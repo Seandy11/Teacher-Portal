@@ -1,18 +1,104 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { sql, relations } from "drizzle-orm";
+import { pgTable, text, varchar, boolean, timestamp, date, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
+// Re-export auth models
+export * from "./models/auth";
+
+// Role enum for user roles
+export const roleEnum = pgEnum("role", ["teacher", "admin"]);
+
+// Leave status enum
+export const leaveStatusEnum = pgEnum("leave_status", ["pending", "approved", "rejected"]);
+
+// Teachers table - extends base user info with teacher-specific data
+export const teachers = pgTable("teachers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  userId: varchar("user_id").notNull().unique(), // Links to users table from auth
+  email: varchar("email").notNull().unique(),
+  name: varchar("name").notNull(),
+  role: roleEnum("role").notNull().default("teacher"),
+  calendarId: varchar("calendar_id"), // Google Calendar ID assigned to this teacher
+  sheetId: varchar("sheet_id"), // Google Sheet ID for attendance
+  sheetRowStart: varchar("sheet_row_start"), // Starting row in the sheet for this teacher
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+// Leave requests table
+export const leaveRequests = pgTable("leave_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teacherId: varchar("teacher_id").notNull().references(() => teachers.id),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  leaveType: varchar("leave_type").notNull(), // sick, personal, vacation, etc.
+  reason: text("reason"),
+  status: leaveStatusEnum("status").notNull().default("pending"),
+  adminNotes: text("admin_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+// Relations
+export const teachersRelations = relations(teachers, ({ many }) => ({
+  leaveRequests: many(leaveRequests),
+}));
+
+export const leaveRequestsRelations = relations(leaveRequests, ({ one }) => ({
+  teacher: one(teachers, {
+    fields: [leaveRequests.teacherId],
+    references: [teachers.id],
+  }),
+}));
+
+// Insert schemas
+export const insertTeacherSchema = createInsertSchema(teachers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertLeaveRequestSchema = createInsertSchema(leaveRequests).omit({
+  id: true,
+  status: true,
+  adminNotes: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateLeaveRequestSchema = z.object({
+  status: z.enum(["pending", "approved", "rejected"]).optional(),
+  adminNotes: z.string().optional(),
+});
+
+// Types
+export type Teacher = typeof teachers.$inferSelect;
+export type InsertTeacher = z.infer<typeof insertTeacherSchema>;
+export type LeaveRequest = typeof leaveRequests.$inferSelect;
+export type InsertLeaveRequest = z.infer<typeof insertLeaveRequestSchema>;
+export type UpdateLeaveRequest = z.infer<typeof updateLeaveRequestSchema>;
+
+// Calendar event types (not stored in DB, from Google Calendar)
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description?: string;
+  start: string;
+  end: string;
+  isAvailabilityBlock: boolean; // true = availability block (editable), false = class (read-only)
+}
+
+// Attendance row type (from Google Sheets)
+export interface AttendanceRow {
+  rowIndex: number;
+  date: string;
+  studentName: string;
+  classTime: string;
+  attendance: string; // present, absent, late, etc.
+  notes: string;
+  // Protected columns (read-only for teachers)
+  lessonPlan?: string;
+  homework?: string;
+}
