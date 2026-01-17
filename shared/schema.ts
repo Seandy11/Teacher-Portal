@@ -15,7 +15,7 @@ export const leaveStatusEnum = pgEnum("leave_status", ["pending", "approved", "r
 // Teachers table - extends base user info with teacher-specific data
 export const teachers = pgTable("teachers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().unique(), // Links to users table from auth
+  userId: varchar("user_id").unique(), // Links to users table from auth (null until first login)
   email: varchar("email").notNull().unique(),
   name: varchar("name").notNull(),
   role: roleEnum("role").notNull().default("teacher"),

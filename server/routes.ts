@@ -10,13 +10,26 @@ import type { CalendarEvent, AttendanceRow } from "@shared/schema";
 // Role-based access control middleware
 const requireTeacher: RequestHandler = async (req, res, next) => {
   const userId = (req.user as any)?.claims?.sub;
+  const userEmail = (req.user as any)?.claims?.email;
+  
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  const teacher = await storage.getTeacherByUserId(userId);
+  // First try to find by userId
+  let teacher = await storage.getTeacherByUserId(userId);
+  
+  // If not found by userId, try by email and link the account
+  if (!teacher && userEmail) {
+    teacher = await storage.getTeacherByEmail(userEmail);
+    if (teacher && !teacher.userId) {
+      // Link this user to the existing teacher record
+      teacher = await storage.updateTeacher(teacher.id, { userId });
+    }
+  }
+  
   if (!teacher) {
-    return res.status(403).json({ message: "Access denied - not registered as teacher" });
+    return res.status(403).json({ message: "Access denied - not registered as teacher. Please contact your administrator." });
   }
 
   if (!teacher.isActive) {
@@ -29,11 +42,24 @@ const requireTeacher: RequestHandler = async (req, res, next) => {
 
 const requireAdmin: RequestHandler = async (req, res, next) => {
   const userId = (req.user as any)?.claims?.sub;
+  const userEmail = (req.user as any)?.claims?.email;
+  
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  const teacher = await storage.getTeacherByUserId(userId);
+  // First try to find by userId
+  let teacher = await storage.getTeacherByUserId(userId);
+  
+  // If not found by userId, try by email and link the account
+  if (!teacher && userEmail) {
+    teacher = await storage.getTeacherByEmail(userEmail);
+    if (teacher && !teacher.userId) {
+      // Link this user to the existing teacher record
+      teacher = await storage.updateTeacher(teacher.id, { userId });
+    }
+  }
+  
   if (!teacher || teacher.role !== "admin") {
     return res.status(403).json({ message: "Admin access required" });
   }
