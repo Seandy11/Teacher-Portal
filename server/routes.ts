@@ -404,7 +404,7 @@ export async function registerRoutes(
   // Update teacher (admin only)
   app.patch("/api/admin/teachers/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const teacher = await storage.updateTeacher(id, req.body);
       
       if (!teacher) {
@@ -442,7 +442,7 @@ export async function registerRoutes(
   // Update leave request status (admin only)
   app.patch("/api/admin/leave-requests/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const validatedData = updateLeaveRequestSchema.parse(req.body);
       
       const request = await storage.updateLeaveRequest(id, validatedData);
