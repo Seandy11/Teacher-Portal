@@ -5,19 +5,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { TeacherManagement } from "@/components/admin/teacher-management";
 import { LeaveManagement } from "@/components/admin/leave-management";
+import { CalendarOverview } from "@/components/admin/calendar-overview";
 import { FullPageLoader } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/auth-utils";
-import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle } from "lucide-react";
+import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar } from "lucide-react";
 import type { Teacher, LeaveRequest } from "@shared/schema";
 
-type AdminView = "dashboard" | "teachers" | "leave";
+type AdminView = "dashboard" | "calendar" | "teachers" | "leave";
 
 const navItems = [
   { id: "dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
+  { id: "calendar" as const, label: "Calendar Overview", icon: Calendar },
   { id: "teachers" as const, label: "Teachers", icon: Users },
   { id: "leave" as const, label: "Leave Requests", icon: FileText },
 ];
@@ -281,6 +283,16 @@ export default function AdminDashboard() {
                     </div>
                   </>
                 )}
+              </div>
+            )}
+
+            {activeView === "calendar" && (
+              <div className="space-y-6">
+                <div>
+                  <h1 className="text-2xl font-medium">Calendar Overview</h1>
+                  <p className="text-muted-foreground">View all teachers' schedules in one place</p>
+                </div>
+                <CalendarOverview />
               </div>
             )}
 

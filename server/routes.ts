@@ -439,6 +439,92 @@ export async function registerRoutes(
     }
   });
 
+  // Get all teachers' calendar events (admin overview)
+  app.get("/api/admin/calendar/all", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const teachers = await storage.getAllTeachers();
+      const activeTeachersWithCalendars = teachers.filter(t => t.isActive && t.calendarId);
+      
+      if (activeTeachersWithCalendars.length === 0) {
+        return res.json([]);
+      }
+
+      const calendar = await getGoogleCalendarClient();
+      
+      // Accept week start/end parameters for fetching specific weeks
+      const timeMinParam = req.query.timeMin as string;
+      const timeMaxParam = req.query.timeMax as string;
+      
+      const timeMin = timeMinParam ? new Date(timeMinParam) : new Date();
+      const timeMax = timeMaxParam ? new Date(timeMaxParam) : new Date(timeMin.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+      const allEvents: Array<CalendarEvent & { teacherId: string; teacherName: string; teacherColor: string }> = [];
+
+      // Generate deterministic colors based on teacher ID hash
+      const colors = [
+        "#3b82f6", // blue
+        "#10b981", // emerald
+        "#f59e0b", // amber
+        "#ef4444", // red
+        "#8b5cf6", // violet
+        "#ec4899", // pink
+        "#06b6d4", // cyan
+        "#84cc16", // lime
+      ];
+
+      // Simple hash function to get consistent color from teacher ID
+      const getColorForTeacher = (teacherId: string): string => {
+        let hash = 0;
+        for (let i = 0; i < teacherId.length; i++) {
+          const char = teacherId.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash = hash & hash;
+        }
+        return colors[Math.abs(hash) % colors.length];
+      };
+
+      for (const teacher of activeTeachersWithCalendars) {
+        try {
+          const response = await calendar.events.list({
+            calendarId: teacher.calendarId!,
+            timeMin: timeMin.toISOString(),
+            timeMax: timeMax.toISOString(),
+            singleEvents: true,
+            orderBy: "startTime",
+          });
+
+          const teacherColor = getColorForTeacher(teacher.id);
+          const events = (response.data.items || []).map((event: any) => ({
+            id: event.id,
+            title: event.summary || "Untitled",
+            description: event.description || "",
+            start: event.start?.dateTime || event.start?.date,
+            end: event.end?.dateTime || event.end?.date,
+            isAvailabilityBlock: event.summary?.toLowerCase().includes("blocked") || 
+                                 event.summary?.toLowerCase().includes("unavailable") ||
+                                 event.extendedProperties?.private?.type === "availability_block",
+            teacherId: teacher.id,
+            teacherName: teacher.name,
+            teacherColor: teacherColor,
+          }));
+
+          allEvents.push(...events);
+        } catch (calendarError) {
+          console.error(`Error fetching calendar for teacher ${teacher.id}:`, calendarError);
+          // Continue with other teachers even if one fails
+        }
+      }
+
+      // Sort by start time
+      allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+
+      res.json(allEvents);
+    } catch (error) {
+      console.error("Error fetching all calendar events:", error);
+      res.status(500).json({ message: "Failed to fetch calendar overview" });
+    }
+  });
+
   // Update leave request status (admin only)
   app.patch("/api/admin/leave-requests/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
