@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,14 +9,22 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { RoleBadge } from "@/components/role-badge";
-import { Users, Plus, Edit2, Power, Search, Calendar, FileSpreadsheet } from "lucide-react";
+import { Users, Plus, Edit2, Power, Search, Calendar, FileSpreadsheet, RefreshCw } from "lucide-react";
 import type { Teacher } from "@shared/schema";
+
+interface GoogleCalendar {
+  id: string;
+  name: string;
+  description: string;
+  primary: boolean;
+  backgroundColor: string;
+}
 
 const teacherFormSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -43,6 +52,12 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const { data: calendars = [], isLoading: calendarsLoading, refetch: refetchCalendars } = useQuery<GoogleCalendar[]>({
+    queryKey: ["/api/admin/calendars"],
+  });
+
+  const calendarMap = new Map(calendars.map(c => [c.id, c.name]));
+
   const filteredTeachers = teachers.filter(t =>
     t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     t.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -54,7 +69,7 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
       email: "",
       name: "",
       role: "teacher",
-      calendarId: "",
+      calendarId: "none",
       sheetId: "",
       sheetRowStart: "",
     },
@@ -66,16 +81,21 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
       email: "",
       name: "",
       role: "teacher",
-      calendarId: "",
+      calendarId: "none",
       sheetId: "",
       sheetRowStart: "",
     },
   });
 
+  const normalizeFormData = (data: TeacherFormValues): TeacherFormValues => ({
+    ...data,
+    calendarId: data.calendarId === "none" || data.calendarId === "" ? undefined : data.calendarId,
+  });
+
   const handleAdd = async (data: TeacherFormValues) => {
     setIsSubmitting(true);
     try {
-      await onAdd(data);
+      await onAdd(normalizeFormData(data));
       setIsAddOpen(false);
       addForm.reset();
     } finally {
@@ -87,7 +107,7 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
     if (!editingTeacher) return;
     setIsSubmitting(true);
     try {
-      await onUpdate(editingTeacher.id, data);
+      await onUpdate(editingTeacher.id, normalizeFormData(data));
       setEditingTeacher(null);
     } finally {
       setIsSubmitting(false);
@@ -110,7 +130,7 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
       email: teacher.email,
       name: teacher.name,
       role: teacher.role,
-      calendarId: teacher.calendarId || "",
+      calendarId: teacher.calendarId || "none",
       sheetId: teacher.sheetId || "",
       sheetRowStart: teacher.sheetRowStart || "",
     });
@@ -172,10 +192,43 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
           name="calendarId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Google Calendar ID</FormLabel>
-              <FormControl>
-                <Input placeholder="calendar@group.calendar.google.com" {...field} data-testid="input-calendar-id" />
-              </FormControl>
+              <FormLabel>Google Calendar</FormLabel>
+              <div className="flex items-center gap-2">
+                <Select onValueChange={field.onChange} value={field.value || ""}>
+                  <FormControl>
+                    <SelectTrigger data-testid="select-calendar-id" className="flex-1">
+                      <SelectValue placeholder={calendarsLoading ? "Loading calendars..." : "Select a calendar"} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="none">No calendar</SelectItem>
+                    {calendars.map((cal) => (
+                      <SelectItem key={cal.id} value={cal.id}>
+                        <span className="inline-flex items-center gap-2">
+                          <span
+                            className="inline-block w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: cal.backgroundColor }}
+                          />
+                          {cal.name}{cal.primary ? " (Primary)" : ""}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => refetchCalendars()}
+                  disabled={calendarsLoading}
+                  data-testid="button-refresh-calendars"
+                >
+                  <RefreshCw className={`h-4 w-4 ${calendarsLoading ? "animate-spin" : ""}`} />
+                </Button>
+              </div>
+              <FormDescription>
+                Select the Google Calendar containing this teacher's classes
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -310,8 +363,8 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
                           {teacher.isActive ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground max-w-[150px] truncate">
-                        {teacher.calendarId || "—"}
+                      <TableCell className="text-sm text-muted-foreground max-w-[150px] truncate" title={teacher.calendarId || ""}>
+                        {teacher.calendarId ? (calendarMap.get(teacher.calendarId) || teacher.calendarId) : "—"}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground max-w-[150px] truncate">
                         {teacher.sheetId || "—"}

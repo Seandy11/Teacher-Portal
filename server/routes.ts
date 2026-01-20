@@ -366,6 +366,27 @@ export async function registerRoutes(
 
   // ============ ADMIN ROUTES ============
 
+  // List available Google Calendars (admin only)
+  app.get("/api/admin/calendars", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const calendar = await getGoogleCalendarClient();
+      const response = await calendar.calendarList.list();
+      
+      const calendars = (response.data.items || []).map((cal: any) => ({
+        id: cal.id,
+        name: cal.summary || cal.id,
+        description: cal.description || "",
+        primary: cal.primary || false,
+        backgroundColor: cal.backgroundColor,
+      }));
+
+      res.json(calendars);
+    } catch (error) {
+      console.error("Error fetching calendar list:", error);
+      res.status(500).json({ message: "Failed to fetch calendars" });
+    }
+  });
+
   // Get all teachers (admin only)
   app.get("/api/admin/teachers", isAuthenticated, requireAdmin, async (req, res) => {
     try {
