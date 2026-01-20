@@ -1,12 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronLeft, ChevronRight, Calendar, Lock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Lock, Eye, EyeOff } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, isSameDay, parseISO, eachDayOfInterval } from "date-fns";
 import type { CalendarEvent } from "@shared/schema";
 
@@ -22,6 +21,8 @@ interface CalendarOverviewProps {
 
 export function CalendarOverview({ className }: CalendarOverviewProps) {
   const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [visibleTeacherIds, setVisibleTeacherIds] = useState<Set<string>>(new Set());
+  const hasInitialized = useRef(false);
 
   const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
   
@@ -37,7 +38,41 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
       return response.json();
     },
   });
+
   const weekDays = eachDayOfInterval({ start: currentWeekStart, end: weekEnd });
+
+  const teacherList = useMemo(() => {
+    const teacherMap = new Map<string, { name: string; color: string }>();
+    for (const event of events) {
+      if (!teacherMap.has(event.teacherId)) {
+        teacherMap.set(event.teacherId, { name: event.teacherName, color: event.teacherColor });
+      }
+    }
+    return Array.from(teacherMap.entries()).map(([id, data]) => ({ id, ...data }));
+  }, [events]);
+
+  useEffect(() => {
+    if (teacherList.length > 0) {
+      if (!hasInitialized.current) {
+        setVisibleTeacherIds(new Set(teacherList.map(t => t.id)));
+        hasInitialized.current = true;
+      } else {
+        setVisibleTeacherIds(prev => {
+          const next = new Set(prev);
+          for (const teacher of teacherList) {
+            if (!prev.has(teacher.id)) {
+              next.add(teacher.id);
+            }
+          }
+          return next;
+        });
+      }
+    }
+  }, [teacherList]);
+
+  const filteredEvents = useMemo(() => {
+    return events.filter(event => visibleTeacherIds.has(event.teacherId));
+  }, [events, visibleTeacherIds]);
 
   const eventsByDay = useMemo(() => {
     const grouped: Record<string, TeacherCalendarEvent[]> = {};
@@ -47,7 +82,7 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
       grouped[dateStr] = [];
     }
 
-    for (const event of events) {
+    for (const event of filteredEvents) {
       const eventDate = parseISO(event.start);
       const dateStr = format(eventDate, "yyyy-MM-dd");
       if (grouped[dateStr]) {
@@ -56,17 +91,27 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
     }
 
     return grouped;
-  }, [events, weekDays]);
+  }, [filteredEvents, weekDays]);
 
-  const teacherLegend = useMemo(() => {
-    const teacherMap = new Map<string, { name: string; color: string }>();
-    for (const event of events) {
-      if (!teacherMap.has(event.teacherId)) {
-        teacherMap.set(event.teacherId, { name: event.teacherName, color: event.teacherColor });
+  const toggleTeacher = (teacherId: string) => {
+    setVisibleTeacherIds(prev => {
+      const next = new Set(prev);
+      if (next.has(teacherId)) {
+        next.delete(teacherId);
+      } else {
+        next.add(teacherId);
       }
-    }
-    return Array.from(teacherMap.entries()).map(([id, data]) => ({ id, ...data }));
-  }, [events]);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setVisibleTeacherIds(new Set(teacherList.map(t => t.id)));
+  };
+
+  const clearAll = () => {
+    setVisibleTeacherIds(new Set());
+  };
 
   const goToPreviousWeek = () => setCurrentWeekStart(subWeeks(currentWeekStart, 1));
   const goToNextWeek = () => setCurrentWeekStart(addWeeks(currentWeekStart, 1));
@@ -125,24 +170,64 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
         </div>
       </div>
 
-      {teacherLegend.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {teacherLegend.map((teacher) => (
-            <Badge
-              key={teacher.id}
-              variant="outline"
-              className="text-xs"
-              style={{ borderColor: teacher.color, color: teacher.color }}
-              data-testid={`legend-teacher-${teacher.id}`}
-            >
-              <span
-                className="w-2 h-2 rounded-full mr-1.5"
-                style={{ backgroundColor: teacher.color }}
-              />
-              {teacher.name}
-            </Badge>
-          ))}
-        </div>
+      {teacherList.length > 0 && (
+        <Card>
+          <CardHeader className="py-3 px-4">
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle className="text-sm font-medium">Teacher Calendars</CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={selectAll}
+                  data-testid="button-select-all-teachers"
+                >
+                  <Eye className="h-3 w-3 mr-1" />
+                  Show All
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearAll}
+                  data-testid="button-clear-all-teachers"
+                >
+                  <EyeOff className="h-3 w-3 mr-1" />
+                  Hide All
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="py-2 px-4">
+            <div className="flex flex-wrap gap-3">
+              {teacherList.map((teacher) => {
+                const isVisible = visibleTeacherIds.has(teacher.id);
+                return (
+                  <label
+                    key={teacher.id}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md cursor-pointer hover-elevate border ${
+                      isVisible ? "border-border" : "opacity-50 border-transparent"
+                    }`}
+                    style={{
+                      backgroundColor: isVisible ? `${teacher.color}15` : undefined,
+                    }}
+                    data-testid={`toggle-teacher-${teacher.id}`}
+                  >
+                    <Checkbox
+                      checked={isVisible}
+                      onCheckedChange={() => toggleTeacher(teacher.id)}
+                      data-testid={`checkbox-teacher-${teacher.id}`}
+                    />
+                    <span
+                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: teacher.color }}
+                    />
+                    <span className="text-sm font-medium">{teacher.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid grid-cols-7 gap-2">
@@ -154,7 +239,7 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
           return (
             <Card
               key={dateStr}
-              className={`min-h-[180px] ${isToday ? "ring-2 ring-primary" : ""}`}
+              className={`${isToday ? "ring-2 ring-primary" : ""}`}
               data-testid={`calendar-day-${dateStr}`}
             >
               <CardHeader className="py-2 px-3">
@@ -166,41 +251,39 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-2 pt-0">
-                <ScrollArea className="h-[120px]">
-                  {dayEvents.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-4">No events</p>
-                  ) : (
-                    <div className="space-y-1">
-                      {dayEvents.map((event) => (
-                        <div
-                          key={`${event.teacherId}-${event.id}`}
-                          className="text-xs p-1.5 rounded"
-                          style={{
-                            backgroundColor: `${event.teacherColor}20`,
-                            borderLeft: `3px solid ${event.teacherColor}`,
-                          }}
-                          data-testid={`event-${event.id}`}
-                        >
-                          <div className="flex items-center gap-1">
-                            {event.isAvailabilityBlock && (
-                              <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                            )}
-                            <span className="font-medium truncate" title={event.title}>
-                              {event.title}
-                            </span>
-                          </div>
-                          <div className="text-muted-foreground flex items-center gap-1 mt-0.5">
-                            <Calendar className="h-3 w-3 flex-shrink-0" />
-                            <span className="truncate">{event.teacherName}</span>
-                          </div>
-                          <div className="text-muted-foreground">
-                            {format(parseISO(event.start), "HH:mm")} - {format(parseISO(event.end), "HH:mm")}
-                          </div>
+                {dayEvents.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">No events</p>
+                ) : (
+                  <div className="space-y-1">
+                    {dayEvents.map((event) => (
+                      <div
+                        key={`${event.teacherId}-${event.id}`}
+                        className="text-xs p-1.5 rounded"
+                        style={{
+                          backgroundColor: `${event.teacherColor}20`,
+                          borderLeft: `3px solid ${event.teacherColor}`,
+                        }}
+                        data-testid={`event-${event.id}`}
+                      >
+                        <div className="flex items-center gap-1">
+                          {event.isAvailabilityBlock && (
+                            <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          )}
+                          <span className="font-medium truncate" title={event.title}>
+                            {event.title}
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </ScrollArea>
+                        <div className="text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <Calendar className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{event.teacherName}</span>
+                        </div>
+                        <div className="text-muted-foreground">
+                          {format(parseISO(event.start), "HH:mm")} - {format(parseISO(event.end), "HH:mm")}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           );
