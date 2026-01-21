@@ -15,7 +15,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { EmptyState } from "@/components/empty-state";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { RoleBadge } from "@/components/role-badge";
-import { Users, Plus, Edit2, Power, Search, Calendar, FileSpreadsheet, RefreshCw } from "lucide-react";
+import { Users, Plus, Edit2, Power, Search, Calendar, FileSpreadsheet, RefreshCw, Eye } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 import type { Teacher } from "@shared/schema";
 
 interface GoogleCalendar {
@@ -30,6 +33,7 @@ const teacherFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   name: z.string().min(2, "Name must be at least 2 characters"),
   role: z.enum(["teacher", "admin"]),
+  hourlyRate: z.string().optional(),
   calendarId: z.string().optional(),
   sheetId: z.string().optional(),
   sheetRowStart: z.string().optional(),
@@ -46,6 +50,8 @@ interface TeacherManagementProps {
 }
 
 export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onToggleActive }: TeacherManagementProps) {
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [toggleTarget, setToggleTarget] = useState<Teacher | null>(null);
@@ -69,6 +75,7 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
       email: "",
       name: "",
       role: "teacher",
+      hourlyRate: "",
       calendarId: "none",
       sheetId: "",
       sheetRowStart: "",
@@ -81,6 +88,7 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
       email: "",
       name: "",
       role: "teacher",
+      hourlyRate: "",
       calendarId: "none",
       sheetId: "",
       sheetRowStart: "",
@@ -130,11 +138,30 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
       email: teacher.email,
       name: teacher.name,
       role: teacher.role,
+      hourlyRate: teacher.hourlyRate || "",
       calendarId: teacher.calendarId || "none",
       sheetId: teacher.sheetId || "",
       sheetRowStart: teacher.sheetRowStart || "",
     });
     setEditingTeacher(teacher);
+  };
+
+  const handleImpersonate = async (teacher: Teacher) => {
+    try {
+      await apiRequest("POST", `/api/admin/impersonate/${teacher.id}`);
+      await queryClient.invalidateQueries({ queryKey: ["/api/admin/impersonate/status"] });
+      toast({
+        title: "Viewing as Teacher",
+        description: `You are now viewing the app as ${teacher.name}`,
+      });
+      setLocation("/");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to start impersonation",
+        variant: "destructive",
+      });
+    }
   };
 
   const TeacherFormContent = ({ form, onSubmit, submitLabel }: { form: any; onSubmit: (data: TeacherFormValues) => void; submitLabel: string }) => (
@@ -183,6 +210,29 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="hourlyRate"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Hourly Rate</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  step="0.01" 
+                  min="0" 
+                  placeholder="25.00" 
+                  {...field} 
+                  data-testid="input-hourly-rate" 
+                />
+              </FormControl>
+              <FormDescription>
+                Teacher's pay rate per hour for payroll calculation
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -334,6 +384,7 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead>Hourly Rate</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>
                       <div className="flex items-center gap-1">
@@ -358,6 +409,9 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
                       <TableCell>
                         <RoleBadge role={teacher.role} />
                       </TableCell>
+                      <TableCell className="text-sm">
+                        {teacher.hourlyRate ? `$${parseFloat(teacher.hourlyRate).toFixed(2)}/hr` : "—"}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={teacher.isActive ? "default" : "secondary"}>
                           {teacher.isActive ? "Active" : "Inactive"}
@@ -371,6 +425,15 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleImpersonate(teacher)}
+                            title={`View as ${teacher.name}`}
+                            data-testid={`button-impersonate-teacher-${teacher.id}`}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"

@@ -11,6 +11,11 @@ import AdminDashboard from "@/pages/admin-dashboard";
 import NotFound from "@/pages/not-found";
 import type { Teacher } from "@shared/schema";
 
+interface ImpersonationStatus {
+  isImpersonating: boolean;
+  teacher?: Teacher | null;
+}
+
 function AuthenticatedApp() {
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
   
@@ -19,7 +24,12 @@ function AuthenticatedApp() {
     enabled: isAuthenticated,
   });
 
-  if (authLoading || (isAuthenticated && teacherLoading)) {
+  const { data: impersonationStatus, isLoading: impersonationLoading } = useQuery<ImpersonationStatus>({
+    queryKey: ["/api/admin/impersonate/status"],
+    enabled: isAuthenticated,
+  });
+
+  if (authLoading || (isAuthenticated && (teacherLoading || impersonationLoading))) {
     return <FullPageLoader />;
   }
 
@@ -57,6 +67,11 @@ function AuthenticatedApp() {
         </div>
       </div>
     );
+  }
+
+  // If admin is impersonating a teacher, show the teacher dashboard
+  if (impersonationStatus?.isImpersonating) {
+    return <TeacherDashboard />;
   }
 
   if (teacher.role === "admin") {

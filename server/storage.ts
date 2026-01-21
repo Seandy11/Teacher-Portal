@@ -1,6 +1,6 @@
-import { teachers, leaveRequests, type Teacher, type InsertTeacher, type LeaveRequest, type InsertLeaveRequest, type UpdateLeaveRequest } from "@shared/schema";
+import { teachers, leaveRequests, bonuses, type Teacher, type InsertTeacher, type LeaveRequest, type InsertLeaveRequest, type UpdateLeaveRequest, type Bonus, type InsertBonus } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
   // Teachers
@@ -17,6 +17,12 @@ export interface IStorage {
   getAllLeaveRequests(): Promise<LeaveRequest[]>;
   createLeaveRequest(request: InsertLeaveRequest): Promise<LeaveRequest>;
   updateLeaveRequest(id: string, updates: UpdateLeaveRequest): Promise<LeaveRequest | undefined>;
+  
+  // Bonuses
+  getBonusesByTeacherAndMonth(teacherId: string, month: string): Promise<Bonus[]>;
+  getBonusesByTeacher(teacherId: string): Promise<Bonus[]>;
+  createBonus(bonus: InsertBonus): Promise<Bonus>;
+  deleteBonus(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -80,6 +86,27 @@ export class DatabaseStorage implements IStorage {
       .where(eq(leaveRequests.id, id))
       .returning();
     return updated;
+  }
+
+  // Bonuses
+  async getBonusesByTeacherAndMonth(teacherId: string, month: string): Promise<Bonus[]> {
+    return db.select().from(bonuses).where(
+      and(eq(bonuses.teacherId, teacherId), eq(bonuses.month, month))
+    );
+  }
+
+  async getBonusesByTeacher(teacherId: string): Promise<Bonus[]> {
+    return db.select().from(bonuses).where(eq(bonuses.teacherId, teacherId));
+  }
+
+  async createBonus(bonus: InsertBonus): Promise<Bonus> {
+    const [created] = await db.insert(bonuses).values(bonus).returning();
+    return created;
+  }
+
+  async deleteBonus(id: string): Promise<boolean> {
+    const result = await db.delete(bonuses).where(eq(bonuses.id, id)).returning();
+    return result.length > 0;
   }
 }
 

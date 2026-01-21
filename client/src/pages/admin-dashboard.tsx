@@ -6,21 +6,23 @@ import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGrou
 import { TeacherManagement } from "@/components/admin/teacher-management";
 import { LeaveManagement } from "@/components/admin/leave-management";
 import { CalendarOverview } from "@/components/admin/calendar-overview";
+import { BonusManagement } from "@/components/admin/bonus-management";
 import { FullPageLoader } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/auth-utils";
-import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar } from "lucide-react";
+import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Gift } from "lucide-react";
 import type { Teacher, LeaveRequest } from "@shared/schema";
 
-type AdminView = "dashboard" | "calendar" | "teachers" | "leave";
+type AdminView = "dashboard" | "calendar" | "teachers" | "leave" | "bonuses";
 
 const navItems = [
   { id: "dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
   { id: "calendar" as const, label: "Calendar Overview", icon: Calendar },
   { id: "teachers" as const, label: "Teachers", icon: Users },
+  { id: "bonuses" as const, label: "Bonuses", icon: Gift },
   { id: "leave" as const, label: "Leave Requests", icon: FileText },
 ];
 
@@ -182,7 +184,7 @@ export default function AdminDashboard() {
           <header className="sticky top-0 z-50 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur px-4">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <div className="flex-1" />
-            <Header user={user} teacher={teacher || null} onLogout={logout} />
+            <Header user={user ?? null} teacher={teacher || null} onLogout={logout} />
           </header>
 
           <main className="flex-1 p-6">
@@ -318,6 +320,10 @@ export default function AdminDashboard() {
                   }}
                 />
               )
+            )}
+
+            {activeView === "bonuses" && (
+              <BonusManagement teachers={teachers} />
             )}
 
             {activeView === "leave" && (

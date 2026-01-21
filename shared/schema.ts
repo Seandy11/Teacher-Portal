@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, boolean, timestamp, date, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, boolean, timestamp, date, pgEnum, integer, decimal } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -22,9 +22,21 @@ export const teachers = pgTable("teachers", {
   calendarId: varchar("calendar_id"), // Google Calendar ID assigned to this teacher
   sheetId: varchar("sheet_id"), // Google Sheet ID for attendance
   sheetRowStart: varchar("sheet_row_start"), // Starting row in the sheet for this teacher
+  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }), // Teacher's hourly pay rate
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Bonuses table - admin-added bonuses for teachers
+export const bonuses = pgTable("bonuses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teacherId: varchar("teacher_id").notNull().references(() => teachers.id),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  reason: text("reason").notNull(),
+  month: varchar("month").notNull(), // Format: YYYY-MM
+  createdBy: varchar("created_by"), // Admin user ID who created the bonus
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Leave requests table
@@ -44,11 +56,19 @@ export const leaveRequests = pgTable("leave_requests", {
 // Relations
 export const teachersRelations = relations(teachers, ({ many }) => ({
   leaveRequests: many(leaveRequests),
+  bonuses: many(bonuses),
 }));
 
 export const leaveRequestsRelations = relations(leaveRequests, ({ one }) => ({
   teacher: one(teachers, {
     fields: [leaveRequests.teacherId],
+    references: [teachers.id],
+  }),
+}));
+
+export const bonusesRelations = relations(bonuses, ({ one }) => ({
+  teacher: one(teachers, {
+    fields: [bonuses.teacherId],
     references: [teachers.id],
   }),
 }));
@@ -73,12 +93,20 @@ export const updateLeaveRequestSchema = z.object({
   adminNotes: z.string().optional(),
 });
 
+// Bonus insert schema
+export const insertBonusSchema = createInsertSchema(bonuses).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type Teacher = typeof teachers.$inferSelect;
 export type InsertTeacher = z.infer<typeof insertTeacherSchema>;
 export type LeaveRequest = typeof leaveRequests.$inferSelect;
 export type InsertLeaveRequest = z.infer<typeof insertLeaveRequestSchema>;
 export type UpdateLeaveRequest = z.infer<typeof updateLeaveRequestSchema>;
+export type Bonus = typeof bonuses.$inferSelect;
+export type InsertBonus = z.infer<typeof insertBonusSchema>;
 
 // Calendar event types (not stored in DB, from Google Calendar)
 export interface CalendarEvent {

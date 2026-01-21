@@ -4,39 +4,51 @@ import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { getGoogleCalendarClient } from "./integrations/googleCalendar";
 import { getGoogleSheetsClient } from "./integrations/googleSheets";
-import { insertLeaveRequestSchema, updateLeaveRequestSchema, insertTeacherSchema } from "@shared/schema";
+import { insertLeaveRequestSchema, updateLeaveRequestSchema, insertTeacherSchema, insertBonusSchema } from "@shared/schema";
 import type { CalendarEvent, AttendanceRow } from "@shared/schema";
 
 // Role-based access control middleware
-const requireTeacher: RequestHandler = async (req, res, next) => {
-  const userId = (req.user as any)?.claims?.sub;
-  const userEmail = (req.user as any)?.claims?.email;
+const requireTeacher: RequestHandler = async (req: any, res, next) => {
+  const userId = req.user?.claims?.sub;
+  const userEmail = req.user?.claims?.email;
   
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  // First try to find by userId
-  let teacher = await storage.getTeacherByUserId(userId);
+  // First get the actual logged-in user's teacher record
+  let actualTeacher = await storage.getTeacherByUserId(userId);
   
   // If not found by userId, try by email and link the account
-  if (!teacher && userEmail) {
-    teacher = await storage.getTeacherByEmail(userEmail);
-    if (teacher && !teacher.userId) {
+  if (!actualTeacher && userEmail) {
+    actualTeacher = await storage.getTeacherByEmail(userEmail);
+    if (actualTeacher && !actualTeacher.userId) {
       // Link this user to the existing teacher record
-      teacher = await storage.updateTeacher(teacher.id, { userId });
+      actualTeacher = await storage.updateTeacher(actualTeacher.id, { userId });
     }
   }
   
-  if (!teacher) {
+  if (!actualTeacher) {
     return res.status(403).json({ message: "Access denied - not registered as teacher. Please contact your administrator." });
   }
 
-  if (!teacher.isActive) {
+  if (!actualTeacher.isActive) {
     return res.status(403).json({ message: "Account deactivated" });
   }
 
-  (req as any).teacher = teacher;
+  // Check if admin is impersonating a teacher - only allow if the actual user is an admin
+  const impersonateTeacherId = req.session?.impersonateTeacherId;
+  if (impersonateTeacherId && actualTeacher.role === "admin") {
+    const impersonatedTeacher = await storage.getTeacher(impersonateTeacherId);
+    if (impersonatedTeacher) {
+      req.teacher = impersonatedTeacher;
+      req.isImpersonating = true;
+      req.actualAdmin = actualTeacher; // Store the real admin for reference
+      return next();
+    }
+  }
+
+  req.teacher = actualTeacher;
   next();
 };
 
@@ -82,7 +94,7 @@ export async function registerRoutes(
 
   // ============ TEACHER ROUTES ============
 
-  // Get current teacher's profile
+  // Get current teacher's profile (respects impersonation)
   app.get("/api/teachers/me", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
@@ -90,26 +102,35 @@ export async function registerRoutes(
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      // First try to find by userId
-      let teacher = await storage.getTeacherByUserId(userId);
+      // First get the actual logged-in user's teacher record
+      let actualTeacher = await storage.getTeacherByUserId(userId);
       
       // If not found, try by email (for first-time users)
-      if (!teacher) {
+      if (!actualTeacher) {
         const email = req.user?.claims?.email;
         if (email) {
-          teacher = await storage.getTeacherByEmail(email);
-          if (teacher) {
+          actualTeacher = await storage.getTeacherByEmail(email);
+          if (actualTeacher) {
             // Link the user ID to the teacher record
-            teacher = await storage.updateTeacher(teacher.id, { userId });
+            actualTeacher = await storage.updateTeacher(actualTeacher.id, { userId });
           }
         }
       }
 
-      if (!teacher) {
+      if (!actualTeacher) {
         return res.status(404).json({ message: "Teacher not found" });
       }
 
-      res.json(teacher);
+      // If admin is impersonating, return the impersonated teacher's data
+      const impersonateTeacherId = req.session?.impersonateTeacherId;
+      if (impersonateTeacherId && actualTeacher.role === "admin") {
+        const impersonatedTeacher = await storage.getTeacher(impersonateTeacherId);
+        if (impersonatedTeacher) {
+          return res.json(impersonatedTeacher);
+        }
+      }
+
+      res.json(actualTeacher);
     } catch (error) {
       console.error("Error fetching teacher:", error);
       res.status(500).json({ message: "Failed to fetch teacher" });
@@ -565,6 +586,304 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to update leave request" });
+    }
+  });
+
+  // ============ BONUS ROUTES ============
+
+  // Get bonuses for a teacher by month (admin only)
+  app.get("/api/admin/bonuses/:teacherId", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const teacherId = req.params.teacherId as string;
+      const month = req.query.month as string | undefined;
+      
+      if (month) {
+        const bonuses = await storage.getBonusesByTeacherAndMonth(teacherId, month);
+        return res.json(bonuses);
+      }
+      
+      const bonuses = await storage.getBonusesByTeacher(teacherId);
+      res.json(bonuses);
+    } catch (error) {
+      console.error("Error fetching bonuses:", error);
+      res.status(500).json({ message: "Failed to fetch bonuses" });
+    }
+  });
+
+  // Create a bonus (admin only)
+  app.post("/api/admin/bonuses", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const adminId = req.teacher?.id;
+      const validatedData = insertBonusSchema.parse({
+        ...req.body,
+        createdBy: adminId,
+      });
+      
+      const bonus = await storage.createBonus(validatedData);
+      res.status(201).json(bonus);
+    } catch (error: any) {
+      console.error("Error creating bonus:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create bonus" });
+    }
+  });
+
+  // Delete a bonus (admin only)
+  app.delete("/api/admin/bonuses/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const id = req.params.id as string;
+      const deleted = await storage.deleteBonus(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Bonus not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting bonus:", error);
+      res.status(500).json({ message: "Failed to delete bonus" });
+    }
+  });
+
+  // ============ PAY CALCULATION ROUTES ============
+
+  // Get pay summary for a teacher (teacher can view own, admin can view any)
+  app.get("/api/pay/summary", isAuthenticated, requireTeacher, async (req: any, res) => {
+    try {
+      const teacher = req.teacher;
+      const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
+      
+      // Get bonuses for this month
+      const bonuses = await storage.getBonusesByTeacherAndMonth(teacher.id, month);
+      const totalBonuses = bonuses.reduce((sum, b) => sum + parseFloat(b.amount), 0);
+      
+      // Calculate minutes from calendar if calendar is set up
+      let totalMinutes = 0;
+      if (teacher.calendarId) {
+        try {
+          const calendar = await getGoogleCalendarClient();
+          const [year, monthNum] = month.split("-").map(Number);
+          const timeMin = new Date(year, monthNum - 1, 1);
+          const timeMax = new Date(year, monthNum, 0, 23, 59, 59);
+          
+          const response = await calendar.events.list({
+            calendarId: teacher.calendarId,
+            timeMin: timeMin.toISOString(),
+            timeMax: timeMax.toISOString(),
+            singleEvents: true,
+            orderBy: "startTime",
+          });
+          
+          // Sum up duration of all class events (excluding availability blocks)
+          for (const event of response.data.items || []) {
+            const isAvailabilityBlock = event.summary?.toLowerCase().includes("blocked") || 
+                                       event.summary?.toLowerCase().includes("unavailable") ||
+                                       event.extendedProperties?.private?.type === "availability_block";
+            
+            if (!isAvailabilityBlock && event.start?.dateTime && event.end?.dateTime) {
+              const start = new Date(event.start.dateTime);
+              const end = new Date(event.end.dateTime);
+              const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+              totalMinutes += durationMinutes;
+            }
+          }
+        } catch (calendarError) {
+          console.error("Error fetching calendar for pay calculation:", calendarError);
+        }
+      }
+      
+      const hourlyRate = teacher.hourlyRate ? parseFloat(teacher.hourlyRate) : 0;
+      const hoursWorked = totalMinutes / 60;
+      const basePay = hoursWorked * hourlyRate;
+      const totalPay = basePay + totalBonuses;
+      
+      res.json({
+        month,
+        teacherId: teacher.id,
+        teacherName: teacher.name,
+        hourlyRate,
+        totalMinutes,
+        hoursWorked: parseFloat(hoursWorked.toFixed(2)),
+        basePay: parseFloat(basePay.toFixed(2)),
+        bonuses: bonuses.map(b => ({
+          id: b.id,
+          amount: parseFloat(b.amount),
+          reason: b.reason,
+          createdAt: b.createdAt,
+        })),
+        totalBonuses: parseFloat(totalBonuses.toFixed(2)),
+        totalPay: parseFloat(totalPay.toFixed(2)),
+      });
+    } catch (error) {
+      console.error("Error calculating pay summary:", error);
+      res.status(500).json({ message: "Failed to calculate pay summary" });
+    }
+  });
+
+  // Get pay summary for a specific teacher (admin only)
+  app.get("/api/admin/pay/:teacherId", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const teacherId = req.params.teacherId;
+      const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
+      
+      const teacher = await storage.getTeacher(teacherId);
+      if (!teacher) {
+        return res.status(404).json({ message: "Teacher not found" });
+      }
+      
+      // Get bonuses for this month
+      const bonuses = await storage.getBonusesByTeacherAndMonth(teacher.id, month);
+      const totalBonuses = bonuses.reduce((sum, b) => sum + parseFloat(b.amount), 0);
+      
+      // Calculate minutes from calendar if calendar is set up
+      let totalMinutes = 0;
+      if (teacher.calendarId) {
+        try {
+          const calendar = await getGoogleCalendarClient();
+          const [year, monthNum] = month.split("-").map(Number);
+          const timeMin = new Date(year, monthNum - 1, 1);
+          const timeMax = new Date(year, monthNum, 0, 23, 59, 59);
+          
+          const response = await calendar.events.list({
+            calendarId: teacher.calendarId,
+            timeMin: timeMin.toISOString(),
+            timeMax: timeMax.toISOString(),
+            singleEvents: true,
+            orderBy: "startTime",
+          });
+          
+          // Sum up duration of all class events (excluding availability blocks)
+          for (const event of response.data.items || []) {
+            const isAvailabilityBlock = event.summary?.toLowerCase().includes("blocked") || 
+                                       event.summary?.toLowerCase().includes("unavailable") ||
+                                       event.extendedProperties?.private?.type === "availability_block";
+            
+            if (!isAvailabilityBlock && event.start?.dateTime && event.end?.dateTime) {
+              const start = new Date(event.start.dateTime);
+              const end = new Date(event.end.dateTime);
+              const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+              totalMinutes += durationMinutes;
+            }
+          }
+        } catch (calendarError) {
+          console.error("Error fetching calendar for pay calculation:", calendarError);
+        }
+      }
+      
+      const hourlyRate = teacher.hourlyRate ? parseFloat(teacher.hourlyRate) : 0;
+      const hoursWorked = totalMinutes / 60;
+      const basePay = hoursWorked * hourlyRate;
+      const totalPay = basePay + totalBonuses;
+      
+      res.json({
+        month,
+        teacherId: teacher.id,
+        teacherName: teacher.name,
+        hourlyRate,
+        totalMinutes,
+        hoursWorked: parseFloat(hoursWorked.toFixed(2)),
+        basePay: parseFloat(basePay.toFixed(2)),
+        bonuses: bonuses.map(b => ({
+          id: b.id,
+          amount: parseFloat(b.amount),
+          reason: b.reason,
+          createdAt: b.createdAt,
+        })),
+        totalBonuses: parseFloat(totalBonuses.toFixed(2)),
+        totalPay: parseFloat(totalPay.toFixed(2)),
+      });
+    } catch (error) {
+      console.error("Error calculating pay summary:", error);
+      res.status(500).json({ message: "Failed to calculate pay summary" });
+    }
+  });
+
+  // ============ IMPERSONATION ROUTES ============
+
+  // Start impersonating a teacher (admin only)
+  app.post("/api/admin/impersonate/:teacherId", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const teacherId = req.params.teacherId as string;
+      const adminId = req.teacher?.id;
+      
+      const targetTeacher = await storage.getTeacher(teacherId);
+      if (!targetTeacher) {
+        return res.status(404).json({ message: "Teacher not found" });
+      }
+      
+      // Store impersonation in session
+      req.session.impersonateTeacherId = teacherId;
+      req.session.realAdminId = adminId;
+      
+      console.log(`Admin ${adminId} started impersonating teacher ${teacherId}`);
+      
+      res.json({ 
+        success: true, 
+        impersonating: targetTeacher,
+        message: `Now viewing as ${targetTeacher.name}`
+      });
+    } catch (error) {
+      console.error("Error starting impersonation:", error);
+      res.status(500).json({ message: "Failed to start impersonation" });
+    }
+  });
+
+  // Stop impersonating (admin only)
+  app.post("/api/admin/impersonate/exit", isAuthenticated, async (req: any, res) => {
+    try {
+      const wasImpersonating = req.session.impersonateTeacherId;
+      delete req.session.impersonateTeacherId;
+      delete req.session.realAdminId;
+      
+      if (wasImpersonating) {
+        console.log(`Stopped impersonating teacher ${wasImpersonating}`);
+      }
+      
+      res.json({ success: true, message: "Stopped impersonation" });
+    } catch (error) {
+      console.error("Error stopping impersonation:", error);
+      res.status(500).json({ message: "Failed to stop impersonation" });
+    }
+  });
+
+  // Get impersonation status (must verify admin before returning impersonation data)
+  app.get("/api/admin/impersonate/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const userEmail = req.user?.claims?.email;
+      
+      if (!userId) {
+        return res.json({ isImpersonating: false });
+      }
+
+      // First verify the user is an admin
+      let actualTeacher = await storage.getTeacherByUserId(userId);
+      if (!actualTeacher && userEmail) {
+        actualTeacher = await storage.getTeacherByEmail(userEmail);
+      }
+      
+      // Only admins can have impersonation status
+      if (!actualTeacher || actualTeacher.role !== "admin") {
+        return res.json({ isImpersonating: false });
+      }
+
+      const impersonateTeacherId = req.session.impersonateTeacherId;
+      
+      if (!impersonateTeacherId) {
+        return res.json({ isImpersonating: false });
+      }
+      
+      const teacher = await storage.getTeacher(impersonateTeacherId);
+      
+      res.json({
+        isImpersonating: true,
+        teacher: teacher ? { id: teacher.id, name: teacher.name } : null,
+      });
+    } catch (error) {
+      console.error("Error getting impersonation status:", error);
+      res.status(500).json({ message: "Failed to get impersonation status" });
     }
   });
 
