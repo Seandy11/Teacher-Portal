@@ -11,11 +11,14 @@ This is an internal teacher portal with the following core features:
 - **Attendance Tracking**: Fill in specific allowed columns (attendance, notes) that write back to Google Sheets
 - **Weekly Availability**: Block/reopen time slots that sync back to Google Calendar
 - **Leave Requests**: Submit leave requests visible to admin
+- **Pay Dashboard**: View monthly earnings with breakdown of hours worked, base pay, and bonuses
 
 ### For Admins:
 - **Dashboard**: Overview stats of teachers, pending leave requests
-- **Teacher Management**: Add/remove teachers, assign calendar & sheet mappings, toggle active status
+- **Teacher Management**: Add/remove teachers, assign calendar & sheet mappings, set hourly rates, toggle active status
 - **Leave Management**: View and approve/reject teacher leave requests
+- **Bonus Management**: Add, view, and delete teacher bonuses per month
+- **View as Teacher**: Impersonate any teacher to see the app from their perspective
 
 ## Architecture
 
@@ -63,12 +66,14 @@ shared/
 ### Tables
 - **users** - Auth user records (from Replit Auth)
 - **sessions** - Session storage (from Replit Auth)
-- **teachers** - Teacher profiles with calendar/sheet assignments
+- **teachers** - Teacher profiles with calendar/sheet assignments, hourly rates
 - **leave_requests** - Leave request records
+- **bonuses** - Teacher bonus records (amount, month, description)
 
 ### Key Relations
 - teachers.userId → users.id
 - leave_requests.teacherId → teachers.id
+- bonuses.teacherId → teachers.id
 
 ## API Endpoints
 
@@ -90,9 +95,18 @@ shared/
 ### Admin Endpoints
 - `GET /api/admin/teachers` - List all teachers
 - `POST /api/admin/teachers` - Add teacher
-- `PATCH /api/admin/teachers/:id` - Update teacher
+- `PATCH /api/admin/teachers/:id` - Update teacher (including hourly rate)
 - `GET /api/admin/leave-requests` - List all leave requests
 - `PATCH /api/admin/leave-requests/:id` - Update leave status
+- `GET /api/admin/bonuses` - List bonuses (filtered by teacher/month)
+- `POST /api/admin/bonuses` - Add bonus
+- `DELETE /api/admin/bonuses/:id` - Delete bonus
+- `POST /api/admin/impersonate/:teacherId` - Start impersonating a teacher
+- `POST /api/admin/impersonate/exit` - Stop impersonating
+- `GET /api/admin/impersonate/status` - Get current impersonation status
+
+### Pay Endpoints
+- `GET /api/pay/summary` - Get pay summary (hours worked, base pay, bonuses, total)
 
 ## Role-Based Access
 
