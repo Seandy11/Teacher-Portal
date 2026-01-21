@@ -801,6 +801,25 @@ export async function registerRoutes(
   });
 
   // ============ IMPERSONATION ROUTES ============
+  // NOTE: Specific routes (/exit, /status) MUST be defined before parameterized routes (/:teacherId)
+
+  // Stop impersonating (admin only) - MUST be before /:teacherId route
+  app.post("/api/admin/impersonate/exit", isAuthenticated, async (req: any, res) => {
+    try {
+      const wasImpersonating = req.session.impersonateTeacherId;
+      delete req.session.impersonateTeacherId;
+      delete req.session.realAdminId;
+      
+      if (wasImpersonating) {
+        console.log(`Stopped impersonating teacher ${wasImpersonating}`);
+      }
+      
+      res.json({ success: true, message: "Stopped impersonation" });
+    } catch (error) {
+      console.error("Error stopping impersonation:", error);
+      res.status(500).json({ message: "Failed to stop impersonation" });
+    }
+  });
 
   // Start impersonating a teacher (admin only)
   app.post("/api/admin/impersonate/:teacherId", isAuthenticated, requireAdmin, async (req: any, res) => {
@@ -827,24 +846,6 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error starting impersonation:", error);
       res.status(500).json({ message: "Failed to start impersonation" });
-    }
-  });
-
-  // Stop impersonating (admin only)
-  app.post("/api/admin/impersonate/exit", isAuthenticated, async (req: any, res) => {
-    try {
-      const wasImpersonating = req.session.impersonateTeacherId;
-      delete req.session.impersonateTeacherId;
-      delete req.session.realAdminId;
-      
-      if (wasImpersonating) {
-        console.log(`Stopped impersonating teacher ${wasImpersonating}`);
-      }
-      
-      res.json({ success: true, message: "Stopped impersonation" });
-    } catch (error) {
-      console.error("Error stopping impersonation:", error);
-      res.status(500).json({ message: "Failed to stop impersonation" });
     }
   });
 
