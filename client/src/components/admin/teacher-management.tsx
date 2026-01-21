@@ -345,7 +345,7 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
                 Add Teacher
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Teacher</DialogTitle>
                 <DialogDescription>Create a new teacher account and assign their calendar and sheet.</DialogDescription>
@@ -463,7 +463,7 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
       )}
 
       <Dialog open={!!editingTeacher} onOpenChange={() => setEditingTeacher(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Teacher</DialogTitle>
             <DialogDescription>Update teacher information and assignments.</DialogDescription>
