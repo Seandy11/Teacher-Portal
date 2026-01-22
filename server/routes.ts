@@ -263,14 +263,15 @@ export async function registerRoutes(
   app.get("/api/attendance", isAuthenticated, requireTeacher, async (req: any, res) => {
     try {
       const teacher = req.teacher;
-      if (!teacher.sheetId || !teacher.sheetRowStart) {
+      if (!teacher.sheetId) {
         return res.json([]);
       }
 
       const sheets = await getGoogleSheetsClient();
+      const range = teacher.sheetRowStart || "A2:H1000";
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: teacher.sheetId,
-        range: teacher.sheetRowStart,
+        range: range,
       });
 
       const rows = response.data.values || [];
@@ -303,7 +304,7 @@ export async function registerRoutes(
   app.patch("/api/attendance/:rowIndex", isAuthenticated, requireTeacher, async (req: any, res) => {
     try {
       const teacher = req.teacher;
-      if (!teacher.sheetId || !teacher.sheetRowStart) {
+      if (!teacher.sheetId) {
         return res.status(400).json({ message: "No sheet assigned" });
       }
 
@@ -313,13 +314,15 @@ export async function registerRoutes(
       }
       const { field, value } = req.body;
 
-      // Validate row index is within assigned range
-      const rowBounds = parseRowRange(teacher.sheetRowStart);
+      // Validate row index is within assigned range (use default if not set)
+      const range = teacher.sheetRowStart || "A2:H1000";
+      const rowBounds = parseRowRange(range);
       if (!rowBounds) {
-        return res.status(400).json({ message: "Invalid sheet range configuration" });
-      }
-
-      if (rowIndex < rowBounds.startRow || rowIndex > rowBounds.endRow) {
+        // If no valid range can be parsed, use default bounds
+        if (rowIndex < 2 || rowIndex > 1000) {
+          return res.status(403).json({ message: "Row not within valid attendance range" });
+        }
+      } else if (rowIndex < rowBounds.startRow || rowIndex > rowBounds.endRow) {
         return res.status(403).json({ message: "Row not within your assigned attendance range" });
       }
 
@@ -447,7 +450,17 @@ export async function registerRoutes(
   app.patch("/api/admin/teachers/:id", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const id = req.params.id as string;
-      const teacher = await storage.updateTeacher(id, req.body);
+      
+      // Sanitize the request body - convert empty strings to null for optional fields
+      const sanitizedBody = { ...req.body };
+      const optionalFields = ['hourlyRate', 'sheetId', 'sheetRowStart', 'calendarId'];
+      for (const field of optionalFields) {
+        if (sanitizedBody[field] === '' || sanitizedBody[field] === 'none') {
+          sanitizedBody[field] = null;
+        }
+      }
+      
+      const teacher = await storage.updateTeacher(id, sanitizedBody);
       
       if (!teacher) {
         return res.status(404).json({ message: "Teacher not found" });
@@ -660,7 +673,9 @@ export async function registerRoutes(
       const totalBonuses = bonuses.reduce((sum, b) => sum + parseFloat(b.amount), 0);
       
       // Calculate minutes from calendar if calendar is set up
+      // Only count lessons that have ENDED (completed lessons only)
       let totalMinutes = 0;
+      const now = new Date();
       if (teacher.calendarId) {
         try {
           const calendar = await getGoogleCalendarClient();
@@ -677,6 +692,7 @@ export async function registerRoutes(
           });
           
           // Sum up duration of all class events (excluding availability blocks)
+          // Only count lessons that have ENDED (end time <= now)
           for (const event of response.data.items || []) {
             const isAvailabilityBlock = event.summary?.toLowerCase().includes("blocked") || 
                                        event.summary?.toLowerCase().includes("unavailable") ||
@@ -685,8 +701,12 @@ export async function registerRoutes(
             if (!isAvailabilityBlock && event.start?.dateTime && event.end?.dateTime) {
               const start = new Date(event.start.dateTime);
               const end = new Date(event.end.dateTime);
-              const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
-              totalMinutes += durationMinutes;
+              
+              // Only count if the lesson has ended
+              if (end.getTime() <= now.getTime()) {
+                const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+                totalMinutes += durationMinutes;
+              }
             }
           }
         } catch (calendarError) {
@@ -738,7 +758,9 @@ export async function registerRoutes(
       const totalBonuses = bonuses.reduce((sum, b) => sum + parseFloat(b.amount), 0);
       
       // Calculate minutes from calendar if calendar is set up
+      // Only count lessons that have ENDED (completed lessons only)
       let totalMinutes = 0;
+      const now = new Date();
       if (teacher.calendarId) {
         try {
           const calendar = await getGoogleCalendarClient();
@@ -755,6 +777,7 @@ export async function registerRoutes(
           });
           
           // Sum up duration of all class events (excluding availability blocks)
+          // Only count lessons that have ENDED (end time <= now)
           for (const event of response.data.items || []) {
             const isAvailabilityBlock = event.summary?.toLowerCase().includes("blocked") || 
                                        event.summary?.toLowerCase().includes("unavailable") ||
@@ -763,8 +786,12 @@ export async function registerRoutes(
             if (!isAvailabilityBlock && event.start?.dateTime && event.end?.dateTime) {
               const start = new Date(event.start.dateTime);
               const end = new Date(event.end.dateTime);
-              const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
-              totalMinutes += durationMinutes;
+              
+              // Only count if the lesson has ended
+              if (end.getTime() <= now.getTime()) {
+                const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+                totalMinutes += durationMinutes;
+              }
             }
           }
         } catch (calendarError) {
