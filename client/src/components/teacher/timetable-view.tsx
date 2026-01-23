@@ -18,6 +18,114 @@ const START_HOUR = 7; // 07:00
 const END_HOUR = 20; // 20:00
 const HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
+// Event with layout information for overlap handling
+interface LayoutEvent extends CalendarEvent {
+  column: number;
+  totalColumns: number;
+}
+
+// Check if two events overlap in time
+function eventsOverlap(a: CalendarEvent, b: CalendarEvent): boolean {
+  const aStart = parseISO(a.start).getTime();
+  const aEnd = parseISO(a.end).getTime();
+  const bStart = parseISO(b.start).getTime();
+  const bEnd = parseISO(b.end).getTime();
+  return aStart < bEnd && aEnd > bStart;
+}
+
+// Google Calendar-style layout algorithm
+function layoutEvents(events: CalendarEvent[]): LayoutEvent[] {
+  if (events.length === 0) return [];
+  
+  // Sort events by start time, then by duration (longer events first)
+  const sortedEvents = [...events].sort((a, b) => {
+    const aStart = parseISO(a.start).getTime();
+    const bStart = parseISO(b.start).getTime();
+    if (aStart !== bStart) return aStart - bStart;
+    // If same start, longer events first
+    const aDuration = parseISO(a.end).getTime() - aStart;
+    const bDuration = parseISO(b.end).getTime() - bStart;
+    return bDuration - aDuration;
+  });
+  
+  // Group events into collision groups (events that overlap directly or transitively)
+  const groups: CalendarEvent[][] = [];
+  const eventToGroup = new Map<string, number>();
+  
+  for (const event of sortedEvents) {
+    let groupIndex = -1;
+    
+    // Find if this event overlaps with any existing group
+    for (let i = 0; i < groups.length; i++) {
+      const group = groups[i];
+      if (group.some(e => eventsOverlap(e, event))) {
+        if (groupIndex === -1) {
+          groupIndex = i;
+          group.push(event);
+          eventToGroup.set(event.id, i);
+        } else {
+          // Merge groups
+          groups[groupIndex].push(...group);
+          group.forEach(e => eventToGroup.set(e.id, groupIndex));
+          groups.splice(i, 1);
+          i--;
+        }
+      }
+    }
+    
+    // If no overlap found, create new group
+    if (groupIndex === -1) {
+      groups.push([event]);
+      eventToGroup.set(event.id, groups.length - 1);
+    }
+  }
+  
+  // For each group, assign columns using greedy algorithm
+  const layoutMap = new Map<string, { column: number; totalColumns: number }>();
+  
+  for (const group of groups) {
+    // Sort group by start time
+    group.sort((a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime());
+    
+    // Track column end times
+    const columnEnds: number[] = [];
+    
+    for (const event of group) {
+      const eventStart = parseISO(event.start).getTime();
+      const eventEnd = parseISO(event.end).getTime();
+      
+      // Find first available column
+      let column = 0;
+      while (column < columnEnds.length && columnEnds[column] > eventStart) {
+        column++;
+      }
+      
+      // Assign column
+      if (column >= columnEnds.length) {
+        columnEnds.push(eventEnd);
+      } else {
+        columnEnds[column] = eventEnd;
+      }
+      
+      layoutMap.set(event.id, { column, totalColumns: 0 });
+    }
+    
+    // Set total columns for all events in this group
+    const totalColumns = columnEnds.length;
+    for (const event of group) {
+      const layout = layoutMap.get(event.id)!;
+      layout.totalColumns = totalColumns;
+    }
+  }
+  
+  // Return events with layout info
+  return sortedEvents.map(event => ({
+    ...event,
+    column: layoutMap.get(event.id)?.column ?? 0,
+    totalColumns: layoutMap.get(event.id)?.totalColumns ?? 1,
+  }));
+}
+
 export function TimetableView({ events, isLoading, onRefresh }: TimetableViewProps) {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -34,11 +142,12 @@ export function TimetableView({ events, isLoading, onRefresh }: TimetableViewPro
 
   const classEvents = events.filter(e => !e.isAvailabilityBlock);
 
-  const getEventsForDay = (day: Date) => {
-    return classEvents.filter(event => {
+  const getEventsForDay = (day: Date): LayoutEvent[] => {
+    const dayEvents = classEvents.filter(event => {
       const eventDate = parseISO(event.start);
       return isSameDay(eventDate, day);
-    }).sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+    });
+    return layoutEvents(dayEvents);
   };
 
   // Calculate event position and height based on time
@@ -204,32 +313,14 @@ export function TimetableView({ events, isLoading, onRefresh }: TimetableViewPro
                   )}
 
                   {/* Events */}
-                  {dayEvents.map((event, index) => {
+                  {dayEvents.map((event) => {
                     const eventColor = event.backgroundColor || defaultEventColor;
                     const isPastEvent = isPast(parseISO(event.end));
                     const style = getEventStyle(event);
                     
-                    // Check for overlapping events to adjust width
-                    const overlapping = dayEvents.filter((e, i) => {
-                      if (i === index) return false;
-                      const eStart = parseISO(e.start).getTime();
-                      const eEnd = parseISO(e.end).getTime();
-                      const thisStart = parseISO(event.start).getTime();
-                      const thisEnd = parseISO(event.end).getTime();
-                      return (thisStart < eEnd && thisEnd > eStart);
-                    });
-                    
-                    const overlapIndex = dayEvents.slice(0, index).filter(e => {
-                      const eStart = parseISO(e.start).getTime();
-                      const eEnd = parseISO(e.end).getTime();
-                      const thisStart = parseISO(event.start).getTime();
-                      const thisEnd = parseISO(event.end).getTime();
-                      return (thisStart < eEnd && thisEnd > eStart);
-                    }).length;
-                    
-                    const totalOverlaps = overlapping.length + 1;
-                    const width = totalOverlaps > 1 ? `${100 / totalOverlaps}%` : '100%';
-                    const left = totalOverlaps > 1 ? `${(overlapIndex * 100) / totalOverlaps}%` : '0';
+                    // Use pre-calculated layout from layoutEvents
+                    const width = `${100 / event.totalColumns}%`;
+                    const left = `${(event.column * 100) / event.totalColumns}%`;
                     
                     return (
                       <Tooltip key={event.id}>

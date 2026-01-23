@@ -185,7 +185,7 @@ export async function registerRoutes(
                              event.summary?.toLowerCase().includes("unavailable") ||
                              event.extendedProperties?.private?.type === "availability_block",
         colorId: event.colorId,
-        backgroundColor: event.colorId ? googleCalendarColors[event.colorId] : undefined,
+        backgroundColor: event.backgroundColor || (event.colorId ? googleCalendarColors[event.colorId] : undefined),
       }));
 
       res.json(events);
@@ -659,7 +659,7 @@ export async function registerRoutes(
                                  event.summary?.toLowerCase().includes("unavailable") ||
                                  event.extendedProperties?.private?.type === "availability_block",
             colorId: event.colorId,
-            backgroundColor: event.colorId ? googleCalendarColors[event.colorId] : undefined,
+            backgroundColor: event.backgroundColor || (event.colorId ? googleCalendarColors[event.colorId] : undefined),
             teacherId: teacher.id,
             teacherName: teacher.name,
             teacherColor: teacherColor,
