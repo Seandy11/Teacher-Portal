@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7,112 +7,146 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
 import { LoadingSpinner } from "@/components/loading-spinner";
-import { FileSpreadsheet, Lock, Edit2, Save, X, RefreshCw, Search } from "lucide-react";
-import type { AttendanceRow } from "@shared/schema";
+import { FileSpreadsheet, Lock, Edit2, Save, X, RefreshCw, Search, Users } from "lucide-react";
+import type { AttendanceRow, SheetTab } from "@shared/schema";
 
 interface AttendanceTrackerProps {
+  tabs: SheetTab[];
   rows: AttendanceRow[];
-  isLoading: boolean;
-  onUpdate: (rowIndex: number, field: "attendance" | "notes", value: string) => Promise<void>;
+  isLoadingTabs: boolean;
+  isLoadingRows: boolean;
+  selectedTab: string;
+  onSelectTab: (tab: string) => void;
+  onUpdate: (rowIndex: number, value: string) => Promise<void>;
   onRefresh: () => void;
 }
 
-const attendanceOptions = [
-  { value: "present", label: "Present", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
-  { value: "absent", label: "Absent", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" },
-  { value: "late", label: "Late", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" },
-  { value: "excused", label: "Excused", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" },
-];
-
-export function AttendanceTracker({ rows, isLoading, onUpdate, onRefresh }: AttendanceTrackerProps) {
+export function AttendanceTracker({ 
+  tabs, 
+  rows, 
+  isLoadingTabs, 
+  isLoadingRows, 
+  selectedTab, 
+  onSelectTab, 
+  onUpdate, 
+  onRefresh 
+}: AttendanceTrackerProps) {
   const [editingRow, setEditingRow] = useState<number | null>(null);
-  const [editValues, setEditValues] = useState<{ attendance: string; notes: string }>({ attendance: "", notes: "" });
+  const [editValue, setEditValue] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredRows = rows.filter(row => 
-    row.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    row.date.includes(searchQuery)
+    row.date.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    row.lessonNo.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const startEdit = (row: AttendanceRow) => {
     setEditingRow(row.rowIndex);
-    setEditValues({ attendance: row.attendance, notes: row.notes });
+    setEditValue(row.lessonDetails);
   };
 
   const cancelEdit = () => {
     setEditingRow(null);
-    setEditValues({ attendance: "", notes: "" });
+    setEditValue("");
   };
 
   const saveEdit = async (rowIndex: number) => {
     setIsSaving(true);
     try {
-      await onUpdate(rowIndex, "attendance", editValues.attendance);
-      await onUpdate(rowIndex, "notes", editValues.notes);
+      await onUpdate(rowIndex, editValue);
       setEditingRow(null);
+      setEditValue("");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const getAttendanceColor = (value: string) => {
-    return attendanceOptions.find(opt => opt.value === value)?.color || "bg-muted text-muted-foreground";
-  };
+  const currentRow = rows.find(r => r.rowIndex === editingRow);
+  const hasDropdown = currentRow?.dropdownOptions && currentRow.dropdownOptions.length > 0;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-medium">Student Attendance</h2>
-          <p className="text-sm text-muted-foreground">Update attendance and notes for your classes</p>
+          <h2 className="text-lg font-medium">Lesson Tracker</h2>
+          <p className="text-sm text-muted-foreground">Update lesson details for your students</p>
         </div>
         
         <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search students or dates..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 w-64"
-              data-testid="input-search-attendance"
-            />
-          </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={onRefresh}
-            disabled={isLoading}
+            disabled={isLoadingRows || isLoadingTabs}
             data-testid="button-refresh-attendance"
           >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-4 w-4 ${isLoadingRows || isLoadingTabs ? "animate-spin" : ""}`} />
           </Button>
         </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
+          <label className="text-sm font-medium mb-2 block">Student</label>
+          <Select value={selectedTab} onValueChange={onSelectTab} disabled={isLoadingTabs}>
+            <SelectTrigger data-testid="select-student-tab">
+              <SelectValue placeholder={isLoadingTabs ? "Loading students..." : "Select a student"} />
+            </SelectTrigger>
+            <SelectContent>
+              {tabs.map((tab) => (
+                <SelectItem key={tab.sheetId} value={tab.name}>
+                  {tab.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {selectedTab && (
+          <div className="flex-1">
+            <label className="text-sm font-medium mb-2 block">Search</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by date or lesson..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+                data-testid="input-search-attendance"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-4 text-sm flex-wrap">
         <span className="text-muted-foreground">Editable:</span>
         <Badge variant="outline" className="gap-1">
           <Edit2 className="h-3 w-3" />
-          Attendance, Notes
+          Lesson Details
         </Badge>
-        <span className="text-muted-foreground">Protected:</span>
+        <span className="text-muted-foreground">Read-only:</span>
         <Badge variant="secondary" className="gap-1">
           <Lock className="h-3 w-3" />
-          Lesson Plan, Homework
+          All other columns
         </Badge>
       </div>
 
-      {isLoading ? (
+      {!selectedTab ? (
+        <EmptyState
+          icon={Users}
+          title="Select a Student"
+          description="Choose a student from the dropdown to view and update their lesson records."
+        />
+      ) : isLoadingRows ? (
         <div className="flex items-center justify-center py-12">
           <LoadingSpinner size="lg" />
         </div>
       ) : filteredRows.length === 0 ? (
         <EmptyState
           icon={FileSpreadsheet}
-          title="No Attendance Records"
-          description={searchQuery ? "No records match your search." : "No attendance records found. They will appear here when synced from Google Sheets."}
+          title="No Lesson Records"
+          description={searchQuery ? "No records match your search." : "No lesson records found for this student."}
         />
       ) : (
         <Card>
@@ -121,75 +155,90 @@ export function AttendanceTracker({ rows, isLoading, onUpdate, onRefresh }: Atte
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="min-w-[60px]">No.</TableHead>
                     <TableHead className="min-w-[100px]">Date</TableHead>
-                    <TableHead className="min-w-[150px]">Student</TableHead>
-                    <TableHead className="min-w-[100px]">Time</TableHead>
-                    <TableHead className="min-w-[120px]">
+                    <TableHead className="min-w-[200px]">
                       <div className="flex items-center gap-1">
-                        Attendance
+                        Lesson Details
                         <Edit2 className="h-3 w-3 text-primary" />
                       </div>
                     </TableHead>
-                    <TableHead className="min-w-[200px]">
+                    <TableHead className="min-w-[100px]">
                       <div className="flex items-center gap-1">
-                        Notes
-                        <Edit2 className="h-3 w-3 text-primary" />
+                        <Lock className="h-3 w-3 text-muted-foreground" />
+                        Teacher
+                      </div>
+                    </TableHead>
+                    <TableHead className="min-w-[100px]">
+                      <div className="flex items-center gap-1">
+                        <Lock className="h-3 w-3 text-muted-foreground" />
+                        Time Purchased
+                      </div>
+                    </TableHead>
+                    <TableHead className="min-w-[100px]">
+                      <div className="flex items-center gap-1">
+                        <Lock className="h-3 w-3 text-muted-foreground" />
+                        Duration
+                      </div>
+                    </TableHead>
+                    <TableHead className="min-w-[100px]">
+                      <div className="flex items-center gap-1">
+                        <Lock className="h-3 w-3 text-muted-foreground" />
+                        Remaining
                       </div>
                     </TableHead>
                     <TableHead className="min-w-[150px]">
                       <div className="flex items-center gap-1">
                         <Lock className="h-3 w-3 text-muted-foreground" />
-                        Lesson Plan
+                        Notes
                       </div>
                     </TableHead>
-                    <TableHead className="min-w-[100px]">Actions</TableHead>
+                    <TableHead className="min-w-[80px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredRows.map((row) => (
                     <TableRow key={row.rowIndex} data-testid={`row-attendance-${row.rowIndex}`}>
-                      <TableCell className="font-medium">{row.date}</TableCell>
-                      <TableCell>{row.studentName}</TableCell>
-                      <TableCell className="text-muted-foreground">{row.classTime}</TableCell>
+                      <TableCell className="font-medium">{row.lessonNo}</TableCell>
+                      <TableCell>{row.date}</TableCell>
                       <TableCell>
                         {editingRow === row.rowIndex ? (
-                          <Select
-                            value={editValues.attendance}
-                            onValueChange={(val) => setEditValues({ ...editValues, attendance: val })}
-                          >
-                            <SelectTrigger className="w-28" data-testid="select-attendance">
-                              <SelectValue placeholder="Select" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {attendanceOptions.map((opt) => (
-                                <SelectItem key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          row.dropdownOptions && row.dropdownOptions.length > 0 ? (
+                            <Select
+                              value={editValue}
+                              onValueChange={setEditValue}
+                            >
+                              <SelectTrigger className="w-full" data-testid="select-lesson-details">
+                                <SelectValue placeholder="Select..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {row.dropdownOptions.map((option) => (
+                                  <SelectItem key={option} value={option}>
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Input
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              placeholder="Enter lesson details..."
+                              className="min-w-[180px]"
+                              data-testid="input-lesson-details"
+                            />
+                          )
                         ) : (
-                          <Badge variant="outline" className={getAttendanceColor(row.attendance)}>
-                            {row.attendance || "—"}
-                          </Badge>
+                          <span className={`text-sm ${row.lessonDetails ? "" : "text-muted-foreground"}`}>
+                            {row.lessonDetails || "—"}
+                          </span>
                         )}
                       </TableCell>
-                      <TableCell>
-                        {editingRow === row.rowIndex ? (
-                          <Input
-                            value={editValues.notes}
-                            onChange={(e) => setEditValues({ ...editValues, notes: e.target.value })}
-                            placeholder="Add notes..."
-                            className="min-w-[180px]"
-                            data-testid="input-notes"
-                          />
-                        ) : (
-                          <span className="text-sm text-muted-foreground">{row.notes || "—"}</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {row.lessonPlan || "—"}
-                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{row.teacher || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{row.lessonTimePurchased || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{row.lessonDuration || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{row.remainingTime || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{row.notes || "—"}</TableCell>
                       <TableCell>
                         {editingRow === row.rowIndex ? (
                           <div className="flex items-center gap-1">
@@ -198,7 +247,7 @@ export function AttendanceTracker({ rows, isLoading, onUpdate, onRefresh }: Atte
                               size="icon"
                               onClick={() => saveEdit(row.rowIndex)}
                               disabled={isSaving}
-                              data-testid="button-save-attendance"
+                              data-testid="button-save-lesson"
                             >
                               {isSaving ? <LoadingSpinner size="sm" /> : <Save className="h-4 w-4 text-green-600" />}
                             </Button>

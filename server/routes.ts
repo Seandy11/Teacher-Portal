@@ -259,8 +259,8 @@ export async function registerRoutes(
 
   // ============ ATTENDANCE ROUTES ============
 
-  // Get attendance data from Google Sheets
-  app.get("/api/attendance", isAuthenticated, requireTeacher, async (req: any, res) => {
+  // Get sheet tabs (worksheets) for the teacher's spreadsheet
+  app.get("/api/attendance/tabs", isAuthenticated, requireTeacher, async (req: any, res) => {
     try {
       const teacher = req.teacher;
       if (!teacher.sheetId) {
@@ -268,23 +268,88 @@ export async function registerRoutes(
       }
 
       const sheets = await getGoogleSheetsClient();
-      const range = teacher.sheetRowStart || "A2:H1000";
+      const response = await sheets.spreadsheets.get({
+        spreadsheetId: teacher.sheetId,
+        fields: "sheets.properties",
+      });
+
+      const tabs = (response.data.sheets || []).map((sheet: any) => ({
+        name: sheet.properties.title,
+        sheetId: sheet.properties.sheetId,
+      }));
+
+      res.json(tabs);
+    } catch (error) {
+      console.error("Error fetching sheet tabs:", error);
+      res.status(500).json({ message: "Failed to fetch sheet tabs" });
+    }
+  });
+
+  // Get attendance data from Google Sheets for a specific tab
+  // Data starts at row 4 (rows 1-3 are headers)
+  // Structure: A=No., B=Date, C=Lesson details (editable), D=Teacher, E=Lesson time purchased, F=Lesson duration, G=Remaining time, H=Notes
+  app.get("/api/attendance", isAuthenticated, requireTeacher, async (req: any, res) => {
+    try {
+      const teacher = req.teacher;
+      if (!teacher.sheetId) {
+        return res.json([]);
+      }
+
+      const tabName = req.query.tab as string;
+      if (!tabName) {
+        return res.json([]);
+      }
+
+      const sheets = await getGoogleSheetsClient();
+      
+      // Get cell values (data starts at row 4)
+      const range = `'${tabName}'!A4:H1000`;
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: teacher.sheetId,
         range: range,
       });
 
       const rows = response.data.values || [];
-      const attendance: AttendanceRow[] = rows.map((row: any[], index: number) => ({
-        rowIndex: index + 2, // +2 because sheets are 1-indexed and we skip header
-        date: row[0] || "",
-        studentName: row[1] || "",
-        classTime: row[2] || "",
-        attendance: row[3] || "",
-        notes: row[4] || "",
-        lessonPlan: row[5] || "", // Protected column
-        homework: row[6] || "", // Protected column
-      }));
+      
+      // Get data validation for column C to find dropdown options
+      let dropdownOptionsMap: Map<number, string[]> = new Map();
+      try {
+        const validationResponse = await sheets.spreadsheets.get({
+          spreadsheetId: teacher.sheetId,
+          ranges: [`'${tabName}'!C4:C1000`],
+          fields: "sheets.data.rowData.values.dataValidation",
+        });
+        
+        const rowData = validationResponse.data.sheets?.[0]?.data?.[0]?.rowData || [];
+        rowData.forEach((row: any, index: number) => {
+          const validation = row?.values?.[0]?.dataValidation;
+          if (validation?.condition?.type === "ONE_OF_LIST" && validation?.condition?.values) {
+            const options = validation.condition.values.map((v: any) => v.userEnteredValue || "").filter((v: string) => v);
+            if (options.length > 0) {
+              dropdownOptionsMap.set(index + 4, options); // +4 because data starts at row 4
+            }
+          }
+        });
+      } catch (validationError) {
+        console.error("Error fetching data validation:", validationError);
+        // Continue without dropdown options
+      }
+
+      const attendance: AttendanceRow[] = rows.map((row: any[], index: number) => {
+        const rowNum = index + 4; // +4 because data starts at row 4
+        return {
+          rowIndex: rowNum,
+          lessonNo: row[0] || "",
+          date: row[1] || "",
+          lessonDetails: row[2] || "",
+          teacher: row[3] || "",
+          lessonTimePurchased: row[4] || "",
+          lessonDuration: row[5] || "",
+          remainingTime: row[6] || "",
+          notes: row[7] || "",
+          dropdownOptions: dropdownOptionsMap.get(rowNum),
+        };
+      }).filter((row: AttendanceRow) => row.date || row.lessonNo); // Filter out empty rows
 
       res.json(attendance);
     } catch (error) {
@@ -293,14 +358,7 @@ export async function registerRoutes(
     }
   });
 
-  // Helper function to parse row range (e.g., "A2:F100" -> { startRow: 2, endRow: 100 })
-  const parseRowRange = (range: string): { startRow: number; endRow: number } | null => {
-    const match = range.match(/[A-Z]+(\d+):[A-Z]+(\d+)/i);
-    if (!match) return null;
-    return { startRow: parseInt(match[1], 10), endRow: parseInt(match[2], 10) };
-  };
-
-  // Update attendance (only allowed columns and within assigned row range)
+  // Update lesson details (Column C only)
   app.patch("/api/attendance/:rowIndex", isAuthenticated, requireTeacher, async (req: any, res) => {
     try {
       const teacher = req.teacher;
@@ -309,38 +367,21 @@ export async function registerRoutes(
       }
 
       const rowIndex = parseInt(req.params.rowIndex, 10);
-      if (isNaN(rowIndex)) {
+      if (isNaN(rowIndex) || rowIndex < 4) {
         return res.status(400).json({ message: "Invalid row index" });
       }
-      const { field, value } = req.body;
 
-      // Validate row index is within assigned range (use default if not set)
-      const range = teacher.sheetRowStart || "A2:H1000";
-      const rowBounds = parseRowRange(range);
-      if (!rowBounds) {
-        // If no valid range can be parsed, use default bounds
-        if (rowIndex < 2 || rowIndex > 1000) {
-          return res.status(403).json({ message: "Row not within valid attendance range" });
-        }
-      } else if (rowIndex < rowBounds.startRow || rowIndex > rowBounds.endRow) {
-        return res.status(403).json({ message: "Row not within your assigned attendance range" });
-      }
-
-      // Only allow updating specific columns (attendance = D, notes = E)
-      const allowedFields: Record<string, string> = {
-        attendance: "D",
-        notes: "E",
-      };
-
-      const column = allowedFields[field];
-      if (!column) {
-        return res.status(400).json({ message: "Field not editable" });
+      const { tabName, value } = req.body;
+      if (!tabName) {
+        return res.status(400).json({ message: "Tab name is required" });
       }
 
       const sheets = await getGoogleSheetsClient();
+      
+      // Update Column C (lesson details) only
       await sheets.spreadsheets.values.update({
         spreadsheetId: teacher.sheetId,
-        range: `${column}${rowIndex}`,
+        range: `'${tabName}'!C${rowIndex}`,
         valueInputOption: "USER_ENTERED",
         requestBody: {
           values: [[value]],
@@ -349,8 +390,8 @@ export async function registerRoutes(
 
       res.json({ success: true });
     } catch (error) {
-      console.error("Error updating attendance:", error);
-      res.status(500).json({ message: "Failed to update attendance" });
+      console.error("Error updating lesson details:", error);
+      res.status(500).json({ message: "Failed to update lesson details" });
     }
   });
 

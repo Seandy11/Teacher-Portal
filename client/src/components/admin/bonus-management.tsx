@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { LoadingSpinner } from "@/components/loading-spinner";
-import { Plus, Trash2, DollarSign, Gift } from "lucide-react";
+import { Plus, Trash2, Wallet, Gift } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -203,7 +203,7 @@ export function BonusManagement({ teachers }: BonusManagementProps) {
                   name="amount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Amount ($)</FormLabel>
+                      <FormLabel>Amount (R)</FormLabel>
                       <FormControl>
                         <Input 
                           type="number" 
@@ -296,7 +296,7 @@ export function BonusManagement({ teachers }: BonusManagementProps) {
             </div>
           ) : bonuses.length === 0 ? (
             <EmptyState
-              icon={DollarSign}
+              icon={Wallet}
               title="No Bonuses"
               description={`No bonuses found for ${teacherMap.get(selectedTeacher)} in ${format(new Date(selectedMonth + "-01"), "MMMM yyyy")}.`}
             />
@@ -310,10 +310,10 @@ export function BonusManagement({ teachers }: BonusManagementProps) {
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                      <DollarSign className="h-5 w-5 text-primary" />
+                      <Wallet className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-medium">${parseFloat(bonus.amount).toFixed(2)}</p>
+                      <p className="font-medium">R{parseFloat(bonus.amount).toFixed(2)}</p>
                       <p className="text-sm text-muted-foreground">{bonus.reason}</p>
                       {bonus.createdAt && (
                         <p className="text-xs text-muted-foreground">
@@ -335,7 +335,7 @@ export function BonusManagement({ teachers }: BonusManagementProps) {
               ))}
               <div className="pt-2 border-t">
                 <p className="text-sm font-medium">
-                  Total Bonuses: <span className="text-primary">${bonuses.reduce((sum, b) => sum + parseFloat(b.amount), 0).toFixed(2)}</span>
+                  Total Bonuses: <span className="text-primary">R{bonuses.reduce((sum, b) => sum + parseFloat(b.amount), 0).toFixed(2)}</span>
                 </p>
               </div>
             </div>
@@ -348,7 +348,7 @@ export function BonusManagement({ teachers }: BonusManagementProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Bonus?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the ${deleteTarget ? parseFloat(deleteTarget.amount).toFixed(2) : ""} bonus. This action cannot be undone.
+              This will remove the R{deleteTarget ? parseFloat(deleteTarget.amount).toFixed(2) : ""} bonus. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
-import { DollarSign, Clock, Gift, TrendingUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { Wallet, Clock, Gift, TrendingUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { format, subMonths, addMonths } from "date-fns";
 
 interface PaySummary {
@@ -150,10 +150,10 @@ export function PayDashboard({ className }: PayDashboardProps) {
             <Card data-testid="card-total-pay">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Pay</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <Wallet className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${paySummary.totalPay.toFixed(2)}</div>
+                <div className="text-2xl font-bold">R{paySummary.totalPay.toFixed(2)}</div>
                 <p className="text-xs text-muted-foreground">
                   {displayMonth}
                 </p>
@@ -179,9 +179,9 @@ export function PayDashboard({ className }: PayDashboardProps) {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${paySummary.basePay.toFixed(2)}</div>
+                <div className="text-2xl font-bold">R{paySummary.basePay.toFixed(2)}</div>
                 <p className="text-xs text-muted-foreground">
-                  @ ${paySummary.hourlyRate.toFixed(2)}/hr
+                  @ R{paySummary.hourlyRate.toFixed(2)}/hr
                 </p>
               </CardContent>
             </Card>
@@ -192,7 +192,7 @@ export function PayDashboard({ className }: PayDashboardProps) {
                 <Gift className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${paySummary.totalBonuses.toFixed(2)}</div>
+                <div className="text-2xl font-bold">R{paySummary.totalBonuses.toFixed(2)}</div>
                 <p className="text-xs text-muted-foreground">
                   {paySummary.bonuses.length} bonus{paySummary.bonuses.length !== 1 ? "es" : ""}
                 </p>
@@ -215,11 +215,11 @@ export function PayDashboard({ className }: PayDashboardProps) {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Hourly rate</span>
-                    <span>${paySummary.hourlyRate.toFixed(2)}</span>
+                    <span>R{paySummary.hourlyRate.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm font-medium pt-2 border-t">
                     <span>Base pay</span>
-                    <span>${paySummary.basePay.toFixed(2)}</span>
+                    <span>R{paySummary.basePay.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -242,7 +242,7 @@ export function PayDashboard({ className }: PayDashboardProps) {
                             </p>
                           )}
                         </div>
-                        <span className="font-medium text-primary">+${bonus.amount.toFixed(2)}</span>
+                        <span className="font-medium text-primary">+R{bonus.amount.toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
@@ -252,7 +252,7 @@ export function PayDashboard({ className }: PayDashboardProps) {
               <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-medium">Total for {displayMonth}</span>
-                  <span className="text-2xl font-bold text-primary">${paySummary.totalPay.toFixed(2)}</span>
+                  <span className="text-2xl font-bold text-primary">R{paySummary.totalPay.toFixed(2)}</span>
                 </div>
               </div>
             </CardContent>

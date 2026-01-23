@@ -119,14 +119,22 @@ export interface CalendarEvent {
 }
 
 // Attendance row type (from Google Sheets)
+// Structure: A=No., B=Date, C=Lesson details (editable), D=Teacher, E=Lesson time purchased, F=Lesson duration, G=Remaining time, H=Notes
 export interface AttendanceRow {
   rowIndex: number;
-  date: string;
-  studentName: string;
-  classTime: string;
-  attendance: string; // present, absent, late, etc.
-  notes: string;
-  // Protected columns (read-only for teachers)
-  lessonPlan?: string;
-  homework?: string;
+  lessonNo: string; // Column A - lesson number
+  date: string; // Column B
+  lessonDetails: string; // Column C - EDITABLE (dropdown or free text)
+  teacher: string; // Column D - read-only
+  lessonTimePurchased: string; // Column E - read-only
+  lessonDuration: string; // Column F - read-only
+  remainingTime: string; // Column G - read-only
+  notes: string; // Column H - read-only
+  dropdownOptions?: string[]; // Data validation options for Column C (if any)
+}
+
+// Sheet tab info
+export interface SheetTab {
+  name: string;
+  sheetId: number;
 }

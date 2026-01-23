@@ -410,7 +410,7 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
                         <RoleBadge role={teacher.role} />
                       </TableCell>
                       <TableCell className="text-sm">
-                        {teacher.hourlyRate ? `$${parseFloat(teacher.hourlyRate).toFixed(2)}/hr` : "—"}
+                        {teacher.hourlyRate ? `R${parseFloat(teacher.hourlyRate).toFixed(2)}/hr` : "—"}
                       </TableCell>
                       <TableCell>
                         <Badge variant={teacher.isActive ? "default" : "secondary"}>

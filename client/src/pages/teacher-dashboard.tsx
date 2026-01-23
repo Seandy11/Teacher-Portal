@@ -13,14 +13,15 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/auth-utils";
-import { Calendar, FileSpreadsheet, Clock, CalendarDays, DollarSign } from "lucide-react";
-import type { Teacher, CalendarEvent, AttendanceRow, LeaveRequest } from "@shared/schema";
+import { Calendar, FileSpreadsheet, Clock, CalendarDays, Wallet } from "lucide-react";
+import type { Teacher, CalendarEvent, AttendanceRow, LeaveRequest, SheetTab } from "@shared/schema";
 
 export default function TeacherDashboard() {
   const { user, logout, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("timetable");
+  const [selectedStudentTab, setSelectedStudentTab] = useState<string>("");
 
   const { data: teacher, isLoading: teacherLoading, error: teacherError } = useQuery<Teacher>({
     queryKey: ["/api/teachers/me"],
@@ -32,9 +33,22 @@ export default function TeacherDashboard() {
     enabled: !!teacher,
   });
 
-  const { data: attendance = [], isLoading: attendanceLoading, error: attendanceError, refetch: refetchAttendance } = useQuery<AttendanceRow[]>({
-    queryKey: ["/api/attendance"],
+  // Fetch sheet tabs (student worksheets)
+  const { data: sheetTabs = [], isLoading: tabsLoading, error: tabsError, refetch: refetchTabs } = useQuery<SheetTab[]>({
+    queryKey: ["/api/attendance/tabs"],
     enabled: !!teacher,
+  });
+
+  // Fetch attendance data for selected student tab
+  const { data: attendance = [], isLoading: attendanceLoading, error: attendanceError, refetch: refetchAttendance } = useQuery<AttendanceRow[]>({
+    queryKey: ["/api/attendance", selectedStudentTab],
+    queryFn: async () => {
+      if (!selectedStudentTab) return [];
+      const response = await fetch(`/api/attendance?tab=${encodeURIComponent(selectedStudentTab)}`);
+      if (!response.ok) throw new Error("Failed to fetch attendance");
+      return response.json();
+    },
+    enabled: !!teacher && !!selectedStudentTab,
   });
 
   const { data: leaveRequests = [], isLoading: leaveLoading, error: leaveError, refetch: refetchLeave } = useQuery<LeaveRequest[]>({
@@ -90,13 +104,13 @@ export default function TeacherDashboard() {
     },
   });
 
-  const updateAttendanceMutation = useMutation({
-    mutationFn: async ({ rowIndex, field, value }: { rowIndex: number; field: string; value: string }) => {
-      return apiRequest("PATCH", `/api/attendance/${rowIndex}`, { field, value });
+  const updateLessonMutation = useMutation({
+    mutationFn: async ({ rowIndex, value }: { rowIndex: number; value: string }) => {
+      return apiRequest("PATCH", `/api/attendance/${rowIndex}`, { tabName: selectedStudentTab, value });
     },
     onSuccess: () => {
-      toast({ title: "Attendance updated", description: "Changes saved to Google Sheets." });
-      queryClient.invalidateQueries({ queryKey: ["/api/attendance"] });
+      toast({ title: "Lesson updated", description: "Changes saved to Google Sheets." });
+      queryClient.invalidateQueries({ queryKey: ["/api/attendance", selectedStudentTab] });
     },
     onError: (error) => {
       if (isUnauthorizedError(error as Error)) {
@@ -104,7 +118,7 @@ export default function TeacherDashboard() {
         setTimeout(() => { window.location.href = "/api/login"; }, 500);
         return;
       }
-      toast({ title: "Error", description: "Failed to update attendance.", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to update lesson details.", variant: "destructive" });
     },
   });
 
@@ -132,8 +146,8 @@ export default function TeacherDashboard() {
 
   const tabs = [
     { id: "timetable", label: "My Timetable", icon: Calendar },
-    { id: "attendance", label: "Attendance", icon: FileSpreadsheet },
-    { id: "pay", label: "My Pay", icon: DollarSign },
+    { id: "attendance", label: "Lesson Tracker", icon: FileSpreadsheet },
+    { id: "pay", label: "My Pay", icon: Wallet },
     { id: "availability", label: "Availability", icon: Clock },
     { id: "leave", label: "Leave", icon: CalendarDays },
   ];
@@ -170,20 +184,24 @@ export default function TeacherDashboard() {
           </TabsContent>
 
           <TabsContent value="attendance" className="space-y-6">
-            {attendanceError && !isUnauthorizedError(attendanceError as Error) ? (
+            {(attendanceError || tabsError) && !isUnauthorizedError((attendanceError || tabsError) as Error) ? (
               <ErrorDisplay 
-                title="Failed to load attendance"
-                message="Could not fetch attendance data. Please check your sheet settings or try again."
-                onRetry={() => refetchAttendance()}
+                title="Failed to load lesson tracker"
+                message="Could not fetch lesson data. Please check your sheet settings or try again."
+                onRetry={() => { refetchTabs(); refetchAttendance(); }}
               />
             ) : (
               <AttendanceTracker
+                tabs={sheetTabs}
                 rows={attendance}
-                isLoading={attendanceLoading}
-                onUpdate={async (rowIndex, field, value) => {
-                  await updateAttendanceMutation.mutateAsync({ rowIndex, field, value });
+                isLoadingTabs={tabsLoading}
+                isLoadingRows={attendanceLoading}
+                selectedTab={selectedStudentTab}
+                onSelectTab={setSelectedStudentTab}
+                onUpdate={async (rowIndex, value) => {
+                  await updateLessonMutation.mutateAsync({ rowIndex, value });
                 }}
-                onRefresh={() => refetchAttendance()}
+                onRefresh={() => { refetchTabs(); refetchAttendance(); }}
               />
             )}
           </TabsContent>
