@@ -703,15 +703,71 @@ export async function registerRoutes(
 
   // ============ PAY CALCULATION ROUTES ============
 
+  // Helper function to parse currency value (e.g., "R100.00" -> 100.00)
+  const parseCurrencyValue = (value: string | undefined): number => {
+    if (!value) return 0;
+    const cleaned = value.replace(/[R,\s]/g, "").replace("/", "");
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
+  };
+
+  // Helper function to fetch bonuses from payroll sheet
+  const fetchBonusesFromSheet = async (teacherName: string, year: number, monthNum: number) => {
+    const payrollSheetId = process.env.PAYROLL_SHEET_ID;
+    if (!payrollSheetId) {
+      console.log("No PAYROLL_SHEET_ID configured, returning zero bonuses");
+      return { assessment: 0, training: 0, referral: 0, retention: 0, demo: 0, total: 0 };
+    }
+
+    try {
+      const sheets = await getGoogleSheetsClient();
+      const range = "'Adjustments'!A2:I1000"; // A=Teacher, B=Year, C=Month, D-H=Bonus types, I=Notes
+      
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: payrollSheetId,
+        range: range,
+      });
+
+      const rows = response.data.values || [];
+      let assessment = 0, training = 0, referral = 0, retention = 0, demo = 0;
+      
+      // Match teacher name (case-insensitive, first name match)
+      const teacherFirstName = teacherName.split(" ")[0].toLowerCase();
+      
+      for (const row of rows) {
+        const rowTeacher = (row[0] || "").toLowerCase();
+        const rowYear = parseInt(row[1] || "0", 10);
+        const rowMonth = parseInt(row[2] || "0", 10);
+        
+        // Check if this row matches the teacher and month
+        if (rowTeacher === teacherFirstName && rowYear === year && rowMonth === monthNum) {
+          assessment += parseCurrencyValue(row[3]);
+          training += parseCurrencyValue(row[4]);
+          referral += parseCurrencyValue(row[5]);
+          retention += parseCurrencyValue(row[6]);
+          demo += parseCurrencyValue(row[7]);
+        }
+      }
+
+      const total = assessment + training + referral + retention + demo;
+      console.log(`Bonuses from sheet for ${teacherName} (${year}-${monthNum}):`, { assessment, training, referral, retention, demo, total });
+      
+      return { assessment, training, referral, retention, demo, total };
+    } catch (error) {
+      console.error("Error fetching bonuses from payroll sheet:", error);
+      return { assessment: 0, training: 0, referral: 0, retention: 0, demo: 0, total: 0 };
+    }
+  };
+
   // Get pay summary for a teacher (teacher can view own, admin can view any)
   app.get("/api/pay/summary", isAuthenticated, requireTeacher, async (req: any, res) => {
     try {
       const teacher = req.teacher;
       const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
+      const [year, monthNum] = month.split("-").map(Number);
       
-      // Get bonuses for this month
-      const bonuses = await storage.getBonusesByTeacherAndMonth(teacher.id, month);
-      const totalBonuses = bonuses.reduce((sum, b) => sum + parseFloat(b.amount), 0);
+      // Get bonuses from payroll sheet
+      const bonuses = await fetchBonusesFromSheet(teacher.name, year, monthNum);
       
       // Calculate minutes from calendar if calendar is set up
       // Only count lessons that have ENDED (completed lessons only)
@@ -720,7 +776,6 @@ export async function registerRoutes(
       if (teacher.calendarId) {
         try {
           const calendar = await getGoogleCalendarClient();
-          const [year, monthNum] = month.split("-").map(Number);
           const timeMin = new Date(year, monthNum - 1, 1);
           const timeMax = new Date(year, monthNum, 0, 23, 59, 59);
           
@@ -791,8 +846,6 @@ export async function registerRoutes(
             eventsCounted: countedEvents.length,
             eventsSkipped: skippedEvents.length
           });
-          console.log("Counted events:", JSON.stringify(countedEvents, null, 2));
-          console.log("Skipped events:", JSON.stringify(skippedEvents, null, 2));
         } catch (calendarError) {
           console.error("Error fetching calendar for pay calculation:", calendarError);
         }
@@ -801,7 +854,7 @@ export async function registerRoutes(
       const hourlyRate = teacher.hourlyRate ? parseFloat(teacher.hourlyRate) : 0;
       const hoursWorked = totalMinutes / 60;
       const basePay = hoursWorked * hourlyRate;
-      const totalPay = basePay + totalBonuses;
+      const totalPay = basePay + bonuses.total;
       
       res.json({
         month,
@@ -811,13 +864,14 @@ export async function registerRoutes(
         totalMinutes,
         hoursWorked: parseFloat(hoursWorked.toFixed(2)),
         basePay: parseFloat(basePay.toFixed(2)),
-        bonuses: bonuses.map(b => ({
-          id: b.id,
-          amount: parseFloat(b.amount),
-          reason: b.reason,
-          createdAt: b.createdAt,
-        })),
-        totalBonuses: parseFloat(totalBonuses.toFixed(2)),
+        bonuses: {
+          assessment: parseFloat(bonuses.assessment.toFixed(2)),
+          training: parseFloat(bonuses.training.toFixed(2)),
+          referral: parseFloat(bonuses.referral.toFixed(2)),
+          retention: parseFloat(bonuses.retention.toFixed(2)),
+          demo: parseFloat(bonuses.demo.toFixed(2)),
+          total: parseFloat(bonuses.total.toFixed(2)),
+        },
         totalPay: parseFloat(totalPay.toFixed(2)),
       });
     } catch (error) {

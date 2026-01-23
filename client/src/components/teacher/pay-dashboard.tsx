@@ -5,8 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
-import { Wallet, Clock, Gift, TrendingUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { Wallet, Clock, Gift, TrendingUp, ChevronLeft, ChevronRight, Award, GraduationCap, Users, UserPlus, Presentation } from "lucide-react";
 import { format, subMonths, addMonths } from "date-fns";
+
+interface BonusBreakdown {
+  assessment: number;
+  training: number;
+  referral: number;
+  retention: number;
+  demo: number;
+  total: number;
+}
 
 interface PaySummary {
   month: string;
@@ -16,13 +25,7 @@ interface PaySummary {
   totalMinutes: number;
   hoursWorked: number;
   basePay: number;
-  bonuses: Array<{
-    id: string;
-    amount: number;
-    reason: string;
-    createdAt: string | null;
-  }>;
-  totalBonuses: number;
+  bonuses: BonusBreakdown;
   totalPay: number;
 }
 
@@ -79,6 +82,14 @@ export function PayDashboard({ className }: PayDashboardProps) {
 
   const monthOptions = generateMonthOptions();
   const displayMonth = format(new Date(selectedMonth + "-01"), "MMMM yyyy");
+
+  const bonusItems = paySummary ? [
+    { key: "assessment", label: "Assessment", amount: paySummary.bonuses.assessment, icon: Award },
+    { key: "training", label: "Training", amount: paySummary.bonuses.training, icon: GraduationCap },
+    { key: "referral", label: "Referral", amount: paySummary.bonuses.referral, icon: UserPlus },
+    { key: "retention", label: "Retention", amount: paySummary.bonuses.retention, icon: Users },
+    { key: "demo", label: "Demo", amount: paySummary.bonuses.demo, icon: Presentation },
+  ].filter(item => item.amount > 0) : [];
 
   if (error) {
     return (
@@ -192,9 +203,9 @@ export function PayDashboard({ className }: PayDashboardProps) {
                 <Gift className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">R{paySummary.totalBonuses.toFixed(2)}</div>
+                <div className="text-2xl font-bold">R{paySummary.bonuses.total.toFixed(2)}</div>
                 <p className="text-xs text-muted-foreground">
-                  {paySummary.bonuses.length} bonus{paySummary.bonuses.length !== 1 ? "es" : ""}
+                  {bonusItems.length} bonus type{bonusItems.length !== 1 ? "s" : ""}
                 </p>
               </CardContent>
             </Card>
@@ -224,27 +235,38 @@ export function PayDashboard({ className }: PayDashboardProps) {
                 </div>
               </div>
 
-              {paySummary.bonuses.length > 0 && (
+              {bonusItems.length > 0 && (
                 <div className="space-y-3">
-                  <h4 className="text-sm font-medium">Bonuses</h4>
+                  <h4 className="text-sm font-medium">Bonuses & Adjustments</h4>
                   <div className="space-y-2">
-                    {paySummary.bonuses.map((bonus) => (
+                    {bonusItems.map((bonus) => (
                       <div 
-                        key={bonus.id} 
+                        key={bonus.key} 
                         className="p-4 border rounded-lg flex justify-between items-center"
-                        data-testid={`pay-bonus-${bonus.id}`}
+                        data-testid={`pay-bonus-${bonus.key}`}
                       >
-                        <div>
-                          <p className="text-sm font-medium">{bonus.reason}</p>
-                          {bonus.createdAt && (
-                            <p className="text-xs text-muted-foreground">
-                              Added {format(new Date(bonus.createdAt), "MMM d, yyyy")}
-                            </p>
-                          )}
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-primary/10 rounded-full">
+                            <bonus.icon className="h-4 w-4 text-primary" />
+                          </div>
+                          <span className="text-sm font-medium">{bonus.label}</span>
                         </div>
-                        <span className="font-medium text-primary">+R{bonus.amount.toFixed(2)}</span>
+                        <span className="font-medium text-green-600">+R{bonus.amount.toFixed(2)}</span>
                       </div>
                     ))}
+                    <div className="p-3 border rounded-lg flex justify-between items-center bg-muted/50">
+                      <span className="text-sm font-medium">Total Bonuses</span>
+                      <span className="font-medium">R{paySummary.bonuses.total.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {bonusItems.length === 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium">Bonuses & Adjustments</h4>
+                  <div className="p-4 border rounded-lg text-center text-muted-foreground text-sm">
+                    No bonuses for this month
                   </div>
                 </div>
               )}

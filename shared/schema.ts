@@ -138,3 +138,21 @@ export interface SheetTab {
   name: string;
   sheetId: number;
 }
+
+// Pay summary with bonus breakdown from payroll sheet
+export interface PaySummary {
+  month: string;
+  totalMinutes: number;
+  totalHours: number;
+  hourlyRate: number;
+  basePay: number;
+  bonuses: {
+    assessment: number;
+    training: number;
+    referral: number;
+    retention: number;
+    demo: number;
+    total: number;
+  };
+  totalPay: number;
+}
