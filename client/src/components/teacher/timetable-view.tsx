@@ -1,12 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Calendar, Clock, Lock, User, ChevronLeft, ChevronRight, RefreshCw, MapPin, CheckCircle } from "lucide-react";
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isSameDay, parseISO, isPast, isToday as isTodayCheck } from "date-fns";
-import { useState, useEffect } from "react";
+import { Calendar, Clock, ChevronLeft, ChevronRight, RefreshCw, Lock } from "lucide-react";
+import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isSameDay, parseISO, isPast } from "date-fns";
+import { useState, useEffect, useMemo } from "react";
 import type { CalendarEvent } from "@shared/schema";
 
 interface TimetableViewProps {
@@ -14,6 +12,11 @@ interface TimetableViewProps {
   isLoading: boolean;
   onRefresh: () => void;
 }
+
+const HOUR_HEIGHT = 60; // pixels per hour
+const START_HOUR = 7; // 07:00
+const END_HOUR = 20; // 20:00
+const HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
 export function TimetableView({ events, isLoading, onRefresh }: TimetableViewProps) {
   const [currentWeek, setCurrentWeek] = useState(new Date());
@@ -38,20 +41,35 @@ export function TimetableView({ events, isLoading, onRefresh }: TimetableViewPro
     }).sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
   };
 
-  const formatEventTime = (start: string, end: string) => {
-    return `${format(parseISO(start), "HH:mm")} - ${format(parseISO(end), "HH:mm")}`;
+  // Calculate event position and height based on time
+  const getEventStyle = (event: CalendarEvent) => {
+    const startTime = parseISO(event.start);
+    const endTime = parseISO(event.end);
+    
+    const startHour = startTime.getHours() + startTime.getMinutes() / 60;
+    const endHour = endTime.getHours() + endTime.getMinutes() / 60;
+    
+    const top = (startHour - START_HOUR) * HOUR_HEIGHT;
+    const height = (endHour - startHour) * HOUR_HEIGHT;
+    
+    return {
+      top: `${top}px`,
+      height: `${Math.max(height, 30)}px`, // Minimum 30px height
+    };
   };
 
-  // Check if event has ended
-  const isEventPast = (endTime: string) => {
-    return isPast(parseISO(endTime));
-  };
+  // Calculate current time indicator position
+  const currentTimePosition = useMemo(() => {
+    const hour = currentTime.getHours() + currentTime.getMinutes() / 60;
+    if (hour < START_HOUR || hour > END_HOUR) return null;
+    return (hour - START_HOUR) * HOUR_HEIGHT;
+  }, [currentTime]);
 
-  // Default color if no colorId
+  // Default color if no backgroundColor
   const defaultEventColor = "#3b82f6";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1">
@@ -101,10 +119,6 @@ export function TimetableView({ events, isLoading, onRefresh }: TimetableViewPro
       </div>
 
       <div className="flex items-center gap-4 text-sm">
-        <div className="flex items-center gap-2">
-          <div className="h-3 w-3 rounded bg-primary" />
-          <span className="text-muted-foreground">Scheduled Class</span>
-        </div>
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <Lock className="h-3 w-3" />
           <span>Read-only (synced from Calendar)</span>
@@ -122,107 +136,165 @@ export function TimetableView({ events, isLoading, onRefresh }: TimetableViewPro
           description="You don't have any classes scheduled for this week. Check back later or contact your administrator."
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-5 lg:grid-cols-7 gap-4">
-          {daysOfWeek.map((day) => {
-            const dayEvents = getEventsForDay(day);
-            const isToday = isSameDay(day, new Date());
+        <div className="border rounded-lg overflow-hidden">
+          {/* Header row with days */}
+          <div className="flex border-b bg-muted/50">
+            {/* Time column header */}
+            <div className="w-16 flex-shrink-0 border-r" />
             
-            return (
-              <div key={day.toISOString()} className="min-h-[200px]">
-                <div className={`text-center py-2 rounded-t-lg ${isToday ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+            {/* Day headers */}
+            {daysOfWeek.map((day) => {
+              const isToday = isSameDay(day, new Date());
+              return (
+                <div 
+                  key={day.toISOString()} 
+                  className={`flex-1 text-center py-2 border-r last:border-r-0 ${isToday ? "bg-primary text-primary-foreground" : ""}`}
+                >
                   <div className="text-xs font-medium uppercase">{format(day, "EEE")}</div>
-                  <div className={`text-lg font-medium ${isToday ? "" : "text-foreground"}`}>{format(day, "d")}</div>
+                  <div className="text-lg font-medium">{format(day, "d")}</div>
                 </div>
-                
-                {/* Current time indicator for today */}
-                {isToday && (
-                  <div className="relative">
-                    <div className="flex items-center gap-1 px-1 py-0.5">
-                      <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              );
+            })}
+          </div>
+
+          {/* Time grid */}
+          <div className="flex overflow-x-auto">
+            {/* Time labels column */}
+            <div className="w-16 flex-shrink-0 border-r">
+              {HOURS.map((hour) => (
+                <div 
+                  key={hour} 
+                  className="border-b last:border-b-0 text-xs text-muted-foreground pr-2 text-right"
+                  style={{ height: `${HOUR_HEIGHT}px` }}
+                >
+                  <span className="relative -top-2">{String(hour).padStart(2, '0')}:00</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Day columns */}
+            {daysOfWeek.map((day) => {
+              const dayEvents = getEventsForDay(day);
+              const isToday = isSameDay(day, new Date());
+              
+              return (
+                <div 
+                  key={day.toISOString()} 
+                  className="flex-1 relative border-r last:border-r-0 min-w-[100px]"
+                  style={{ height: `${HOURS.length * HOUR_HEIGHT}px` }}
+                >
+                  {/* Hour grid lines */}
+                  {HOURS.map((hour) => (
+                    <div 
+                      key={hour}
+                      className="absolute w-full border-b border-dashed border-muted"
+                      style={{ top: `${(hour - START_HOUR) * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}
+                    />
+                  ))}
+                  
+                  {/* Current time indicator */}
+                  {isToday && currentTimePosition !== null && (
+                    <div 
+                      className="absolute left-0 right-0 z-20 flex items-center pointer-events-none"
+                      style={{ top: `${currentTimePosition}px` }}
+                    >
+                      <div className="w-2.5 h-2.5 rounded-full bg-red-500 -ml-1 animate-pulse" />
                       <div className="flex-1 h-0.5 bg-red-500" />
-                      <span className="text-xs text-red-500 font-medium">
-                        {format(currentTime, "HH:mm")}
-                      </span>
                     </div>
-                  </div>
-                )}
-                
-                <div className="space-y-2 pt-2">
-                  {dayEvents.length === 0 ? (
-                    <div className="text-center py-4 text-sm text-muted-foreground">
-                      No classes
-                    </div>
-                  ) : (
-                    dayEvents.map((event) => {
-                      const eventColor = event.backgroundColor || defaultEventColor;
-                      const isPastEvent = isEventPast(event.end);
-                      
-                      return (
-                        <Tooltip key={event.id}>
-                          <TooltipTrigger asChild>
-                            <Card 
-                              className={`hover-elevate cursor-pointer transition-opacity ${isPastEvent ? "opacity-50" : ""}`}
-                              style={{
-                                borderLeftWidth: "4px",
-                                borderLeftColor: eventColor,
-                              }}
-                              data-testid={`card-event-${event.id}`}
-                            >
-                              <CardContent className="p-3">
-                                <div className="flex items-start justify-between gap-2 mb-2">
-                                  <Badge 
-                                    variant="outline" 
-                                    className="text-xs gap-1"
-                                    style={{ 
-                                      backgroundColor: `${eventColor}20`,
-                                      borderColor: eventColor,
-                                    }}
-                                  >
-                                    <Lock className="h-2.5 w-2.5" />
-                                    {isPastEvent ? "Completed" : "Class"}
-                                  </Badge>
-                                </div>
-                                <h4 className="font-medium text-sm mb-1 line-clamp-2">{event.title}</h4>
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <Clock className="h-3 w-3" />
-                                  {formatEventTime(event.start, event.end)}
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </TooltipTrigger>
-                          <TooltipContent side="right" className="max-w-xs">
-                            <div className="space-y-2">
-                              <div className="font-medium">{event.title}</div>
-                              <div className="text-sm flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {format(parseISO(event.start), "EEEE, MMM d")}
-                              </div>
-                              <div className="text-sm">
-                                {formatEventTime(event.start, event.end)}
-                              </div>
-                              {event.description && (
-                                <div className="text-sm text-muted-foreground border-t pt-2 mt-2">
-                                  {event.description}
-                                </div>
-                              )}
-                              {isPastEvent && (
-                                <div className="text-sm text-green-600 font-medium flex items-center gap-1">
-                                  <CheckCircle className="h-3 w-3" />
-                                  Completed
-                                </div>
-                              )}
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    })
                   )}
+
+                  {/* Events */}
+                  {dayEvents.map((event, index) => {
+                    const eventColor = event.backgroundColor || defaultEventColor;
+                    const isPastEvent = isPast(parseISO(event.end));
+                    const style = getEventStyle(event);
+                    
+                    // Check for overlapping events to adjust width
+                    const overlapping = dayEvents.filter((e, i) => {
+                      if (i === index) return false;
+                      const eStart = parseISO(e.start).getTime();
+                      const eEnd = parseISO(e.end).getTime();
+                      const thisStart = parseISO(event.start).getTime();
+                      const thisEnd = parseISO(event.end).getTime();
+                      return (thisStart < eEnd && thisEnd > eStart);
+                    });
+                    
+                    const overlapIndex = dayEvents.slice(0, index).filter(e => {
+                      const eStart = parseISO(e.start).getTime();
+                      const eEnd = parseISO(e.end).getTime();
+                      const thisStart = parseISO(event.start).getTime();
+                      const thisEnd = parseISO(event.end).getTime();
+                      return (thisStart < eEnd && thisEnd > eStart);
+                    }).length;
+                    
+                    const totalOverlaps = overlapping.length + 1;
+                    const width = totalOverlaps > 1 ? `${100 / totalOverlaps}%` : '100%';
+                    const left = totalOverlaps > 1 ? `${(overlapIndex * 100) / totalOverlaps}%` : '0';
+                    
+                    return (
+                      <Tooltip key={event.id}>
+                        <TooltipTrigger asChild>
+                          <div
+                            className={`absolute rounded-sm cursor-pointer overflow-hidden text-xs p-1 transition-opacity ${isPastEvent ? "opacity-50" : ""}`}
+                            style={{
+                              ...style,
+                              width,
+                              left,
+                              backgroundColor: eventColor,
+                              color: getContrastColor(eventColor),
+                              zIndex: 10,
+                            }}
+                            data-testid={`event-${event.id}`}
+                          >
+                            <div className="font-medium truncate leading-tight">{event.title}</div>
+                            <div className="truncate opacity-90 leading-tight">
+                              {format(parseISO(event.start), "HH:mm")} - {format(parseISO(event.end), "HH:mm")}
+                            </div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs z-50">
+                          <div className="space-y-1">
+                            <div className="font-medium">{event.title}</div>
+                            <div className="text-sm flex items-center gap-1 text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              {format(parseISO(event.start), "EEEE, MMM d")}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {format(parseISO(event.start), "HH:mm")} - {format(parseISO(event.end), "HH:mm")}
+                            </div>
+                            {event.description && (
+                              <div className="text-sm text-muted-foreground border-t pt-1 mt-1">
+                                {event.description}
+                              </div>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
   );
+}
+
+// Helper function to get contrasting text color
+function getContrastColor(hexColor: string): string {
+  // Remove # if present
+  const hex = hexColor.replace('#', '');
+  
+  // Parse RGB values
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  
+  // Calculate relative luminance
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  
+  // Return black or white based on luminance
+  return luminance > 0.5 ? '#000000' : '#ffffff';
 }

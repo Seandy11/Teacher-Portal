@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ChevronLeft, ChevronRight, Calendar, Lock, Eye, EyeOff, Clock, User, CheckCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Eye, EyeOff, Clock, User } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, isSameDay, parseISO, eachDayOfInterval, isPast } from "date-fns";
 import type { CalendarEvent } from "@shared/schema";
 
@@ -20,13 +20,27 @@ interface CalendarOverviewProps {
   className?: string;
 }
 
+const HOUR_HEIGHT = 48; // pixels per hour
+const START_HOUR = 7; // 07:00
+const END_HOUR = 20; // 20:00
+const HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
+
+// Helper function to get contrasting text color
+function getContrastColor(hexColor: string): string {
+  const hex = hexColor.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.5 ? '#000000' : '#ffffff';
+}
+
 export function CalendarOverview({ className }: CalendarOverviewProps) {
   const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [visibleTeacherIds, setVisibleTeacherIds] = useState<Set<string>>(new Set());
   const [currentTime, setCurrentTime] = useState(new Date());
   const hasInitialized = useRef(false);
 
-  // Update current time every minute
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(interval);
@@ -82,57 +96,37 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
     return events.filter(event => visibleTeacherIds.has(event.teacherId));
   }, [events, visibleTeacherIds]);
 
-  // Group overlapping events together
-  const groupOverlappingEvents = (events: TeacherCalendarEvent[]): TeacherCalendarEvent[][] => {
-    if (events.length === 0) return [];
-    
-    const sorted = [...events].sort((a, b) => 
-      new Date(a.start).getTime() - new Date(b.start).getTime()
-    );
-    
-    const groups: TeacherCalendarEvent[][] = [];
-    let currentGroup: TeacherCalendarEvent[] = [sorted[0]];
-    let groupEnd = new Date(sorted[0].end).getTime();
-    
-    for (let i = 1; i < sorted.length; i++) {
-      const event = sorted[i];
-      const eventStart = new Date(event.start).getTime();
-      
-      if (eventStart < groupEnd) {
-        // Overlaps with current group
-        currentGroup.push(event);
-        groupEnd = Math.max(groupEnd, new Date(event.end).getTime());
-      } else {
-        // New group
-        groups.push(currentGroup);
-        currentGroup = [event];
-        groupEnd = new Date(event.end).getTime();
-      }
-    }
-    
-    groups.push(currentGroup);
-    return groups;
+  // Get events for a specific day
+  const getEventsForDay = (day: Date) => {
+    return filteredEvents.filter(event => {
+      const eventDate = parseISO(event.start);
+      return isSameDay(eventDate, day);
+    }).sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
   };
 
-  const eventsByDay = useMemo(() => {
-    const grouped: Record<string, TeacherCalendarEvent[][]> = {};
+  // Calculate event position and height based on time
+  const getEventStyle = (event: TeacherCalendarEvent) => {
+    const startTime = parseISO(event.start);
+    const endTime = parseISO(event.end);
     
-    for (const day of weekDays) {
-      const dateStr = format(day, "yyyy-MM-dd");
-      grouped[dateStr] = [];
-    }
+    const startHour = startTime.getHours() + startTime.getMinutes() / 60;
+    const endHour = endTime.getHours() + endTime.getMinutes() / 60;
+    
+    const top = (startHour - START_HOUR) * HOUR_HEIGHT;
+    const height = (endHour - startHour) * HOUR_HEIGHT;
+    
+    return {
+      top: `${top}px`,
+      height: `${Math.max(height, 24)}px`,
+    };
+  };
 
-    for (const day of weekDays) {
-      const dateStr = format(day, "yyyy-MM-dd");
-      const dayEvents = filteredEvents.filter(event => {
-        const eventDate = parseISO(event.start);
-        return format(eventDate, "yyyy-MM-dd") === dateStr;
-      });
-      grouped[dateStr] = groupOverlappingEvents(dayEvents);
-    }
-
-    return grouped;
-  }, [filteredEvents, weekDays]);
+  // Calculate current time indicator position
+  const currentTimePosition = useMemo(() => {
+    const hour = currentTime.getHours() + currentTime.getMinutes() / 60;
+    if (hour < START_HOUR || hour > END_HOUR) return null;
+    return (hour - START_HOUR) * HOUR_HEIGHT;
+  }, [currentTime]);
 
   const toggleTeacher = (teacherId: string) => {
     setVisibleTeacherIds(prev => {
@@ -271,118 +265,150 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
         </Card>
       )}
 
-      <div className="grid grid-cols-7 gap-2">
-        {weekDays.map((day) => {
-          const dateStr = format(day, "yyyy-MM-dd");
-          const dayEventGroups = eventsByDay[dateStr] || [];
-          const isToday = isSameDay(day, new Date());
-          
-          return (
-            <Card
-              key={dateStr}
-              className={`${isToday ? "ring-2 ring-primary" : ""}`}
-              data-testid={`calendar-day-${dateStr}`}
-            >
-              <CardHeader className="py-2 px-3">
-                <CardTitle className={`text-xs font-medium ${isToday ? "text-primary" : "text-muted-foreground"}`}>
-                  <span className="block">{format(day, "EEE")}</span>
-                  <span className={`text-lg font-bold ${isToday ? "text-primary" : "text-foreground"}`}>
-                    {format(day, "d")}
-                  </span>
-                </CardTitle>
-                {/* Current time indicator for today */}
-                {isToday && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
+      {/* Timeline Calendar Grid */}
+      <div className="border rounded-lg overflow-hidden">
+        {/* Header row with days */}
+        <div className="flex border-b bg-muted/50">
+          <div className="w-14 flex-shrink-0 border-r" />
+          {weekDays.map((day) => {
+            const isToday = isSameDay(day, new Date());
+            return (
+              <div 
+                key={day.toISOString()} 
+                className={`flex-1 text-center py-2 border-r last:border-r-0 min-w-[120px] ${isToday ? "bg-primary text-primary-foreground" : ""}`}
+              >
+                <div className="text-xs font-medium uppercase">{format(day, "EEE")}</div>
+                <div className="text-lg font-medium">{format(day, "d")}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Time grid */}
+        <div className="flex overflow-x-auto">
+          {/* Time labels column */}
+          <div className="w-14 flex-shrink-0 border-r bg-muted/30">
+            {HOURS.map((hour) => (
+              <div 
+                key={hour} 
+                className="border-b last:border-b-0 text-xs text-muted-foreground pr-2 text-right"
+                style={{ height: `${HOUR_HEIGHT}px` }}
+              >
+                <span className="relative -top-2">{String(hour).padStart(2, '0')}:00</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Day columns */}
+          {weekDays.map((day) => {
+            const dayEvents = getEventsForDay(day);
+            const isToday = isSameDay(day, new Date());
+            
+            return (
+              <div 
+                key={day.toISOString()} 
+                className="flex-1 relative border-r last:border-r-0 min-w-[120px]"
+                style={{ height: `${HOURS.length * HOUR_HEIGHT}px` }}
+              >
+                {/* Hour grid lines */}
+                {HOURS.map((hour) => (
+                  <div 
+                    key={hour}
+                    className="absolute w-full border-b border-dashed border-muted"
+                    style={{ top: `${(hour - START_HOUR) * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}
+                  />
+                ))}
+                
+                {/* Current time indicator */}
+                {isToday && currentTimePosition !== null && (
+                  <div 
+                    className="absolute left-0 right-0 z-20 flex items-center pointer-events-none"
+                    style={{ top: `${currentTimePosition}px` }}
+                  >
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500 -ml-1 animate-pulse" />
                     <div className="flex-1 h-0.5 bg-red-500" />
-                    <span className="text-xs text-red-500 font-medium whitespace-nowrap">
-                      {format(currentTime, "HH:mm")}
-                    </span>
                   </div>
                 )}
-              </CardHeader>
-              <CardContent className="p-2 pt-0">
-                {dayEventGroups.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-4">No events</p>
-                ) : (
-                  <div className="space-y-1">
-                    {dayEventGroups.map((eventGroup, groupIndex) => (
-                      <div 
-                        key={groupIndex} 
-                        className={`flex gap-1 ${eventGroup.length > 1 ? "flex-wrap" : ""}`}
-                      >
-                        {eventGroup.map((event) => {
-                          const isPastEvent = isPast(parseISO(event.end));
-                          // Use event's backgroundColor if available, otherwise use teacher color
-                          const displayColor = event.backgroundColor || event.teacherColor;
-                          
-                          return (
-                            <Tooltip key={`${event.teacherId}-${event.id}`}>
-                              <TooltipTrigger asChild>
-                                <div
-                                  className={`text-xs p-1.5 rounded cursor-pointer hover-elevate transition-opacity ${isPastEvent ? "opacity-50" : ""} ${eventGroup.length > 1 ? "flex-1 min-w-0" : "w-full"}`}
-                                  style={{
-                                    backgroundColor: `${displayColor}25`,
-                                    borderLeft: `3px solid ${displayColor}`,
-                                  }}
-                                  data-testid={`event-${event.id}`}
-                                >
-                                  <div className="flex items-center gap-1">
-                                    {event.isAvailabilityBlock && (
-                                      <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                    )}
-                                    <span className="font-medium truncate" title={event.title}>
-                                      {event.title}
-                                    </span>
-                                  </div>
-                                  <div className="text-muted-foreground flex items-center gap-1 mt-0.5">
-                                    <User className="h-3 w-3 flex-shrink-0" />
-                                    <span className="truncate">{event.teacherName}</span>
-                                  </div>
-                                  <div className="text-muted-foreground">
-                                    {format(parseISO(event.start), "HH:mm")} - {format(parseISO(event.end), "HH:mm")}
-                                  </div>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent side="right" className="max-w-xs">
-                                <div className="space-y-2">
-                                  <div className="font-medium">{event.title}</div>
-                                  <div className="text-sm flex items-center gap-1">
-                                    <User className="h-3 w-3" />
-                                    {event.teacherName}
-                                  </div>
-                                  <div className="text-sm flex items-center gap-1">
-                                    <Clock className="h-3 w-3" />
-                                    {format(parseISO(event.start), "EEEE, MMM d")}
-                                  </div>
-                                  <div className="text-sm">
-                                    {format(parseISO(event.start), "HH:mm")} - {format(parseISO(event.end), "HH:mm")}
-                                  </div>
-                                  {event.isAvailabilityBlock && (
-                                    <div className="text-sm text-muted-foreground flex items-center gap-1">
-                                      <Lock className="h-3 w-3" />
-                                      Availability Block
-                                    </div>
-                                  )}
-                                  {isPastEvent && (
-                                    <div className="text-sm text-green-600 font-medium flex items-center gap-1">
-                                      <CheckCircle className="h-3 w-3" />
-                                      Completed
-                                    </div>
-                                  )}
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
+
+                {/* Events */}
+                {dayEvents.map((event, index) => {
+                  const displayColor = event.backgroundColor || event.teacherColor;
+                  const isPastEvent = isPast(parseISO(event.end));
+                  const style = getEventStyle(event);
+                  
+                  // Check for overlapping events to adjust width
+                  const overlapping = dayEvents.filter((e, i) => {
+                    if (i === index) return false;
+                    const eStart = parseISO(e.start).getTime();
+                    const eEnd = parseISO(e.end).getTime();
+                    const thisStart = parseISO(event.start).getTime();
+                    const thisEnd = parseISO(event.end).getTime();
+                    return (thisStart < eEnd && thisEnd > eStart);
+                  });
+                  
+                  const overlapIndex = dayEvents.slice(0, index).filter(e => {
+                    const eStart = parseISO(e.start).getTime();
+                    const eEnd = parseISO(e.end).getTime();
+                    const thisStart = parseISO(event.start).getTime();
+                    const thisEnd = parseISO(event.end).getTime();
+                    return (thisStart < eEnd && thisEnd > eStart);
+                  }).length;
+                  
+                  const totalOverlaps = overlapping.length + 1;
+                  const width = totalOverlaps > 1 ? `${100 / totalOverlaps}%` : '100%';
+                  const left = totalOverlaps > 1 ? `${(overlapIndex * 100) / totalOverlaps}%` : '0';
+                  
+                  return (
+                    <Tooltip key={`${event.teacherId}-${event.id}`}>
+                      <TooltipTrigger asChild>
+                        <div
+                          className={`absolute rounded-sm cursor-pointer overflow-hidden text-xs p-1 transition-opacity ${isPastEvent ? "opacity-50" : ""}`}
+                          style={{
+                            ...style,
+                            width,
+                            left,
+                            backgroundColor: displayColor,
+                            color: getContrastColor(displayColor),
+                            zIndex: 10,
+                          }}
+                          data-testid={`event-${event.id}`}
+                        >
+                          <div className="font-medium truncate leading-tight text-[10px]">{event.title}</div>
+                          <div className="truncate opacity-80 leading-tight text-[10px]">{event.teacherName}</div>
+                          <div className="truncate opacity-80 leading-tight text-[10px]">
+                            {format(parseISO(event.start), "HH:mm")}
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-xs z-50">
+                        <div className="space-y-1">
+                          <div className="font-medium">{event.title}</div>
+                          <div className="text-sm flex items-center gap-1 text-muted-foreground">
+                            <User className="h-3 w-3" />
+                            {event.teacherName}
+                          </div>
+                          <div className="text-sm flex items-center gap-1 text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {format(parseISO(event.start), "EEEE, MMM d")}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {format(parseISO(event.start), "HH:mm")} - {format(parseISO(event.end), "HH:mm")}
+                          </div>
+                          {event.isAvailabilityBlock && (
+                            <div className="text-sm text-muted-foreground flex items-center gap-1">
+                              <Lock className="h-3 w-3" />
+                              Availability Block
+                            </div>
+                          )}
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
