@@ -691,24 +691,67 @@ export async function registerRoutes(
             orderBy: "startTime",
           });
           
-          // Sum up duration of all class events (excluding availability blocks)
+          // Sum up duration of all class events
+          // Exclude: availability blocks, DEMO classes, LEAVE
           // Only count lessons that have ENDED (end time <= now)
+          const countedEvents: { title: string; duration: number; date: string }[] = [];
+          const skippedEvents: { title: string; reason: string }[] = [];
+          
           for (const event of response.data.items || []) {
-            const isAvailabilityBlock = event.summary?.toLowerCase().includes("blocked") || 
-                                       event.summary?.toLowerCase().includes("unavailable") ||
-                                       event.extendedProperties?.private?.type === "availability_block";
+            const title = event.summary || "";
+            const titleLower = title.toLowerCase();
             
-            if (!isAvailabilityBlock && event.start?.dateTime && event.end?.dateTime) {
-              const start = new Date(event.start.dateTime);
-              const end = new Date(event.end.dateTime);
-              
-              // Only count if the lesson has ended
-              if (end.getTime() <= now.getTime()) {
-                const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
-                totalMinutes += durationMinutes;
-              }
+            const isAvailabilityBlock = titleLower.includes("blocked") || 
+                                       titleLower.includes("unavailable") ||
+                                       event.extendedProperties?.private?.type === "availability_block";
+            const isDemo = titleLower.includes("demo");
+            const isLeave = titleLower.includes("leave");
+            
+            // Skip if no dateTime (all-day events like LEAVE)
+            if (!event.start?.dateTime || !event.end?.dateTime) {
+              skippedEvents.push({ title, reason: "all-day event" });
+              continue;
+            }
+            
+            if (isAvailabilityBlock) {
+              skippedEvents.push({ title, reason: "availability block" });
+              continue;
+            }
+            
+            if (isDemo) {
+              skippedEvents.push({ title, reason: "DEMO class" });
+              continue;
+            }
+            
+            if (isLeave) {
+              skippedEvents.push({ title, reason: "LEAVE" });
+              continue;
+            }
+            
+            const start = new Date(event.start.dateTime);
+            const end = new Date(event.end.dateTime);
+            
+            // Only count if the lesson has ended
+            if (end.getTime() <= now.getTime()) {
+              const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+              totalMinutes += durationMinutes;
+              countedEvents.push({ 
+                title, 
+                duration: durationMinutes, 
+                date: start.toISOString().split('T')[0] 
+              });
+            } else {
+              skippedEvents.push({ title, reason: "not ended yet" });
             }
           }
+          
+          console.log(`Pay calculation for ${teacher.name} (${month}):`, {
+            totalMinutes,
+            eventsCounted: countedEvents.length,
+            eventsSkipped: skippedEvents.length
+          });
+          console.log("Counted events:", JSON.stringify(countedEvents, null, 2));
+          console.log("Skipped events:", JSON.stringify(skippedEvents, null, 2));
         } catch (calendarError) {
           console.error("Error fetching calendar for pay calculation:", calendarError);
         }
@@ -776,24 +819,67 @@ export async function registerRoutes(
             orderBy: "startTime",
           });
           
-          // Sum up duration of all class events (excluding availability blocks)
+          // Sum up duration of all class events
+          // Exclude: availability blocks, DEMO classes, LEAVE
           // Only count lessons that have ENDED (end time <= now)
+          const countedEvents: { title: string; duration: number; date: string }[] = [];
+          const skippedEvents: { title: string; reason: string }[] = [];
+          
           for (const event of response.data.items || []) {
-            const isAvailabilityBlock = event.summary?.toLowerCase().includes("blocked") || 
-                                       event.summary?.toLowerCase().includes("unavailable") ||
-                                       event.extendedProperties?.private?.type === "availability_block";
+            const title = event.summary || "";
+            const titleLower = title.toLowerCase();
             
-            if (!isAvailabilityBlock && event.start?.dateTime && event.end?.dateTime) {
-              const start = new Date(event.start.dateTime);
-              const end = new Date(event.end.dateTime);
-              
-              // Only count if the lesson has ended
-              if (end.getTime() <= now.getTime()) {
-                const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
-                totalMinutes += durationMinutes;
-              }
+            const isAvailabilityBlock = titleLower.includes("blocked") || 
+                                       titleLower.includes("unavailable") ||
+                                       event.extendedProperties?.private?.type === "availability_block";
+            const isDemo = titleLower.includes("demo");
+            const isLeave = titleLower.includes("leave");
+            
+            // Skip if no dateTime (all-day events like LEAVE)
+            if (!event.start?.dateTime || !event.end?.dateTime) {
+              skippedEvents.push({ title, reason: "all-day event" });
+              continue;
+            }
+            
+            if (isAvailabilityBlock) {
+              skippedEvents.push({ title, reason: "availability block" });
+              continue;
+            }
+            
+            if (isDemo) {
+              skippedEvents.push({ title, reason: "DEMO class" });
+              continue;
+            }
+            
+            if (isLeave) {
+              skippedEvents.push({ title, reason: "LEAVE" });
+              continue;
+            }
+            
+            const start = new Date(event.start.dateTime);
+            const end = new Date(event.end.dateTime);
+            
+            // Only count if the lesson has ended
+            if (end.getTime() <= now.getTime()) {
+              const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+              totalMinutes += durationMinutes;
+              countedEvents.push({ 
+                title, 
+                duration: durationMinutes, 
+                date: start.toISOString().split('T')[0] 
+              });
+            } else {
+              skippedEvents.push({ title, reason: "not ended yet" });
             }
           }
+          
+          console.log(`Pay calculation for ${teacher.name} (${month}):`, {
+            totalMinutes,
+            eventsCounted: countedEvents.length,
+            eventsSkipped: skippedEvents.length
+          });
+          console.log("Counted events:", JSON.stringify(countedEvents, null, 2));
+          console.log("Skipped events:", JSON.stringify(skippedEvents, null, 2));
         } catch (calendarError) {
           console.error("Error fetching calendar for pay calculation:", calendarError);
         }
