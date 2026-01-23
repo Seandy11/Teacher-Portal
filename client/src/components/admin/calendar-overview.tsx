@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
-import { ChevronLeft, ChevronRight, Calendar, Lock, Eye, EyeOff } from "lucide-react";
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, isSameDay, parseISO, eachDayOfInterval } from "date-fns";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ChevronLeft, ChevronRight, Calendar, Lock, Eye, EyeOff, Clock, User, CheckCircle } from "lucide-react";
+import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, isSameDay, parseISO, eachDayOfInterval, isPast } from "date-fns";
 import type { CalendarEvent } from "@shared/schema";
 
 interface TeacherCalendarEvent extends CalendarEvent {
@@ -22,7 +23,14 @@ interface CalendarOverviewProps {
 export function CalendarOverview({ className }: CalendarOverviewProps) {
   const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [visibleTeacherIds, setVisibleTeacherIds] = useState<Set<string>>(new Set());
+  const [currentTime, setCurrentTime] = useState(new Date());
   const hasInitialized = useRef(false);
+
+  // Update current time every minute
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
   
@@ -74,20 +82,53 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
     return events.filter(event => visibleTeacherIds.has(event.teacherId));
   }, [events, visibleTeacherIds]);
 
+  // Group overlapping events together
+  const groupOverlappingEvents = (events: TeacherCalendarEvent[]): TeacherCalendarEvent[][] => {
+    if (events.length === 0) return [];
+    
+    const sorted = [...events].sort((a, b) => 
+      new Date(a.start).getTime() - new Date(b.start).getTime()
+    );
+    
+    const groups: TeacherCalendarEvent[][] = [];
+    let currentGroup: TeacherCalendarEvent[] = [sorted[0]];
+    let groupEnd = new Date(sorted[0].end).getTime();
+    
+    for (let i = 1; i < sorted.length; i++) {
+      const event = sorted[i];
+      const eventStart = new Date(event.start).getTime();
+      
+      if (eventStart < groupEnd) {
+        // Overlaps with current group
+        currentGroup.push(event);
+        groupEnd = Math.max(groupEnd, new Date(event.end).getTime());
+      } else {
+        // New group
+        groups.push(currentGroup);
+        currentGroup = [event];
+        groupEnd = new Date(event.end).getTime();
+      }
+    }
+    
+    groups.push(currentGroup);
+    return groups;
+  };
+
   const eventsByDay = useMemo(() => {
-    const grouped: Record<string, TeacherCalendarEvent[]> = {};
+    const grouped: Record<string, TeacherCalendarEvent[][]> = {};
     
     for (const day of weekDays) {
       const dateStr = format(day, "yyyy-MM-dd");
       grouped[dateStr] = [];
     }
 
-    for (const event of filteredEvents) {
-      const eventDate = parseISO(event.start);
-      const dateStr = format(eventDate, "yyyy-MM-dd");
-      if (grouped[dateStr]) {
-        grouped[dateStr].push(event);
-      }
+    for (const day of weekDays) {
+      const dateStr = format(day, "yyyy-MM-dd");
+      const dayEvents = filteredEvents.filter(event => {
+        const eventDate = parseISO(event.start);
+        return format(eventDate, "yyyy-MM-dd") === dateStr;
+      });
+      grouped[dateStr] = groupOverlappingEvents(dayEvents);
     }
 
     return grouped;
@@ -233,7 +274,7 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
       <div className="grid grid-cols-7 gap-2">
         {weekDays.map((day) => {
           const dateStr = format(day, "yyyy-MM-dd");
-          const dayEvents = eventsByDay[dateStr] || [];
+          const dayEventGroups = eventsByDay[dateStr] || [];
           const isToday = isSameDay(day, new Date());
           
           return (
@@ -249,37 +290,91 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
                     {format(day, "d")}
                   </span>
                 </CardTitle>
+                {/* Current time indicator for today */}
+                {isToday && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
+                    <div className="flex-1 h-0.5 bg-red-500" />
+                    <span className="text-xs text-red-500 font-medium whitespace-nowrap">
+                      {format(currentTime, "HH:mm")}
+                    </span>
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="p-2 pt-0">
-                {dayEvents.length === 0 ? (
+                {dayEventGroups.length === 0 ? (
                   <p className="text-xs text-muted-foreground text-center py-4">No events</p>
                 ) : (
                   <div className="space-y-1">
-                    {dayEvents.map((event) => (
-                      <div
-                        key={`${event.teacherId}-${event.id}`}
-                        className="text-xs p-1.5 rounded"
-                        style={{
-                          backgroundColor: `${event.teacherColor}20`,
-                          borderLeft: `3px solid ${event.teacherColor}`,
-                        }}
-                        data-testid={`event-${event.id}`}
+                    {dayEventGroups.map((eventGroup, groupIndex) => (
+                      <div 
+                        key={groupIndex} 
+                        className={`flex gap-1 ${eventGroup.length > 1 ? "flex-wrap" : ""}`}
                       >
-                        <div className="flex items-center gap-1">
-                          {event.isAvailabilityBlock && (
-                            <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                          )}
-                          <span className="font-medium truncate" title={event.title}>
-                            {event.title}
-                          </span>
-                        </div>
-                        <div className="text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <Calendar className="h-3 w-3 flex-shrink-0" />
-                          <span className="truncate">{event.teacherName}</span>
-                        </div>
-                        <div className="text-muted-foreground">
-                          {format(parseISO(event.start), "HH:mm")} - {format(parseISO(event.end), "HH:mm")}
-                        </div>
+                        {eventGroup.map((event) => {
+                          const isPastEvent = isPast(parseISO(event.end));
+                          // Use event's backgroundColor if available, otherwise use teacher color
+                          const displayColor = event.backgroundColor || event.teacherColor;
+                          
+                          return (
+                            <Tooltip key={`${event.teacherId}-${event.id}`}>
+                              <TooltipTrigger asChild>
+                                <div
+                                  className={`text-xs p-1.5 rounded cursor-pointer hover-elevate transition-opacity ${isPastEvent ? "opacity-50" : ""} ${eventGroup.length > 1 ? "flex-1 min-w-0" : "w-full"}`}
+                                  style={{
+                                    backgroundColor: `${displayColor}25`,
+                                    borderLeft: `3px solid ${displayColor}`,
+                                  }}
+                                  data-testid={`event-${event.id}`}
+                                >
+                                  <div className="flex items-center gap-1">
+                                    {event.isAvailabilityBlock && (
+                                      <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                    )}
+                                    <span className="font-medium truncate" title={event.title}>
+                                      {event.title}
+                                    </span>
+                                  </div>
+                                  <div className="text-muted-foreground flex items-center gap-1 mt-0.5">
+                                    <User className="h-3 w-3 flex-shrink-0" />
+                                    <span className="truncate">{event.teacherName}</span>
+                                  </div>
+                                  <div className="text-muted-foreground">
+                                    {format(parseISO(event.start), "HH:mm")} - {format(parseISO(event.end), "HH:mm")}
+                                  </div>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="max-w-xs">
+                                <div className="space-y-2">
+                                  <div className="font-medium">{event.title}</div>
+                                  <div className="text-sm flex items-center gap-1">
+                                    <User className="h-3 w-3" />
+                                    {event.teacherName}
+                                  </div>
+                                  <div className="text-sm flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    {format(parseISO(event.start), "EEEE, MMM d")}
+                                  </div>
+                                  <div className="text-sm">
+                                    {format(parseISO(event.start), "HH:mm")} - {format(parseISO(event.end), "HH:mm")}
+                                  </div>
+                                  {event.isAvailabilityBlock && (
+                                    <div className="text-sm text-muted-foreground flex items-center gap-1">
+                                      <Lock className="h-3 w-3" />
+                                      Availability Block
+                                    </div>
+                                  )}
+                                  {isPastEvent && (
+                                    <div className="text-sm text-green-600 font-medium flex items-center gap-1">
+                                      <CheckCircle className="h-3 w-3" />
+                                      Completed
+                                    </div>
+                                  )}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        })}
                       </div>
                     ))}
                   </div>

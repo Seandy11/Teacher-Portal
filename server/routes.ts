@@ -160,6 +160,21 @@ export async function registerRoutes(
         orderBy: "startTime",
       });
 
+      // Google Calendar color mapping (colorId to hex)
+      const googleCalendarColors: Record<string, string> = {
+        "1": "#a4bdfc", // Lavender
+        "2": "#7ae7bf", // Sage
+        "3": "#dbadff", // Grape
+        "4": "#ff887c", // Flamingo
+        "5": "#fbd75b", // Banana
+        "6": "#ffb878", // Tangerine
+        "7": "#46d6db", // Peacock
+        "8": "#e1e1e1", // Graphite
+        "9": "#5484ed", // Blueberry
+        "10": "#51b749", // Basil
+        "11": "#dc2127", // Tomato
+      };
+
       const events: CalendarEvent[] = (response.data.items || []).map((event: any) => ({
         id: event.id,
         title: event.summary || "Untitled",
@@ -169,6 +184,8 @@ export async function registerRoutes(
         isAvailabilityBlock: event.summary?.toLowerCase().includes("blocked") || 
                              event.summary?.toLowerCase().includes("unavailable") ||
                              event.extendedProperties?.private?.type === "availability_block",
+        colorId: event.colorId,
+        backgroundColor: event.colorId ? googleCalendarColors[event.colorId] : undefined,
       }));
 
       res.json(events);
@@ -514,6 +531,33 @@ export async function registerRoutes(
     }
   });
 
+  // Delete teacher (admin only - must be inactive)
+  app.delete("/api/admin/teachers/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const id = req.params.id as string;
+      
+      // Check if teacher exists and is inactive
+      const teacher = await storage.getTeacher(id);
+      if (!teacher) {
+        return res.status(404).json({ message: "Teacher not found" });
+      }
+      
+      if (teacher.isActive) {
+        return res.status(400).json({ message: "Cannot delete an active teacher. Deactivate first." });
+      }
+      
+      const deleted = await storage.deleteTeacher(id);
+      if (!deleted) {
+        return res.status(500).json({ message: "Failed to delete teacher" });
+      }
+      
+      res.json({ success: true, message: "Teacher deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting teacher:", error);
+      res.status(500).json({ message: "Failed to delete teacher" });
+    }
+  });
+
   // Get all leave requests (admin only)
   app.get("/api/admin/leave-requests", isAuthenticated, requireAdmin, async (req, res) => {
     try {
@@ -579,6 +623,21 @@ export async function registerRoutes(
         return colors[Math.abs(hash) % colors.length];
       };
 
+      // Google Calendar color mapping (colorId to hex)
+      const googleCalendarColors: Record<string, string> = {
+        "1": "#a4bdfc", // Lavender
+        "2": "#7ae7bf", // Sage
+        "3": "#dbadff", // Grape
+        "4": "#ff887c", // Flamingo
+        "5": "#fbd75b", // Banana
+        "6": "#ffb878", // Tangerine
+        "7": "#46d6db", // Peacock
+        "8": "#e1e1e1", // Graphite
+        "9": "#5484ed", // Blueberry
+        "10": "#51b749", // Basil
+        "11": "#dc2127", // Tomato
+      };
+
       for (const teacher of activeTeachersWithCalendars) {
         try {
           const response = await calendar.events.list({
@@ -599,6 +658,8 @@ export async function registerRoutes(
             isAvailabilityBlock: event.summary?.toLowerCase().includes("blocked") || 
                                  event.summary?.toLowerCase().includes("unavailable") ||
                                  event.extendedProperties?.private?.type === "availability_block",
+            colorId: event.colorId,
+            backgroundColor: event.colorId ? googleCalendarColors[event.colorId] : undefined,
             teacherId: teacher.id,
             teacherName: teacher.name,
             teacherColor: teacherColor,

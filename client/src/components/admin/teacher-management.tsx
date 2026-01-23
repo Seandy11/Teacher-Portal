@@ -15,7 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { EmptyState } from "@/components/empty-state";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { RoleBadge } from "@/components/role-badge";
-import { Users, Plus, Edit2, Power, Search, Calendar, FileSpreadsheet, RefreshCw, Eye } from "lucide-react";
+import { Users, Plus, Edit2, Power, Search, Calendar, FileSpreadsheet, RefreshCw, Eye, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -47,14 +47,16 @@ interface TeacherManagementProps {
   onAdd: (data: TeacherFormValues) => Promise<void>;
   onUpdate: (id: string, data: Partial<TeacherFormValues>) => Promise<void>;
   onToggleActive: (id: string, isActive: boolean) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 }
 
-export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onToggleActive }: TeacherManagementProps) {
+export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onToggleActive, onDelete }: TeacherManagementProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [toggleTarget, setToggleTarget] = useState<Teacher | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Teacher | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -128,6 +130,17 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
     try {
       await onToggleActive(toggleTarget.id, !toggleTarget.isActive);
       setToggleTarget(null);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setIsSubmitting(true);
+    try {
+      await onDelete(deleteTarget.id);
+      setDeleteTarget(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -451,6 +464,18 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
                           >
                             <Power className="h-4 w-4" />
                           </Button>
+                          {!teacher.isActive && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setDeleteTarget(teacher)}
+                              className="text-destructive"
+                              title="Delete teacher"
+                              data-testid={`button-delete-teacher-${teacher.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -490,10 +515,32 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
             <AlertDialogAction
               onClick={handleToggle}
               disabled={isSubmitting}
-              className={toggleTarget?.isActive ? "bg-destructive hover:bg-destructive/90" : ""}
+              className={toggleTarget?.isActive ? "bg-destructive" : ""}
               data-testid="button-confirm-toggle"
             >
               {isSubmitting ? <LoadingSpinner size="sm" /> : toggleTarget?.isActive ? "Deactivate" : "Activate"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Teacher?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {deleteTarget?.name} and all their data. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting} data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isSubmitting}
+              className="bg-destructive"
+              data-testid="button-confirm-delete"
+            >
+              {isSubmitting ? <LoadingSpinner size="sm" /> : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

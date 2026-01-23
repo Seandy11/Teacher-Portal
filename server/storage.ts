@@ -10,6 +10,7 @@ export interface IStorage {
   getAllTeachers(): Promise<Teacher[]>;
   createTeacher(teacher: InsertTeacher): Promise<Teacher>;
   updateTeacher(id: string, updates: Partial<InsertTeacher>): Promise<Teacher | undefined>;
+  deleteTeacher(id: string): Promise<boolean>;
   
   // Leave Requests
   getLeaveRequest(id: string): Promise<LeaveRequest | undefined>;
@@ -58,6 +59,11 @@ export class DatabaseStorage implements IStorage {
       .where(eq(teachers.id, id))
       .returning();
     return updated;
+  }
+
+  async deleteTeacher(id: string): Promise<boolean> {
+    const result = await db.delete(teachers).where(eq(teachers.id, id)).returning();
+    return result.length > 0;
   }
 
   // Leave Requests

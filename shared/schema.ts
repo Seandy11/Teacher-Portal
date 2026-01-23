@@ -116,6 +116,8 @@ export interface CalendarEvent {
   start: string;
   end: string;
   isAvailabilityBlock: boolean; // true = availability block (editable), false = class (read-only)
+  colorId?: string; // Google Calendar color ID
+  backgroundColor?: string; // Resolved background color
 }
 
 // Attendance row type (from Google Sheets)

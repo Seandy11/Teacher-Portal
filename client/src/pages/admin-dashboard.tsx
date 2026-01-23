@@ -6,23 +6,21 @@ import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGrou
 import { TeacherManagement } from "@/components/admin/teacher-management";
 import { LeaveManagement } from "@/components/admin/leave-management";
 import { CalendarOverview } from "@/components/admin/calendar-overview";
-import { BonusManagement } from "@/components/admin/bonus-management";
 import { FullPageLoader } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/auth-utils";
-import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Gift } from "lucide-react";
+import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar } from "lucide-react";
 import type { Teacher, LeaveRequest } from "@shared/schema";
 
-type AdminView = "dashboard" | "calendar" | "teachers" | "leave" | "bonuses";
+type AdminView = "dashboard" | "calendar" | "teachers" | "leave";
 
 const navItems = [
   { id: "dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
   { id: "calendar" as const, label: "Calendar Overview", icon: Calendar },
   { id: "teachers" as const, label: "Teachers", icon: Users },
-  { id: "bonuses" as const, label: "Bonuses", icon: Gift },
   { id: "leave" as const, label: "Leave Requests", icon: FileText },
 ];
 
@@ -110,6 +108,24 @@ export default function AdminDashboard() {
         return;
       }
       toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
+    },
+  });
+
+  const deleteTeacherMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/admin/teachers/${id}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Teacher deleted", description: "The teacher has been permanently removed." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/teachers"] });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({ title: "Session expired", description: "Redirecting to login...", variant: "destructive" });
+        setTimeout(() => { window.location.href = "/api/login"; }, 500);
+        return;
+      }
+      toast({ title: "Error", description: "Failed to delete teacher.", variant: "destructive" });
     },
   });
 
@@ -318,12 +334,11 @@ export default function AdminDashboard() {
                   onToggleActive={async (id, isActive) => {
                     await toggleTeacherMutation.mutateAsync({ id, isActive });
                   }}
+                  onDelete={async (id) => {
+                    await deleteTeacherMutation.mutateAsync(id);
+                  }}
                 />
               )
-            )}
-
-            {activeView === "bonuses" && (
-              <BonusManagement teachers={teachers} />
             )}
 
             {activeView === "leave" && (
