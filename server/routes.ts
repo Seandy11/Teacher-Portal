@@ -175,15 +175,6 @@ export async function registerRoutes(
         "11": "#d50000", // Tomato
       };
 
-      // Log first few events to debug color data
-      const sampleEvents = (response.data.items || []).slice(0, 3);
-      console.log("Sample calendar events color info:", sampleEvents.map((e: any) => ({
-        title: e.summary,
-        colorId: e.colorId,
-        backgroundColor: e.backgroundColor,
-        foregroundColor: e.foregroundColor,
-      })));
-
       const events: CalendarEvent[] = (response.data.items || []).map((event: any) => ({
         id: event.id,
         title: event.summary || "Untitled",
