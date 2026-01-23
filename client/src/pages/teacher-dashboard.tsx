@@ -41,13 +41,7 @@ export default function TeacherDashboard() {
 
   // Fetch attendance data for selected student tab
   const { data: attendance = [], isLoading: attendanceLoading, error: attendanceError, refetch: refetchAttendance } = useQuery<AttendanceRow[]>({
-    queryKey: ["/api/attendance", selectedStudentTab],
-    queryFn: async () => {
-      if (!selectedStudentTab) return [];
-      const response = await fetch(`/api/attendance?tab=${encodeURIComponent(selectedStudentTab)}`);
-      if (!response.ok) throw new Error("Failed to fetch attendance");
-      return response.json();
-    },
+    queryKey: [`/api/attendance?tab=${encodeURIComponent(selectedStudentTab)}`],
     enabled: !!teacher && !!selectedStudentTab,
   });
 
@@ -58,7 +52,7 @@ export default function TeacherDashboard() {
 
   // Handle unauthorized errors
   useEffect(() => {
-    const errors = [teacherError, eventsError, attendanceError, leaveError].filter(Boolean);
+    const errors = [teacherError, eventsError, attendanceError, leaveError, tabsError].filter(Boolean);
     for (const error of errors) {
       if (error && isUnauthorizedError(error as Error)) {
         toast({ title: "Session expired", description: "Redirecting to login...", variant: "destructive" });
@@ -66,7 +60,7 @@ export default function TeacherDashboard() {
         break;
       }
     }
-  }, [teacherError, eventsError, attendanceError, leaveError, toast]);
+  }, [teacherError, eventsError, attendanceError, leaveError, tabsError, toast]);
 
   const createBlockMutation = useMutation({
     mutationFn: async ({ start, end }: { start: Date; end: Date }) => {
@@ -106,11 +100,14 @@ export default function TeacherDashboard() {
 
   const updateLessonMutation = useMutation({
     mutationFn: async ({ rowIndex, value }: { rowIndex: number; value: string }) => {
+      if (!selectedStudentTab) {
+        throw new Error("No student tab selected");
+      }
       return apiRequest("PATCH", `/api/attendance/${rowIndex}`, { tabName: selectedStudentTab, value });
     },
     onSuccess: () => {
       toast({ title: "Lesson updated", description: "Changes saved to Google Sheets." });
-      queryClient.invalidateQueries({ queryKey: ["/api/attendance", selectedStudentTab] });
+      queryClient.invalidateQueries({ queryKey: [`/api/attendance?tab=${encodeURIComponent(selectedStudentTab)}`] });
     },
     onError: (error) => {
       if (isUnauthorizedError(error as Error)) {
