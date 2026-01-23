@@ -127,6 +127,14 @@ Access is enforced server-side:
 - **Write**: Only columns D (attendance) and E (notes) can be edited
 - Other columns (date, student, time, lesson plan, homework) are protected
 
+### Payroll Sheet Integration (Bonuses)
+- **Sheet ID**: Configured via `PAYROLL_SHEET_ID` environment variable
+- **Tab**: "Adjustments" tab contains bonus data
+- **Columns**: A=Teacher name, B=Year, C=Month, D-H=Bonus types (Assessment, Training, Referral, Retention, Demo), I=Notes
+- **Data starts**: Row 2 (header in row 1)
+- **Teacher matching**: Uses flexible matching (first name, full name, contains, startsWith)
+- **Currency parsing**: Handles R currency format, negatives, and parentheses
+
 ## Development
 
 ```bash
@@ -139,5 +147,9 @@ npm run db:push      # Push schema changes to database
 Required:
 - `DATABASE_URL` - PostgreSQL connection string
 - `SESSION_SECRET` - Session encryption key
+- `PAYROLL_SHEET_ID` - Google Sheet ID for payroll/bonuses data
 - Google Calendar connector (configured via Replit integrations)
 - Google Sheets connector (configured via Replit integrations)
+
+## Currency
+All monetary values are displayed in South African Rand (R), not dollars.
