@@ -15,10 +15,17 @@ This is an internal teacher portal with the following core features:
 
 ### For Admins:
 - **Dashboard**: Overview stats of teachers, pending leave requests
-- **Teacher Management**: Add/remove teachers, assign calendar & sheet mappings, set hourly rates, toggle active status
+- **Teacher Management**: Add/remove teachers (delete only for inactive), assign calendar & sheet mappings, set hourly rates, toggle active status
 - **Leave Management**: View and approve/reject teacher leave requests
-- **Bonus Management**: Add, view, and delete teacher bonuses per month
+- **Calendar Overview**: View all teachers' schedules with filtering, overlapping events side-by-side display
 - **View as Teacher**: Impersonate any teacher to see the app from their perspective
+
+### Calendar Display Features:
+- **Google Calendar Colors**: Events display using their assigned Google Calendar color (colorId 1-11)
+- **Past Event Fading**: Completed lessons appear faded (opacity 50%)
+- **Current Time Indicator**: Animated red dot with time display, updates every minute
+- **Hover Tooltips**: Full event details on hover (teacher, date, time, completion status)
+- **Overlapping Events**: Events at the same time shown side-by-side
 
 ## Architecture
 
@@ -96,6 +103,7 @@ shared/
 - `GET /api/admin/teachers` - List all teachers
 - `POST /api/admin/teachers` - Add teacher
 - `PATCH /api/admin/teachers/:id` - Update teacher (including hourly rate)
+- `DELETE /api/admin/teachers/:id` - Delete teacher (inactive only)
 - `GET /api/admin/leave-requests` - List all leave requests
 - `PATCH /api/admin/leave-requests/:id` - Update leave status
 - `GET /api/admin/bonuses` - List bonuses (filtered by teacher/month)
