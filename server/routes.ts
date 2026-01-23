@@ -152,41 +152,43 @@ export async function registerRoutes(
       const timeMin = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // 1 week ago
       const timeMax = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days ahead
 
-      const response = await calendar.events.list({
-        calendarId: teacher.calendarId,
-        timeMin: timeMin.toISOString(),
-        timeMax: timeMax.toISOString(),
-        singleEvents: true,
-        orderBy: "startTime",
+      // Fetch colors from Google Calendar API
+      const [eventsResponse, colorsResponse, calendarListEntry] = await Promise.all([
+        calendar.events.list({
+          calendarId: teacher.calendarId,
+          timeMin: timeMin.toISOString(),
+          timeMax: timeMax.toISOString(),
+          singleEvents: true,
+          orderBy: "startTime",
+        }),
+        calendar.colors.get(),
+        calendar.calendarList.get({ calendarId: teacher.calendarId }),
+      ]);
+
+      // Build color map from API response
+      const eventColors = colorsResponse.data.event || {};
+      const calendarDefaultColor = calendarListEntry.data.backgroundColor || "#039be5";
+
+      const events: CalendarEvent[] = (eventsResponse.data.items || []).map((event: any) => {
+        // Priority: eventColors[colorId] > calendar default
+        let bgColor = calendarDefaultColor;
+        if (event.colorId && eventColors[event.colorId]?.background) {
+          bgColor = eventColors[event.colorId].background!;
+        }
+        
+        return {
+          id: event.id,
+          title: event.summary || "Untitled",
+          description: event.description || "",
+          start: event.start?.dateTime || event.start?.date,
+          end: event.end?.dateTime || event.end?.date,
+          isAvailabilityBlock: event.summary?.toLowerCase().includes("blocked") || 
+                               event.summary?.toLowerCase().includes("unavailable") ||
+                               event.extendedProperties?.private?.type === "availability_block",
+          colorId: event.colorId,
+          backgroundColor: bgColor,
+        };
       });
-
-      // Google Calendar event color mapping (official API colors)
-      const googleCalendarColors: Record<string, string> = {
-        "1": "#7986cb", // Lavender
-        "2": "#33b679", // Sage
-        "3": "#8e24aa", // Grape
-        "4": "#e67c73", // Flamingo
-        "5": "#f6bf26", // Banana
-        "6": "#f4511e", // Tangerine
-        "7": "#039be5", // Peacock
-        "8": "#616161", // Graphite
-        "9": "#3f51b5", // Blueberry
-        "10": "#0b8043", // Basil
-        "11": "#d50000", // Tomato
-      };
-
-      const events: CalendarEvent[] = (response.data.items || []).map((event: any) => ({
-        id: event.id,
-        title: event.summary || "Untitled",
-        description: event.description || "",
-        start: event.start?.dateTime || event.start?.date,
-        end: event.end?.dateTime || event.end?.date,
-        isAvailabilityBlock: event.summary?.toLowerCase().includes("blocked") || 
-                             event.summary?.toLowerCase().includes("unavailable") ||
-                             event.extendedProperties?.private?.type === "availability_block",
-        colorId: event.colorId,
-        backgroundColor: event.backgroundColor || (event.colorId ? googleCalendarColors[event.colorId] : undefined),
-      }));
 
       res.json(events);
     } catch (error) {
@@ -623,47 +625,49 @@ export async function registerRoutes(
         return colors[Math.abs(hash) % colors.length];
       };
 
-      // Google Calendar event color mapping (official API colors)
-      const googleCalendarColors: Record<string, string> = {
-        "1": "#7986cb", // Lavender
-        "2": "#33b679", // Sage
-        "3": "#8e24aa", // Grape
-        "4": "#e67c73", // Flamingo
-        "5": "#f6bf26", // Banana
-        "6": "#f4511e", // Tangerine
-        "7": "#039be5", // Peacock
-        "8": "#616161", // Graphite
-        "9": "#3f51b5", // Blueberry
-        "10": "#0b8043", // Basil
-        "11": "#d50000", // Tomato
-      };
+      // Fetch colors from Google Calendar API once
+      const colorsResponse = await calendar.colors.get();
+      const eventColors = colorsResponse.data.event || {};
 
       for (const teacher of activeTeachersWithCalendars) {
         try {
-          const response = await calendar.events.list({
-            calendarId: teacher.calendarId!,
-            timeMin: timeMin.toISOString(),
-            timeMax: timeMax.toISOString(),
-            singleEvents: true,
-            orderBy: "startTime",
-          });
+          const [eventsResponse, calendarListEntry] = await Promise.all([
+            calendar.events.list({
+              calendarId: teacher.calendarId!,
+              timeMin: timeMin.toISOString(),
+              timeMax: timeMax.toISOString(),
+              singleEvents: true,
+              orderBy: "startTime",
+            }),
+            calendar.calendarList.get({ calendarId: teacher.calendarId! }),
+          ]);
 
           const teacherColor = getColorForTeacher(teacher.id);
-          const events = (response.data.items || []).map((event: any) => ({
-            id: event.id,
-            title: event.summary || "Untitled",
-            description: event.description || "",
-            start: event.start?.dateTime || event.start?.date,
-            end: event.end?.dateTime || event.end?.date,
-            isAvailabilityBlock: event.summary?.toLowerCase().includes("blocked") || 
-                                 event.summary?.toLowerCase().includes("unavailable") ||
-                                 event.extendedProperties?.private?.type === "availability_block",
-            colorId: event.colorId,
-            backgroundColor: event.backgroundColor || (event.colorId ? googleCalendarColors[event.colorId] : undefined),
-            teacherId: teacher.id,
-            teacherName: teacher.name,
-            teacherColor: teacherColor,
-          }));
+          const calendarDefaultColor = calendarListEntry.data.backgroundColor || teacherColor;
+          
+          const events = (eventsResponse.data.items || []).map((event: any) => {
+            // Priority: eventColors[colorId] > calendar default
+            let bgColor = calendarDefaultColor;
+            if (event.colorId && eventColors[event.colorId]?.background) {
+              bgColor = eventColors[event.colorId].background!;
+            }
+            
+            return {
+              id: event.id,
+              title: event.summary || "Untitled",
+              description: event.description || "",
+              start: event.start?.dateTime || event.start?.date,
+              end: event.end?.dateTime || event.end?.date,
+              isAvailabilityBlock: event.summary?.toLowerCase().includes("blocked") || 
+                                   event.summary?.toLowerCase().includes("unavailable") ||
+                                   event.extendedProperties?.private?.type === "availability_block",
+              colorId: event.colorId,
+              backgroundColor: bgColor,
+              teacherId: teacher.id,
+              teacherName: teacher.name,
+              teacherColor: teacherColor,
+            };
+          });
 
           allEvents.push(...events);
         } catch (calendarError) {

@@ -40,16 +40,6 @@ function getContrastColor(hexColor: string): string {
   return luminance > 0.5 ? '#000000' : '#ffffff';
 }
 
-// Check if two events truly overlap in time (touching events don't count as overlapping)
-function eventsOverlap(a: TeacherCalendarEvent, b: TeacherCalendarEvent): boolean {
-  const aStart = parseISO(a.start).getTime();
-  const aEnd = parseISO(a.end).getTime();
-  const bStart = parseISO(b.start).getTime();
-  const bEnd = parseISO(b.end).getTime();
-  // Events that merely touch (one ends exactly when another starts) are NOT overlapping
-  return aStart < bEnd && aEnd > bStart;
-}
-
 // Get event duration in minutes
 function getEventDurationMinutes(event: TeacherCalendarEvent): number {
   const start = parseISO(event.start).getTime();
@@ -57,89 +47,88 @@ function getEventDurationMinutes(event: TeacherCalendarEvent): number {
   return (end - start) / (1000 * 60);
 }
 
-// Google Calendar-style layout algorithm
+// Calculate concurrent overlaps - each event gets width based on its direct overlaps only
 function layoutEvents(events: TeacherCalendarEvent[]): LayoutEvent[] {
   if (events.length === 0) return [];
   
-  const sortedEvents = [...events].sort((a, b) => {
-    const aStart = parseISO(a.start).getTime();
-    const bStart = parseISO(b.start).getTime();
-    if (aStart !== bStart) return aStart - bStart;
-    const aDuration = parseISO(a.end).getTime() - aStart;
-    const bDuration = parseISO(b.end).getTime() - bStart;
-    return bDuration - aDuration;
+  // Parse times once and include unique key for each event
+  const eventTimes = events.map(e => ({
+    event: e,
+    key: `${e.teacherId}-${e.id}`,
+    start: parseISO(e.start).getTime(),
+    end: parseISO(e.end).getTime(),
+  }));
+  
+  // Sort by start time, then by duration (longer first)
+  eventTimes.sort((a, b) => {
+    if (a.start !== b.start) return a.start - b.start;
+    return (b.end - b.start) - (a.end - a.start);
   });
   
-  const groups: TeacherCalendarEvent[][] = [];
-  const eventToGroup = new Map<string, number>();
+  // For each event, find all events that directly overlap with it
+  const directOverlaps = new Map<string, Set<string>>();
+  for (const et of eventTimes) {
+    directOverlaps.set(et.key, new Set());
+  }
   
-  for (const event of sortedEvents) {
-    const eventKey = `${event.teacherId}-${event.id}`;
-    let groupIndex = -1;
-    
-    for (let i = 0; i < groups.length; i++) {
-      const group = groups[i];
-      if (group.some(e => eventsOverlap(e, event))) {
-        if (groupIndex === -1) {
-          groupIndex = i;
-          group.push(event);
-          eventToGroup.set(eventKey, i);
-        } else {
-          groups[groupIndex].push(...group);
-          group.forEach(e => eventToGroup.set(`${e.teacherId}-${e.id}`, groupIndex));
-          groups.splice(i, 1);
-          i--;
-        }
+  for (let i = 0; i < eventTimes.length; i++) {
+    for (let j = i + 1; j < eventTimes.length; j++) {
+      const a = eventTimes[i];
+      const b = eventTimes[j];
+      // Check overlap: a starts before b ends AND a ends after b starts
+      if (a.start < b.end && a.end > b.start) {
+        directOverlaps.get(a.key)!.add(b.key);
+        directOverlaps.get(b.key)!.add(a.key);
       }
-    }
-    
-    if (groupIndex === -1) {
-      groups.push([event]);
-      eventToGroup.set(eventKey, groups.length - 1);
     }
   }
   
+  // Assign columns using greedy algorithm
+  const columnAssignment = new Map<string, number>();
+  const columnEnds: number[] = [];
+  
+  for (const et of eventTimes) {
+    // Find first column where the last event ended before or at this event's start
+    let column = 0;
+    while (column < columnEnds.length && columnEnds[column] > et.start) {
+      column++;
+    }
+    
+    if (column >= columnEnds.length) {
+      columnEnds.push(et.end);
+    } else {
+      columnEnds[column] = et.end;
+    }
+    
+    columnAssignment.set(et.key, column);
+  }
+  
+  // For each event, calculate totalColumns based on its direct overlaps
   const layoutMap = new Map<string, { column: number; totalColumns: number }>();
   
-  for (const group of groups) {
-    group.sort((a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime());
-    const columnEnds: number[] = [];
+  for (const et of eventTimes) {
+    const overlappingIds = Array.from(directOverlaps.get(et.key)!);
     
-    for (const event of group) {
-      const eventKey = `${event.teacherId}-${event.id}`;
-      const eventStart = parseISO(event.start).getTime();
-      const eventEnd = parseISO(event.end).getTime();
-      
-      let column = 0;
-      while (column < columnEnds.length && columnEnds[column] > eventStart) {
-        column++;
-      }
-      
-      if (column >= columnEnds.length) {
-        columnEnds.push(eventEnd);
-      } else {
-        columnEnds[column] = eventEnd;
-      }
-      
-      layoutMap.set(eventKey, { column, totalColumns: 0 });
+    // Find actual columns used by this event and its overlapping events
+    const usedColumns = new Set<number>();
+    usedColumns.add(columnAssignment.get(et.key)!);
+    for (const otherId of overlappingIds) {
+      usedColumns.add(columnAssignment.get(otherId)!);
     }
     
-    const totalColumns = columnEnds.length;
-    for (const event of group) {
-      const eventKey = `${event.teacherId}-${event.id}`;
-      const layout = layoutMap.get(eventKey)!;
-      layout.totalColumns = totalColumns;
-    }
+    const totalColumns = usedColumns.size;
+    layoutMap.set(et.key, {
+      column: columnAssignment.get(et.key)!,
+      totalColumns,
+    });
   }
   
-  return sortedEvents.map(event => {
-    const eventKey = `${event.teacherId}-${event.id}`;
-    return {
-      ...event,
-      column: layoutMap.get(eventKey)?.column ?? 0,
-      totalColumns: layoutMap.get(eventKey)?.totalColumns ?? 1,
-    };
-  });
+  // Return events with layout info
+  return eventTimes.map(et => ({
+    ...et.event,
+    column: layoutMap.get(et.key)?.column ?? 0,
+    totalColumns: layoutMap.get(et.key)?.totalColumns ?? 1,
+  }));
 }
 
 export function CalendarOverview({ className }: CalendarOverviewProps) {

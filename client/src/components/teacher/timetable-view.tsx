@@ -42,97 +42,90 @@ function getEventDurationMinutes(event: CalendarEvent): number {
   return (end - start) / (1000 * 60);
 }
 
-// Google Calendar-style layout algorithm
+// Calculate concurrent overlaps using sweep line algorithm
+// Returns map from event ID to {column, totalColumns} where totalColumns is the max concurrent events during that event
 function layoutEvents(events: CalendarEvent[]): LayoutEvent[] {
   if (events.length === 0) return [];
   
-  // Sort events by start time, then by duration (longer events first)
-  const sortedEvents = [...events].sort((a, b) => {
-    const aStart = parseISO(a.start).getTime();
-    const bStart = parseISO(b.start).getTime();
-    if (aStart !== bStart) return aStart - bStart;
-    // If same start, longer events first
-    const aDuration = parseISO(a.end).getTime() - aStart;
-    const bDuration = parseISO(b.end).getTime() - bStart;
-    return bDuration - aDuration;
+  // Parse times once
+  const eventTimes = events.map(e => ({
+    event: e,
+    start: parseISO(e.start).getTime(),
+    end: parseISO(e.end).getTime(),
+  }));
+  
+  // Sort by start time, then by duration (longer first for stable column assignment)
+  eventTimes.sort((a, b) => {
+    if (a.start !== b.start) return a.start - b.start;
+    return (b.end - b.start) - (a.end - a.start);
   });
   
-  // Group events into collision groups (events that overlap directly or transitively)
-  const groups: CalendarEvent[][] = [];
-  const eventToGroup = new Map<string, number>();
+  // For each event, find all events that directly overlap with it
+  const directOverlaps = new Map<string, Set<string>>();
+  for (const et of eventTimes) {
+    directOverlaps.set(et.event.id, new Set());
+  }
   
-  for (const event of sortedEvents) {
-    let groupIndex = -1;
-    
-    // Find if this event overlaps with any existing group
-    for (let i = 0; i < groups.length; i++) {
-      const group = groups[i];
-      if (group.some(e => eventsOverlap(e, event))) {
-        if (groupIndex === -1) {
-          groupIndex = i;
-          group.push(event);
-          eventToGroup.set(event.id, i);
-        } else {
-          // Merge groups
-          groups[groupIndex].push(...group);
-          group.forEach(e => eventToGroup.set(e.id, groupIndex));
-          groups.splice(i, 1);
-          i--;
-        }
+  for (let i = 0; i < eventTimes.length; i++) {
+    for (let j = i + 1; j < eventTimes.length; j++) {
+      const a = eventTimes[i];
+      const b = eventTimes[j];
+      // Check overlap: a starts before b ends AND a ends after b starts
+      if (a.start < b.end && a.end > b.start) {
+        directOverlaps.get(a.event.id)!.add(b.event.id);
+        directOverlaps.get(b.event.id)!.add(a.event.id);
       }
-    }
-    
-    // If no overlap found, create new group
-    if (groupIndex === -1) {
-      groups.push([event]);
-      eventToGroup.set(event.id, groups.length - 1);
     }
   }
   
-  // For each group, assign columns using greedy algorithm
+  // Assign columns using greedy algorithm - only considering direct overlaps
+  const columnAssignment = new Map<string, number>();
+  const columnEnds: number[] = [];
+  
+  for (const et of eventTimes) {
+    // Find first column where no overlapping event is currently placed
+    // A column is available if the last event in that column ended before or at this event's start
+    let column = 0;
+    while (column < columnEnds.length && columnEnds[column] > et.start) {
+      column++;
+    }
+    
+    // Assign column
+    if (column >= columnEnds.length) {
+      columnEnds.push(et.end);
+    } else {
+      columnEnds[column] = et.end;
+    }
+    
+    columnAssignment.set(et.event.id, column);
+  }
+  
+  // For each event, calculate totalColumns as 1 + count of direct overlaps
+  // This ensures non-overlapping events get full width
   const layoutMap = new Map<string, { column: number; totalColumns: number }>();
   
-  for (const group of groups) {
-    // Sort group by start time
-    group.sort((a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime());
+  for (const et of eventTimes) {
+    const overlappingIds = Array.from(directOverlaps.get(et.event.id)!);
     
-    // Track column end times
-    const columnEnds: number[] = [];
-    
-    for (const event of group) {
-      const eventStart = parseISO(event.start).getTime();
-      const eventEnd = parseISO(event.end).getTime();
-      
-      // Find first available column
-      // A column is available if the previous event ended at or before this event starts
-      let column = 0;
-      while (column < columnEnds.length && columnEnds[column] > eventStart) {
-        column++;
-      }
-      
-      // Assign column
-      if (column >= columnEnds.length) {
-        columnEnds.push(eventEnd);
-      } else {
-        columnEnds[column] = eventEnd;
-      }
-      
-      layoutMap.set(event.id, { column, totalColumns: 0 });
+    // Find the actual columns used by overlapping events to determine width
+    const usedColumns = new Set<number>();
+    usedColumns.add(columnAssignment.get(et.event.id)!);
+    for (const otherId of overlappingIds) {
+      usedColumns.add(columnAssignment.get(otherId)!);
     }
     
-    // Set total columns for all events in this group
-    const totalColumns = columnEnds.length;
-    for (const event of group) {
-      const layout = layoutMap.get(event.id)!;
-      layout.totalColumns = totalColumns;
-    }
+    const totalColumns = usedColumns.size;
+    layoutMap.set(et.event.id, {
+      column: columnAssignment.get(et.event.id)!,
+      totalColumns,
+    });
   }
   
   // Return events with layout info
-  return sortedEvents.map(event => ({
-    ...event,
-    column: layoutMap.get(event.id)?.column ?? 0,
-    totalColumns: layoutMap.get(event.id)?.totalColumns ?? 1,
+  return eventTimes.map(et => ({
+    ...et.event,
+    column: layoutMap.get(et.event.id)?.column ?? 0,
+    totalColumns: layoutMap.get(et.event.id)?.totalColumns ?? 1,
   }));
 }
 
