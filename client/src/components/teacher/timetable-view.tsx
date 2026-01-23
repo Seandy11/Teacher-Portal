@@ -24,13 +24,22 @@ interface LayoutEvent extends CalendarEvent {
   totalColumns: number;
 }
 
-// Check if two events overlap in time
+// Check if two events truly overlap in time (touching events don't count as overlapping)
 function eventsOverlap(a: CalendarEvent, b: CalendarEvent): boolean {
   const aStart = parseISO(a.start).getTime();
   const aEnd = parseISO(a.end).getTime();
   const bStart = parseISO(b.start).getTime();
   const bEnd = parseISO(b.end).getTime();
+  // Events that merely touch (one ends exactly when another starts) are NOT overlapping
+  // Use strict inequality: overlap only if there's actual time intersection
   return aStart < bEnd && aEnd > bStart;
+}
+
+// Get event duration in minutes
+function getEventDurationMinutes(event: CalendarEvent): number {
+  const start = parseISO(event.start).getTime();
+  const end = parseISO(event.end).getTime();
+  return (end - start) / (1000 * 60);
 }
 
 // Google Calendar-style layout algorithm
@@ -95,6 +104,7 @@ function layoutEvents(events: CalendarEvent[]): LayoutEvent[] {
       const eventEnd = parseISO(event.end).getTime();
       
       // Find first available column
+      // A column is available if the previous event ended at or before this event starts
       let column = 0;
       while (column < columnEnds.length && columnEnds[column] > eventStart) {
         column++;
@@ -317,10 +327,15 @@ export function TimetableView({ events, isLoading, onRefresh }: TimetableViewPro
                     const eventColor = event.backgroundColor || defaultEventColor;
                     const isPastEvent = isPast(parseISO(event.end));
                     const style = getEventStyle(event);
+                    const durationMinutes = getEventDurationMinutes(event);
                     
                     // Use pre-calculated layout from layoutEvents
                     const width = `${100 / event.totalColumns}%`;
                     const left = `${(event.column * 100) / event.totalColumns}%`;
+                    
+                    // Adaptive content based on event duration
+                    const showStartTime = durationMinutes >= 30;
+                    const showEndTime = durationMinutes >= 45;
                     
                     return (
                       <Tooltip key={event.id}>
@@ -338,9 +353,11 @@ export function TimetableView({ events, isLoading, onRefresh }: TimetableViewPro
                             data-testid={`event-${event.id}`}
                           >
                             <div className="font-medium truncate leading-tight">{event.title}</div>
-                            <div className="truncate opacity-90 leading-tight">
-                              {format(parseISO(event.start), "HH:mm")} - {format(parseISO(event.end), "HH:mm")}
-                            </div>
+                            {showStartTime && (
+                              <div className="truncate opacity-90 leading-tight">
+                                {format(parseISO(event.start), "HH:mm")}{showEndTime ? ` - ${format(parseISO(event.end), "HH:mm")}` : ""}
+                              </div>
+                            )}
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="right" className="max-w-xs z-50">

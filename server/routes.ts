@@ -160,20 +160,29 @@ export async function registerRoutes(
         orderBy: "startTime",
       });
 
-      // Google Calendar color mapping (colorId to hex)
+      // Google Calendar event color mapping (official API colors)
       const googleCalendarColors: Record<string, string> = {
-        "1": "#a4bdfc", // Lavender
-        "2": "#7ae7bf", // Sage
-        "3": "#dbadff", // Grape
-        "4": "#ff887c", // Flamingo
-        "5": "#fbd75b", // Banana
-        "6": "#ffb878", // Tangerine
-        "7": "#46d6db", // Peacock
-        "8": "#e1e1e1", // Graphite
-        "9": "#5484ed", // Blueberry
-        "10": "#51b749", // Basil
-        "11": "#dc2127", // Tomato
+        "1": "#7986cb", // Lavender
+        "2": "#33b679", // Sage
+        "3": "#8e24aa", // Grape
+        "4": "#e67c73", // Flamingo
+        "5": "#f6bf26", // Banana
+        "6": "#f4511e", // Tangerine
+        "7": "#039be5", // Peacock
+        "8": "#616161", // Graphite
+        "9": "#3f51b5", // Blueberry
+        "10": "#0b8043", // Basil
+        "11": "#d50000", // Tomato
       };
+
+      // Log first few events to debug color data
+      const sampleEvents = (response.data.items || []).slice(0, 3);
+      console.log("Sample calendar events color info:", sampleEvents.map((e: any) => ({
+        title: e.summary,
+        colorId: e.colorId,
+        backgroundColor: e.backgroundColor,
+        foregroundColor: e.foregroundColor,
+      })));
 
       const events: CalendarEvent[] = (response.data.items || []).map((event: any) => ({
         id: event.id,
@@ -623,19 +632,19 @@ export async function registerRoutes(
         return colors[Math.abs(hash) % colors.length];
       };
 
-      // Google Calendar color mapping (colorId to hex)
+      // Google Calendar event color mapping (official API colors)
       const googleCalendarColors: Record<string, string> = {
-        "1": "#a4bdfc", // Lavender
-        "2": "#7ae7bf", // Sage
-        "3": "#dbadff", // Grape
-        "4": "#ff887c", // Flamingo
-        "5": "#fbd75b", // Banana
-        "6": "#ffb878", // Tangerine
-        "7": "#46d6db", // Peacock
-        "8": "#e1e1e1", // Graphite
-        "9": "#5484ed", // Blueberry
-        "10": "#51b749", // Basil
-        "11": "#dc2127", // Tomato
+        "1": "#7986cb", // Lavender
+        "2": "#33b679", // Sage
+        "3": "#8e24aa", // Grape
+        "4": "#e67c73", // Flamingo
+        "5": "#f6bf26", // Banana
+        "6": "#f4511e", // Tangerine
+        "7": "#039be5", // Peacock
+        "8": "#616161", // Graphite
+        "9": "#3f51b5", // Blueberry
+        "10": "#0b8043", // Basil
+        "11": "#d50000", // Tomato
       };
 
       for (const teacher of activeTeachersWithCalendars) {

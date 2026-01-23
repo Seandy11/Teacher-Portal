@@ -40,13 +40,21 @@ function getContrastColor(hexColor: string): string {
   return luminance > 0.5 ? '#000000' : '#ffffff';
 }
 
-// Check if two events overlap in time
+// Check if two events truly overlap in time (touching events don't count as overlapping)
 function eventsOverlap(a: TeacherCalendarEvent, b: TeacherCalendarEvent): boolean {
   const aStart = parseISO(a.start).getTime();
   const aEnd = parseISO(a.end).getTime();
   const bStart = parseISO(b.start).getTime();
   const bEnd = parseISO(b.end).getTime();
+  // Events that merely touch (one ends exactly when another starts) are NOT overlapping
   return aStart < bEnd && aEnd > bStart;
+}
+
+// Get event duration in minutes
+function getEventDurationMinutes(event: TeacherCalendarEvent): number {
+  const start = parseISO(event.start).getTime();
+  const end = parseISO(event.end).getTime();
+  return (end - start) / (1000 * 60);
 }
 
 // Google Calendar-style layout algorithm
@@ -435,10 +443,15 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
                   const displayColor = event.backgroundColor || event.teacherColor;
                   const isPastEvent = isPast(parseISO(event.end));
                   const style = getEventStyle(event);
+                  const durationMinutes = getEventDurationMinutes(event);
                   
                   // Use pre-calculated layout
                   const width = `${100 / event.totalColumns}%`;
                   const left = `${(event.column * 100) / event.totalColumns}%`;
+                  
+                  // Adaptive content based on duration
+                  const showTeacher = durationMinutes >= 25;
+                  const showTime = durationMinutes >= 35;
                   
                   return (
                     <Tooltip key={`${event.teacherId}-${event.id}`}>
@@ -456,10 +469,14 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
                           data-testid={`event-${event.id}`}
                         >
                           <div className="font-medium truncate leading-tight text-[10px]">{event.title}</div>
-                          <div className="truncate opacity-80 leading-tight text-[10px]">{event.teacherName}</div>
-                          <div className="truncate opacity-80 leading-tight text-[10px]">
-                            {format(parseISO(event.start), "HH:mm")}
-                          </div>
+                          {showTeacher && (
+                            <div className="truncate opacity-80 leading-tight text-[10px]">{event.teacherName}</div>
+                          )}
+                          {showTime && (
+                            <div className="truncate opacity-80 leading-tight text-[10px]">
+                              {format(parseISO(event.start), "HH:mm")}
+                            </div>
+                          )}
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="right" className="max-w-xs z-50">
