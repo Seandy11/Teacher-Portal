@@ -67,6 +67,7 @@ interface PayDashboardProps {
 export function PayDashboard({ className }: PayDashboardProps) {
   const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthLocal());
   const [showEventBreakdown, setShowEventBreakdown] = useState(false);
+  const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set());
 
   const { data: paySummary, isLoading, error, refetch } = useQuery<PaySummary>({
     queryKey: ["/api/pay/summary", selectedMonth],
@@ -335,29 +336,77 @@ export function PayDashboard({ className }: PayDashboardProps) {
               <CardContent>
                 <div className="border rounded-lg divide-y">
                   {(() => {
-                    const grouped: Record<string, { totalMinutes: number; count: number }> = {};
-                    for (const event of paySummary.eventBreakdown!.counted) {
-                      const name = event.title || "(no title)";
-                      if (!grouped[name]) {
-                        grouped[name] = { totalMinutes: 0, count: 0 };
+                    const extractStudentName = (title: string): string => {
+                      if (!title) return "(no title)";
+                      const underscoreIndex = title.lastIndexOf("_");
+                      if (underscoreIndex !== -1 && underscoreIndex < title.length - 1) {
+                        return title.substring(underscoreIndex + 1).trim();
                       }
-                      grouped[name].totalMinutes += event.duration;
-                      grouped[name].count += 1;
+                      return title.trim();
+                    };
+
+                    const grouped: Record<string, { totalMinutes: number; count: number; events: EventDetail[] }> = {};
+                    for (const event of paySummary.eventBreakdown!.counted) {
+                      const studentName = extractStudentName(event.title);
+                      if (!grouped[studentName]) {
+                        grouped[studentName] = { totalMinutes: 0, count: 0, events: [] };
+                      }
+                      grouped[studentName].totalMinutes += event.duration;
+                      grouped[studentName].count += 1;
+                      grouped[studentName].events.push(event);
                     }
                     const sorted = Object.entries(grouped).sort((a, b) => b[1].totalMinutes - a[1].totalMinutes);
+                    const toggleStudent = (name: string) => {
+                      setExpandedStudents(prev => {
+                        const next = new Set(prev);
+                        if (next.has(name)) next.delete(name);
+                        else next.add(name);
+                        return next;
+                      });
+                    };
+
                     return sorted.map(([name, data]) => (
-                      <div key={name} className="px-3 py-2 flex justify-between items-center text-sm" data-testid={`student-hours-${name}`}>
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="font-medium truncate">{name}</span>
-                          <span className="text-muted-foreground text-xs whitespace-nowrap">({data.count} lesson{data.count !== 1 ? "s" : ""})</span>
+                      <div key={name} data-testid={`student-hours-${name}`}>
+                        <div
+                          className="px-3 py-2 flex justify-between items-center text-sm cursor-pointer hover:bg-muted/30 transition-colors"
+                          onClick={() => toggleStudent(name)}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            {expandedStudents.has(name) ? (
+                              <ChevronUp className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                            ) : (
+                              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                            )}
+                            <span className="font-medium truncate">{name}</span>
+                            <span className="text-muted-foreground text-xs whitespace-nowrap">({data.count} lesson{data.count !== 1 ? "s" : ""})</span>
+                          </div>
+                          <div className="flex items-center gap-3 whitespace-nowrap ml-2">
+                            <span className="text-muted-foreground text-xs">{data.totalMinutes} min</span>
+                            <span className="font-medium">{(data.totalMinutes / 60).toFixed(1)} hrs</span>
+                          </div>
                         </div>
-                        <span className="font-medium whitespace-nowrap ml-2">{(data.totalMinutes / 60).toFixed(1)} hrs</span>
+                        {expandedStudents.has(name) && (
+                          <div className="bg-muted/20 border-t divide-y">
+                            {data.events.map((event, i) => (
+                              <div key={i} className="px-3 py-1.5 pl-9 flex justify-between items-center text-xs text-muted-foreground">
+                                <div>
+                                  <span>{event.date}</span>
+                                  <span className="ml-2">{event.time}</span>
+                                </div>
+                                <span>{event.duration} min</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ));
                   })()}
                   <div className="px-3 py-2 flex justify-between items-center text-sm font-medium bg-muted/50">
                     <span>Total</span>
-                    <span>{paySummary.hoursWorked.toFixed(1)} hrs</span>
+                    <div className="flex items-center gap-3 whitespace-nowrap ml-2">
+                      <span className="text-muted-foreground text-xs">{paySummary.totalMinutes} min</span>
+                      <span>{paySummary.hoursWorked.toFixed(1)} hrs</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
