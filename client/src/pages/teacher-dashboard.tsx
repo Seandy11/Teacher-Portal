@@ -4,7 +4,6 @@ import { Header } from "@/components/header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TimetableView } from "@/components/teacher/timetable-view";
 import { AttendanceTracker } from "@/components/teacher/attendance-tracker";
-import { AvailabilityManager } from "@/components/teacher/availability-manager";
 import { LeaveForm } from "@/components/teacher/leave-form";
 import { PayDashboard } from "@/components/teacher/pay-dashboard";
 import { FullPageLoader } from "@/components/loading-spinner";
@@ -13,7 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/auth-utils";
-import { Calendar, FileSpreadsheet, Clock, CalendarDays, Wallet } from "lucide-react";
+import { Calendar, FileSpreadsheet, CalendarDays, Wallet } from "lucide-react";
 import type { Teacher, CalendarEvent, AttendanceRow, LeaveRequest, SheetTab } from "@shared/schema";
 
 export default function TeacherDashboard() {
@@ -62,42 +61,6 @@ export default function TeacherDashboard() {
     }
   }, [teacherError, eventsError, attendanceError, leaveError, tabsError, toast]);
 
-  const createBlockMutation = useMutation({
-    mutationFn: async ({ start, end }: { start: Date; end: Date }) => {
-      return apiRequest("POST", "/api/calendar/availability", { start: start.toISOString(), end: end.toISOString() });
-    },
-    onSuccess: () => {
-      toast({ title: "Availability blocked", description: "Time slot has been blocked in your calendar." });
-      queryClient.invalidateQueries({ queryKey: ["/api/calendar/events"] });
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error as Error)) {
-        toast({ title: "Session expired", description: "Redirecting to login...", variant: "destructive" });
-        setTimeout(() => { window.location.href = "/api/login"; }, 500);
-        return;
-      }
-      toast({ title: "Error", description: "Failed to block time slot.", variant: "destructive" });
-    },
-  });
-
-  const deleteBlockMutation = useMutation({
-    mutationFn: async (eventId: string) => {
-      return apiRequest("DELETE", `/api/calendar/availability/${eventId}`);
-    },
-    onSuccess: () => {
-      toast({ title: "Block removed", description: "Time slot is now available." });
-      queryClient.invalidateQueries({ queryKey: ["/api/calendar/events"] });
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error as Error)) {
-        toast({ title: "Session expired", description: "Redirecting to login...", variant: "destructive" });
-        setTimeout(() => { window.location.href = "/api/login"; }, 500);
-        return;
-      }
-      toast({ title: "Error", description: "Failed to remove block.", variant: "destructive" });
-    },
-  });
-
   const updateLessonMutation = useMutation({
     mutationFn: async ({ rowIndex, value }: { rowIndex: number; value: string }) => {
       if (!selectedStudentTab) {
@@ -145,7 +108,6 @@ export default function TeacherDashboard() {
     { id: "timetable", label: "My Timetable", icon: Calendar },
     { id: "attendance", label: "Lesson Tracker", icon: FileSpreadsheet },
     { id: "pay", label: "My Pay", icon: Wallet },
-    { id: "availability", label: "Availability", icon: Clock },
     { id: "leave", label: "Leave", icon: CalendarDays },
   ];
 
@@ -155,7 +117,7 @@ export default function TeacherDashboard() {
       
       <main className="max-w-7xl mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-flex" data-testid="tabs-teacher-nav">
+          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex" data-testid="tabs-teacher-nav">
             {tabs.map((tab) => (
               <TabsTrigger key={tab.id} value={tab.id} className="gap-2" data-testid={`tab-${tab.id}`}>
                 <tab.icon className="h-4 w-4 hidden sm:block" />
@@ -205,28 +167,6 @@ export default function TeacherDashboard() {
 
           <TabsContent value="pay" className="space-y-6">
             <PayDashboard />
-          </TabsContent>
-
-          <TabsContent value="availability" className="space-y-6">
-            {eventsError && !isUnauthorizedError(eventsError as Error) ? (
-              <ErrorDisplay 
-                title="Failed to load availability"
-                message="Could not fetch your calendar data. Please check your calendar settings or try again."
-                onRetry={() => refetchEvents()}
-              />
-            ) : (
-              <AvailabilityManager
-                events={events}
-                isLoading={eventsLoading}
-                onCreateBlock={async (start, end) => {
-                  await createBlockMutation.mutateAsync({ start, end });
-                }}
-                onDeleteBlock={async (eventId) => {
-                  await deleteBlockMutation.mutateAsync(eventId);
-                }}
-                onRefresh={() => refetchEvents()}
-              />
-            )}
           </TabsContent>
 
           <TabsContent value="leave" className="space-y-6">
