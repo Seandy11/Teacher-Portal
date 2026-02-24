@@ -140,7 +140,7 @@ Access is enforced server-side:
 - **Tab**: "Adjustments" tab contains bonus data
 - **Columns**: A=Teacher name, B=Year, C=Month, D-H=Bonus types (Assessment, Training, Referral, Retention, Demo), I=Notes
 - **Data starts**: Row 2 (header in row 1)
-- **Teacher matching**: Uses flexible matching (first name, full name, contains, startsWith)
+- **Teacher matching**: Uses strict exact matching (first name or full name, case-insensitive)
 - **Currency parsing**: Handles R currency format, negatives, and parentheses
 
 ## Development
@@ -158,6 +158,12 @@ Required:
 - `PAYROLL_SHEET_ID` - Google Sheet ID for payroll/bonuses data
 - Google Calendar connector (configured via Replit integrations)
 - Google Sheets connector (configured via Replit integrations)
+
+## Timezone
+- School is in South Africa (SAST, UTC+2)
+- Server runs in UTC - all month formatting on frontend uses local timezone helpers (`client/src/lib/date-utils.ts`) to avoid off-by-one month issues
+- Event dates/times in pay breakdown are formatted in Africa/Johannesburg timezone
+- NEVER use `toISOString().slice(0, 7)` for month values - use `formatMonthLocal()` or `getCurrentMonthLocal()` from `@/lib/date-utils`
 
 ## Currency
 All monetary values are displayed in South African Rand (R), not dollars.

@@ -785,14 +785,8 @@ export async function registerRoutes(
     const teacherLower = teacherName.toLowerCase().trim();
     const teacherFirstName = teacherLower.split(" ")[0];
     
-    // Exact match on first name (common case for this sheet)
     if (sheetLower === teacherFirstName) return true;
-    // Full name match
     if (sheetLower === teacherLower) return true;
-    // Sheet contains teacher's first name
-    if (sheetLower.includes(teacherFirstName)) return true;
-    // Teacher name starts with sheet name
-    if (teacherLower.startsWith(sheetLower)) return true;
     
     return false;
   };
@@ -802,12 +796,12 @@ export async function registerRoutes(
     const payrollSheetId = process.env.PAYROLL_SHEET_ID;
     if (!payrollSheetId) {
       console.log("No PAYROLL_SHEET_ID configured, returning zero bonuses");
-      return { assessment: 0, training: 0, referral: 0, retention: 0, demo: 0, total: 0 };
+      return { assessment: 0, training: 0, referral: 0, retention: 0, demo: 0, total: 0, matchedRows: [] as { sheetName: string; year: number; month: number; assessment: number; training: number; referral: number; retention: number; demo: number; notes: string }[] };
     }
 
     try {
       const sheets = await getGoogleSheetsClient();
-      const range = "'Adjustments'!A2:I5000"; // A=Teacher, B=Year, C=Month, D-H=Bonus types, I=Notes
+      const range = "'Adjustments'!A2:I5000";
       
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: payrollSheetId,
@@ -816,36 +810,48 @@ export async function registerRoutes(
 
       const rows = response.data.values || [];
       let assessment = 0, training = 0, referral = 0, retention = 0, demo = 0;
-      let matchedRows = 0;
+      const matchedRows: { sheetName: string; year: number; month: number; assessment: number; training: number; referral: number; retention: number; demo: number; notes: string }[] = [];
       
       for (const row of rows) {
         const rowTeacher = (row[0] || "").toString();
         const rowYear = parseInt(row[1] || "0", 10);
         const rowMonth = parseInt(row[2] || "0", 10);
         
-        // Check if this row matches the teacher and month
         if (teacherNameMatches(rowTeacher, teacherName) && rowYear === year && rowMonth === monthNum) {
-          matchedRows++;
-          assessment += parseCurrencyValue(row[3]);
-          training += parseCurrencyValue(row[4]);
-          referral += parseCurrencyValue(row[5]);
-          retention += parseCurrencyValue(row[6]);
-          demo += parseCurrencyValue(row[7]);
+          const rowAssessment = parseCurrencyValue(row[3]);
+          const rowTraining = parseCurrencyValue(row[4]);
+          const rowReferral = parseCurrencyValue(row[5]);
+          const rowRetention = parseCurrencyValue(row[6]);
+          const rowDemo = parseCurrencyValue(row[7]);
+          
+          assessment += rowAssessment;
+          training += rowTraining;
+          referral += rowReferral;
+          retention += rowRetention;
+          demo += rowDemo;
+          
+          matchedRows.push({
+            sheetName: rowTeacher,
+            year: rowYear,
+            month: rowMonth,
+            assessment: rowAssessment,
+            training: rowTraining,
+            referral: rowReferral,
+            retention: rowRetention,
+            demo: rowDemo,
+            notes: (row[8] || "").toString(),
+          });
         }
       }
 
       const total = assessment + training + referral + retention + demo;
-      console.log(`Bonuses from sheet for ${teacherName} (${year}-${monthNum}): ${matchedRows} matching rows`, 
+      console.log(`Bonuses for ${teacherName} (${year}-${monthNum}): ${matchedRows.length} rows matched`, 
         { assessment, training, referral, retention, demo, total });
       
-      if (matchedRows === 0) {
-        console.log(`No bonus rows found for teacher "${teacherName}" in ${year}-${monthNum}. Total sheet rows: ${rows.length}`);
-      }
-      
-      return { assessment, training, referral, retention, demo, total };
+      return { assessment, training, referral, retention, demo, total, matchedRows };
     } catch (error) {
       console.error("Error fetching bonuses from payroll sheet:", error);
-      return { assessment: 0, training: 0, referral: 0, retention: 0, demo: 0, total: 0 };
+      return { assessment: 0, training: 0, referral: 0, retention: 0, demo: 0, total: 0, matchedRows: [] as { sheetName: string; year: number; month: number; assessment: number; training: number; referral: number; retention: number; demo: number; notes: string }[] };
     }
   };
 
@@ -853,16 +859,17 @@ export async function registerRoutes(
   app.get("/api/pay/summary", isAuthenticated, requireTeacher, async (req: any, res) => {
     try {
       const teacher = req.teacher;
-      const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
+      const now = new Date();
+      const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const month = (req.query.month as string) || defaultMonth;
       const [year, monthNum] = month.split("-").map(Number);
       
-      // Get bonuses from payroll sheet
       const bonuses = await fetchBonusesFromSheet(teacher.name, year, monthNum);
       
-      // Calculate minutes from calendar if calendar is set up
-      // Only count lessons that have ENDED (completed lessons only)
       let totalMinutes = 0;
-      const now = new Date();
+      const countedEvents: { title: string; duration: number; date: string; time: string }[] = [];
+      const skippedEvents: { title: string; reason: string }[] = [];
+      
       if (teacher.calendarId) {
         try {
           const calendar = await getGoogleCalendarClient();
@@ -877,12 +884,6 @@ export async function registerRoutes(
             orderBy: "startTime",
           });
           
-          // Sum up duration of all class events
-          // Exclude: availability blocks, DEMO classes, LEAVE
-          // Only count lessons that have ENDED (end time <= now)
-          const countedEvents: { title: string; duration: number; date: string }[] = [];
-          const skippedEvents: { title: string; reason: string }[] = [];
-          
           for (const event of response.data.items || []) {
             const title = event.summary || "";
             const titleLower = title.toLowerCase();
@@ -893,7 +894,6 @@ export async function registerRoutes(
             const isDemo = titleLower.includes("demo");
             const isLeave = titleLower.includes("leave");
             
-            // Skip if no dateTime (all-day events like LEAVE)
             if (!event.start?.dateTime || !event.end?.dateTime) {
               skippedEvents.push({ title, reason: "all-day event" });
               continue;
@@ -917,14 +917,14 @@ export async function registerRoutes(
             const start = new Date(event.start.dateTime);
             const end = new Date(event.end.dateTime);
             
-            // Only count if the lesson has ended
             if (end.getTime() <= now.getTime()) {
               const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
               totalMinutes += durationMinutes;
               countedEvents.push({ 
                 title, 
                 duration: durationMinutes, 
-                date: start.toISOString().split('T')[0] 
+                date: start.toLocaleDateString('en-ZA', { timeZone: 'Africa/Johannesburg' }),
+                time: `${start.toLocaleTimeString('en-ZA', { timeZone: 'Africa/Johannesburg', hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('en-ZA', { timeZone: 'Africa/Johannesburg', hour: '2-digit', minute: '2-digit' })}`,
               });
             } else {
               skippedEvents.push({ title, reason: "not ended yet" });
@@ -946,6 +946,8 @@ export async function registerRoutes(
       const basePay = hoursWorked * hourlyRate;
       const totalPay = basePay + bonuses.total;
       
+      const isCurrentMonth = month === defaultMonth;
+      
       res.json({
         month,
         teacherId: teacher.id,
@@ -963,6 +965,12 @@ export async function registerRoutes(
           total: parseFloat(bonuses.total.toFixed(2)),
         },
         totalPay: parseFloat(totalPay.toFixed(2)),
+        isCurrentMonth,
+        eventBreakdown: {
+          counted: countedEvents,
+          skipped: skippedEvents,
+        },
+        bonusRows: bonuses.matchedRows,
       });
     } catch (error) {
       console.error("Error calculating pay summary:", error);
@@ -974,7 +982,9 @@ export async function registerRoutes(
   app.get("/api/admin/pay/:teacherId", isAuthenticated, requireAdmin, async (req: any, res) => {
     try {
       const teacherId = req.params.teacherId;
-      const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
+      const now = new Date();
+      const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const month = (req.query.month as string) || defaultMonth;
       const [year, monthNum] = month.split("-").map(Number);
       
       const teacher = await storage.getTeacher(teacherId);
@@ -982,13 +992,12 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Teacher not found" });
       }
       
-      // Get bonuses from payroll sheet (same as teacher endpoint)
       const bonuses = await fetchBonusesFromSheet(teacher.name, year, monthNum);
       
-      // Calculate minutes from calendar if calendar is set up
-      // Only count lessons that have ENDED (completed lessons only)
       let totalMinutes = 0;
-      const now = new Date();
+      const countedEvents: { title: string; duration: number; date: string; time: string }[] = [];
+      const skippedEvents: { title: string; reason: string }[] = [];
+      
       if (teacher.calendarId) {
         try {
           const calendar = await getGoogleCalendarClient();
@@ -1003,9 +1012,6 @@ export async function registerRoutes(
             orderBy: "startTime",
           });
           
-          // Sum up duration of all class events
-          // Exclude: availability blocks, DEMO classes, LEAVE
-          // Only count lessons that have ENDED (end time <= now)
           for (const event of response.data.items || []) {
             const title = event.summary || "";
             const titleLower = title.toLowerCase();
@@ -1016,22 +1022,30 @@ export async function registerRoutes(
             const isDemo = titleLower.includes("demo");
             const isLeave = titleLower.includes("leave");
             
-            // Skip if no dateTime (all-day events like LEAVE)
             if (!event.start?.dateTime || !event.end?.dateTime) {
+              skippedEvents.push({ title, reason: "all-day event" });
               continue;
             }
             
             if (isAvailabilityBlock || isDemo || isLeave) {
+              skippedEvents.push({ title, reason: isAvailabilityBlock ? "availability block" : isDemo ? "DEMO class" : "LEAVE" });
               continue;
             }
             
             const start = new Date(event.start.dateTime);
             const end = new Date(event.end.dateTime);
             
-            // Only count if the lesson has ended
             if (end.getTime() <= now.getTime()) {
               const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
               totalMinutes += durationMinutes;
+              countedEvents.push({ 
+                title, 
+                duration: durationMinutes, 
+                date: start.toLocaleDateString('en-ZA', { timeZone: 'Africa/Johannesburg' }),
+                time: `${start.toLocaleTimeString('en-ZA', { timeZone: 'Africa/Johannesburg', hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('en-ZA', { timeZone: 'Africa/Johannesburg', hour: '2-digit', minute: '2-digit' })}`,
+              });
+            } else {
+              skippedEvents.push({ title, reason: "not ended yet" });
             }
           }
         } catch (calendarError) {
@@ -1043,6 +1057,8 @@ export async function registerRoutes(
       const hoursWorked = totalMinutes / 60;
       const basePay = hoursWorked * hourlyRate;
       const totalPay = basePay + bonuses.total;
+      
+      const isCurrentMonth = month === defaultMonth;
       
       res.json({
         month,
@@ -1061,6 +1077,12 @@ export async function registerRoutes(
           total: parseFloat(bonuses.total.toFixed(2)),
         },
         totalPay: parseFloat(totalPay.toFixed(2)),
+        isCurrentMonth,
+        eventBreakdown: {
+          counted: countedEvents,
+          skipped: skippedEvents,
+        },
+        bonusRows: bonuses.matchedRows,
       });
     } catch (error) {
       console.error("Error calculating pay summary:", error);

@@ -18,6 +18,7 @@ import { Plus, Trash2, Wallet, Gift } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { formatMonthLocal, getCurrentMonthLocal } from "@/lib/date-utils";
 import type { Teacher, Bonus } from "@shared/schema";
 
 const bonusFormSchema = z.object({
@@ -37,7 +38,7 @@ export function BonusManagement({ teachers }: BonusManagementProps) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Bonus | null>(null);
   const [selectedTeacher, setSelectedTeacher] = useState<string>("");
-  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7));
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthLocal());
   const { toast } = useToast();
 
   const form = useForm<BonusFormValues>({
@@ -46,7 +47,7 @@ export function BonusManagement({ teachers }: BonusManagementProps) {
       teacherId: "",
       amount: "",
       reason: "",
-      month: new Date().toISOString().slice(0, 7),
+      month: getCurrentMonthLocal(),
     },
   });
 
@@ -78,7 +79,7 @@ export function BonusManagement({ teachers }: BonusManagementProps) {
         teacherId: "",
         amount: "",
         reason: "",
-        month: new Date().toISOString().slice(0, 7),
+        month: getCurrentMonthLocal(),
       });
     },
     onError: () => {
@@ -119,7 +120,7 @@ export function BonusManagement({ teachers }: BonusManagementProps) {
     for (let i = 0; i < 12; i++) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       options.push({
-        value: date.toISOString().slice(0, 7),
+        value: formatMonthLocal(date),
         label: format(date, "MMMM yyyy"),
       });
     }

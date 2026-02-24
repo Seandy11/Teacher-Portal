@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
-import { Wallet, Clock, Gift, TrendingUp, ChevronLeft, ChevronRight, Award, GraduationCap, Users, UserPlus, Presentation } from "lucide-react";
+import { Wallet, Clock, Gift, TrendingUp, ChevronLeft, ChevronRight, Award, GraduationCap, Users, UserPlus, Presentation, ChevronDown, ChevronUp, AlertCircle, ListChecks } from "lucide-react";
 import { format, subMonths, addMonths } from "date-fns";
+import { formatMonthLocal, getCurrentMonthLocal } from "@/lib/date-utils";
 
 interface BonusBreakdown {
   assessment: number;
@@ -15,6 +16,30 @@ interface BonusBreakdown {
   retention: number;
   demo: number;
   total: number;
+}
+
+interface EventDetail {
+  title: string;
+  duration: number;
+  date: string;
+  time: string;
+}
+
+interface SkippedEvent {
+  title: string;
+  reason: string;
+}
+
+interface BonusRow {
+  sheetName: string;
+  year: number;
+  month: number;
+  assessment: number;
+  training: number;
+  referral: number;
+  retention: number;
+  demo: number;
+  notes: string;
 }
 
 interface PaySummary {
@@ -27,6 +52,12 @@ interface PaySummary {
   basePay: number;
   bonuses: BonusBreakdown;
   totalPay: number;
+  isCurrentMonth?: boolean;
+  eventBreakdown?: {
+    counted: EventDetail[];
+    skipped: SkippedEvent[];
+  };
+  bonusRows?: BonusRow[];
 }
 
 interface PayDashboardProps {
@@ -34,7 +65,8 @@ interface PayDashboardProps {
 }
 
 export function PayDashboard({ className }: PayDashboardProps) {
-  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7));
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthLocal());
+  const [showEventBreakdown, setShowEventBreakdown] = useState(false);
 
   const { data: paySummary, isLoading, error, refetch } = useQuery<PaySummary>({
     queryKey: ["/api/pay/summary", selectedMonth],
@@ -48,7 +80,7 @@ export function PayDashboard({ className }: PayDashboardProps) {
   const goToPreviousMonth = () => {
     const [year, month] = selectedMonth.split("-").map(Number);
     const prevDate = subMonths(new Date(year, month - 1, 1), 1);
-    setSelectedMonth(prevDate.toISOString().slice(0, 7));
+    setSelectedMonth(formatMonthLocal(prevDate));
   };
 
   const goToNextMonth = () => {
@@ -56,15 +88,15 @@ export function PayDashboard({ className }: PayDashboardProps) {
     const nextDate = addMonths(new Date(year, month - 1, 1), 1);
     const now = new Date();
     if (nextDate <= now) {
-      setSelectedMonth(nextDate.toISOString().slice(0, 7));
+      setSelectedMonth(formatMonthLocal(nextDate));
     }
   };
 
   const goToCurrentMonth = () => {
-    setSelectedMonth(new Date().toISOString().slice(0, 7));
+    setSelectedMonth(getCurrentMonthLocal());
   };
 
-  const isCurrentMonth = selectedMonth === new Date().toISOString().slice(0, 7);
+  const isCurrentMonth = selectedMonth === getCurrentMonthLocal();
   const canGoNext = !isCurrentMonth;
 
   const generateMonthOptions = () => {
@@ -73,7 +105,7 @@ export function PayDashboard({ className }: PayDashboardProps) {
     for (let i = 0; i < 12; i++) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       options.push({
-        value: date.toISOString().slice(0, 7),
+        value: formatMonthLocal(date),
         label: format(date, "MMMM yyyy"),
       });
     }
@@ -211,6 +243,15 @@ export function PayDashboard({ className }: PayDashboardProps) {
             </Card>
           </div>
 
+          {paySummary.isCurrentMonth && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800" data-testid="current-month-notice">
+              <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                This month is still in progress. Only completed lessons are included in the hours total.
+              </p>
+            </div>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle>Pay Breakdown</CardTitle>
@@ -279,6 +320,63 @@ export function PayDashboard({ className }: PayDashboardProps) {
               </div>
             </CardContent>
           </Card>
+
+          {paySummary.eventBreakdown && (
+            <Card>
+              <CardHeader className="cursor-pointer" onClick={() => setShowEventBreakdown(!showEventBreakdown)}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ListChecks className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <CardTitle className="text-base">Lessons Counted</CardTitle>
+                      <CardDescription>
+                        {paySummary.eventBreakdown.counted.length} lesson{paySummary.eventBreakdown.counted.length !== 1 ? "s" : ""} counted
+                        {paySummary.eventBreakdown.skipped.length > 0 && `, ${paySummary.eventBreakdown.skipped.length} skipped`}
+                      </CardDescription>
+                    </div>
+                  </div>
+                  {showEventBreakdown ? (
+                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
+              </CardHeader>
+              {showEventBreakdown && (
+                <CardContent className="space-y-4">
+                  {paySummary.eventBreakdown.counted.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-green-700 dark:text-green-400">Counted toward hours</h4>
+                      <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
+                        {paySummary.eventBreakdown.counted.map((event, i) => (
+                          <div key={i} className="px-3 py-2 flex justify-between items-center text-sm" data-testid={`counted-event-${i}`}>
+                            <div>
+                              <span className="font-medium">{event.title}</span>
+                              <span className="text-muted-foreground ml-2">{event.date} {event.time}</span>
+                            </div>
+                            <span className="text-muted-foreground whitespace-nowrap ml-2">{event.duration} min</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {paySummary.eventBreakdown.skipped.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-muted-foreground">Skipped</h4>
+                      <div className="border rounded-lg divide-y max-h-40 overflow-y-auto">
+                        {paySummary.eventBreakdown.skipped.map((event, i) => (
+                          <div key={i} className="px-3 py-2 flex justify-between items-center text-sm text-muted-foreground" data-testid={`skipped-event-${i}`}>
+                            <span>{event.title || "(no title)"}</span>
+                            <span className="text-xs">{event.reason}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+          )}
         </>
       ) : null}
     </div>
