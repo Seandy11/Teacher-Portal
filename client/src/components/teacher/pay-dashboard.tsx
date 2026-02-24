@@ -321,6 +321,49 @@ export function PayDashboard({ className }: PayDashboardProps) {
             </CardContent>
           </Card>
 
+          {paySummary.eventBreakdown && paySummary.eventBreakdown.counted.length > 0 && (
+            <Card data-testid="card-hours-by-student">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <CardTitle className="text-base">Hours by Student</CardTitle>
+                    <CardDescription>Total hours per student for easy payroll comparison</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="border rounded-lg divide-y">
+                  {(() => {
+                    const grouped: Record<string, { totalMinutes: number; count: number }> = {};
+                    for (const event of paySummary.eventBreakdown!.counted) {
+                      const name = event.title || "(no title)";
+                      if (!grouped[name]) {
+                        grouped[name] = { totalMinutes: 0, count: 0 };
+                      }
+                      grouped[name].totalMinutes += event.duration;
+                      grouped[name].count += 1;
+                    }
+                    const sorted = Object.entries(grouped).sort((a, b) => b[1].totalMinutes - a[1].totalMinutes);
+                    return sorted.map(([name, data]) => (
+                      <div key={name} className="px-3 py-2 flex justify-between items-center text-sm" data-testid={`student-hours-${name}`}>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-medium truncate">{name}</span>
+                          <span className="text-muted-foreground text-xs whitespace-nowrap">({data.count} lesson{data.count !== 1 ? "s" : ""})</span>
+                        </div>
+                        <span className="font-medium whitespace-nowrap ml-2">{(data.totalMinutes / 60).toFixed(1)} hrs</span>
+                      </div>
+                    ));
+                  })()}
+                  <div className="px-3 py-2 flex justify-between items-center text-sm font-medium bg-muted/50">
+                    <span>Total</span>
+                    <span>{paySummary.hoursWorked.toFixed(1)} hrs</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {paySummary.eventBreakdown && (
             <Card>
               <CardHeader className="cursor-pointer" onClick={() => setShowEventBreakdown(!showEventBreakdown)}>
