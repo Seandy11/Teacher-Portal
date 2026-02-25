@@ -325,8 +325,8 @@ export async function registerRoutes(
 
       const sheets = await getGoogleSheetsClient();
       
-      // Get cell values (data starts at row 4)
-      const range = `'${tabName}'!A4:H1000`;
+      // Get cell values (data starts at row 3)
+      const range = `'${tabName}'!A3:H1000`;
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: teacher.sheetId,
         range: range,
@@ -339,7 +339,7 @@ export async function registerRoutes(
       try {
         const validationResponse = await sheets.spreadsheets.get({
           spreadsheetId: teacher.sheetId,
-          ranges: [`'${tabName}'!C4:C1000`],
+          ranges: [`'${tabName}'!C3:C1000`],
           fields: "sheets.data.rowData.values.dataValidation",
         });
         
@@ -349,7 +349,7 @@ export async function registerRoutes(
           if (validation?.condition?.type === "ONE_OF_LIST" && validation?.condition?.values) {
             const options = validation.condition.values.map((v: any) => v.userEnteredValue || "").filter((v: string) => v);
             if (options.length > 0) {
-              dropdownOptionsMap.set(index + 4, options); // +4 because data starts at row 4
+              dropdownOptionsMap.set(index + 3, options); // +3 because data starts at row 3
             }
           }
         });
@@ -359,7 +359,7 @@ export async function registerRoutes(
       }
 
       const attendance: AttendanceRow[] = rows.map((row: any[], index: number) => {
-        const rowNum = index + 4; // +4 because data starts at row 4
+        const rowNum = index + 3; // +3 because data starts at row 3
         return {
           rowIndex: rowNum,
           lessonNo: row[0] || "",
@@ -390,7 +390,7 @@ export async function registerRoutes(
       }
 
       const rowIndex = parseInt(req.params.rowIndex, 10);
-      if (isNaN(rowIndex) || rowIndex < 4) {
+      if (isNaN(rowIndex) || rowIndex < 3) {
         return res.status(400).json({ message: "Invalid row index" });
       }
 
