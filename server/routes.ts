@@ -326,7 +326,7 @@ export async function registerRoutes(
       const sheets = await getGoogleSheetsClient();
       
       // Get cell values (data starts at row 3)
-      const range = `'${tabName}'!A3:H1000`;
+      const range = `'${tabName}'!A3:I1000`;
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: teacher.sheetId,
         range: range,
@@ -369,7 +369,8 @@ export async function registerRoutes(
           lessonTimePurchased: row[4] || "",
           lessonDuration: row[5] || "",
           remainingTime: row[6] || "",
-          notes: row[7] || "",
+          referralCredits: row[7] || "",
+          notes: row[8] || "",
           dropdownOptions: dropdownOptionsMap.get(rowNum),
         };
       }).filter((row: AttendanceRow) => row.date || row.lessonNo); // Filter out empty rows

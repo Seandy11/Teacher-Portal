@@ -121,7 +121,7 @@ export interface CalendarEvent {
 }
 
 // Attendance row type (from Google Sheets)
-// Structure: A=No., B=Date, C=Lesson details (editable), D=Teacher, E=Lesson time purchased, F=Lesson duration, G=Remaining time, H=Notes
+// Structure: A=No., B=Date, C=Lesson details (editable), D=Teacher, E=Lesson time purchased, F=Lesson duration, G=Remaining time, H=Referral credits, I=Notes & Parent Feedback
 export interface AttendanceRow {
   rowIndex: number;
   lessonNo: string; // Column A - lesson number
@@ -131,7 +131,8 @@ export interface AttendanceRow {
   lessonTimePurchased: string; // Column E - read-only
   lessonDuration: string; // Column F - read-only
   remainingTime: string; // Column G - read-only
-  notes: string; // Column H - read-only
+  referralCredits: string; // Column H - read-only
+  notes: string; // Column I - read-only (Notes & Parent Feedback)
   dropdownOptions?: string[]; // Data validation options for Column C (if any)
 }
 

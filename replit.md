@@ -131,9 +131,11 @@ Access is enforced server-side:
 - Events with "Blocked" or "Unavailable" in title are treated as availability blocks
 
 ### Sheets Integration
-- **Read**: Attendance data pulled from assigned sheet range
-- **Write**: Only columns D (attendance) and E (notes) can be edited
-- Other columns (date, student, time, lesson plan, homework) are protected
+- **Read**: Attendance data pulled from assigned sheet range (A3:I1000)
+- **Column mapping**: A=No., B=Date, C=Lesson details (editable), D=Teacher, E=Lesson time purchased, F=Lesson duration, G=Remaining time, H=Referral credits, I=Notes & Parent Feedback
+- **Write**: Only Column C (lesson details) can be edited by teachers
+- **Notes display**: Notes shown as clickable icon with popover; unread notes have red badge (tracked via localStorage)
+- Other columns are read-only and protected
 
 ### Payroll Sheet Integration (Bonuses)
 - **Sheet ID**: Configured via `PAYROLL_SHEET_ID` environment variable
