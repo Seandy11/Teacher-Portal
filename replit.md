@@ -112,6 +112,7 @@ shared/
 - `POST /api/admin/impersonate/:teacherId` - Start impersonating a teacher
 - `POST /api/admin/impersonate/exit` - Stop impersonating
 - `GET /api/admin/impersonate/status` - Get current impersonation status
+- `GET /api/admin/payroll` - Get pay summaries for all active teachers (accepts ?month=YYYY-MM)
 
 ### Pay Endpoints
 - `GET /api/pay/summary` - Get pay summary (hours worked, base pay, bonuses, total)

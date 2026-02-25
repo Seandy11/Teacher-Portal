@@ -423,7 +423,6 @@ export function PayDashboard({ className }: PayDashboardProps) {
                       <CardTitle className="text-base">Lessons Counted</CardTitle>
                       <CardDescription>
                         {paySummary.eventBreakdown.counted.length} lesson{paySummary.eventBreakdown.counted.length !== 1 ? "s" : ""} counted
-                        {paySummary.eventBreakdown.skipped.length > 0 && `, ${paySummary.eventBreakdown.skipped.length} skipped`}
                       </CardDescription>
                     </div>
                   </div>
@@ -447,19 +446,6 @@ export function PayDashboard({ className }: PayDashboardProps) {
                               <span className="text-muted-foreground ml-2">{event.date} {event.time}</span>
                             </div>
                             <span className="text-muted-foreground whitespace-nowrap ml-2">{event.duration} min</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {paySummary.eventBreakdown.skipped.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium text-muted-foreground">Skipped</h4>
-                      <div className="border rounded-lg divide-y max-h-40 overflow-y-auto">
-                        {paySummary.eventBreakdown.skipped.map((event, i) => (
-                          <div key={i} className="px-3 py-2 flex justify-between items-center text-sm text-muted-foreground" data-testid={`skipped-event-${i}`}>
-                            <span>{event.title || "(no title)"}</span>
-                            <span className="text-xs">{event.reason}</span>
                           </div>
                         ))}
                       </div>

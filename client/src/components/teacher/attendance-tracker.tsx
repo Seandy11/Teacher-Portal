@@ -226,9 +226,17 @@ export function AttendanceTracker({
                       </div>
                     </TableHead>
                     <TableHead className="min-w-[50px]">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 relative">
                         <Lock className="h-3 w-3 text-muted-foreground" />
                         Notes
+                        {rows.some(r => {
+                          const has = !!r.notes?.trim();
+                          if (!has) return false;
+                          const key = getNoteKey(selectedTab, r.rowIndex, r.notes);
+                          return !isNoteRead(selectedTab, r.rowIndex, r.notes) && !readNotes[key];
+                        }) && (
+                          <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white" data-testid="badge-unread-notes-header">!</span>
+                        )}
                       </div>
                     </TableHead>
                     <TableHead className="min-w-[80px]">Actions</TableHead>

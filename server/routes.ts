@@ -1095,6 +1095,137 @@ export async function registerRoutes(
     }
   });
 
+  // Get payroll summary for all active teachers (admin only)
+  app.get("/api/admin/payroll", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const now = new Date();
+      const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const month = (req.query.month as string) || defaultMonth;
+      const [year, monthNum] = month.split("-").map(Number);
+      const isCurrentMonth = month === defaultMonth;
+      
+      const allTeachers = await storage.getAllTeachers();
+      const activeTeachers = allTeachers.filter(t => t.isActive);
+      
+      const calendar = await getGoogleCalendarClient();
+      const timeMin = new Date(year, monthNum - 1, 1);
+      const timeMax = new Date(year, monthNum, 0, 23, 59, 59);
+      
+      const results = await Promise.all(activeTeachers.map(async (teacher) => {
+        try {
+          const bonuses = await fetchBonusesFromSheet(teacher.name, year, monthNum);
+          
+          let totalMinutes = 0;
+          const countedEvents: { title: string; duration: number; date: string; time: string }[] = [];
+          const skippedEvents: { title: string; reason: string }[] = [];
+          
+          if (teacher.calendarId) {
+            try {
+              const response = await calendar.events.list({
+                calendarId: teacher.calendarId,
+                timeMin: timeMin.toISOString(),
+                timeMax: timeMax.toISOString(),
+                singleEvents: true,
+                orderBy: "startTime",
+              });
+              
+              for (const event of response.data.items || []) {
+                const title = event.summary || "";
+                const titleLower = title.toLowerCase();
+                
+                const isAvailabilityBlock = titleLower.includes("blocked") || 
+                                           titleLower.includes("unavailable") ||
+                                           event.extendedProperties?.private?.type === "availability_block";
+                const isDemo = titleLower.includes("demo");
+                const isLeave = titleLower.includes("leave");
+                
+                if (!event.start?.dateTime || !event.end?.dateTime) {
+                  skippedEvents.push({ title, reason: "all-day event" });
+                  continue;
+                }
+                
+                if (isAvailabilityBlock || isDemo || isLeave) {
+                  skippedEvents.push({ title, reason: isAvailabilityBlock ? "availability block" : isDemo ? "DEMO class" : "LEAVE" });
+                  continue;
+                }
+                
+                const start = new Date(event.start.dateTime);
+                const end = new Date(event.end.dateTime);
+                
+                if (end.getTime() <= now.getTime()) {
+                  const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+                  totalMinutes += durationMinutes;
+                  countedEvents.push({ 
+                    title, 
+                    duration: durationMinutes, 
+                    date: start.toLocaleDateString('en-ZA', { timeZone: 'Africa/Johannesburg' }),
+                    time: `${start.toLocaleTimeString('en-ZA', { timeZone: 'Africa/Johannesburg', hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('en-ZA', { timeZone: 'Africa/Johannesburg', hour: '2-digit', minute: '2-digit' })}`,
+                  });
+                } else {
+                  skippedEvents.push({ title, reason: "not ended yet" });
+                }
+              }
+            } catch (calendarError) {
+              console.error(`Error fetching calendar for ${teacher.name}:`, calendarError);
+            }
+          }
+          
+          const hourlyRate = teacher.hourlyRate ? parseFloat(teacher.hourlyRate) : 0;
+          const hoursWorked = totalMinutes / 60;
+          const basePay = hoursWorked * hourlyRate;
+          const totalPay = basePay + bonuses.total;
+          
+          return {
+            month,
+            teacherId: teacher.id,
+            teacherName: teacher.name,
+            hourlyRate,
+            totalMinutes,
+            hoursWorked: parseFloat(hoursWorked.toFixed(2)),
+            basePay: parseFloat(basePay.toFixed(2)),
+            bonuses: {
+              assessment: parseFloat(bonuses.assessment.toFixed(2)),
+              training: parseFloat(bonuses.training.toFixed(2)),
+              referral: parseFloat(bonuses.referral.toFixed(2)),
+              retention: parseFloat(bonuses.retention.toFixed(2)),
+              demo: parseFloat(bonuses.demo.toFixed(2)),
+              total: parseFloat(bonuses.total.toFixed(2)),
+            },
+            totalPay: parseFloat(totalPay.toFixed(2)),
+            isCurrentMonth,
+            eventBreakdown: {
+              counted: countedEvents,
+              skipped: skippedEvents,
+            },
+            bonusRows: bonuses.matchedRows,
+          };
+        } catch (teacherError) {
+          console.error(`Error calculating pay for ${teacher.name}:`, teacherError);
+          return {
+            month,
+            teacherId: teacher.id,
+            teacherName: teacher.name,
+            hourlyRate: teacher.hourlyRate ? parseFloat(teacher.hourlyRate) : 0,
+            totalMinutes: 0,
+            hoursWorked: 0,
+            basePay: 0,
+            bonuses: { assessment: 0, training: 0, referral: 0, retention: 0, demo: 0, total: 0 },
+            totalPay: 0,
+            isCurrentMonth,
+            eventBreakdown: { counted: [], skipped: [] },
+            bonusRows: [],
+            error: "Failed to calculate",
+          };
+        }
+      }));
+      
+      res.json(results);
+    } catch (error) {
+      console.error("Error fetching payroll:", error);
+      res.status(500).json({ message: "Failed to fetch payroll data" });
+    }
+  });
+
   // ============ IMPERSONATION ROUTES ============
   // NOTE: Specific routes (/exit, /status) MUST be defined before parameterized routes (/:teacherId)
 
