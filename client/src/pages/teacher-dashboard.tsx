@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/auth-utils";
 import { Calendar, FileSpreadsheet, CalendarDays, Wallet } from "lucide-react";
+import { startOfWeek, endOfWeek, subWeeks, addWeeks } from "date-fns";
 import type { Teacher, CalendarEvent, AttendanceRow, LeaveRequest, SheetTab } from "@shared/schema";
 
 export default function TeacherDashboard() {
@@ -21,6 +22,10 @@ export default function TeacherDashboard() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("timetable");
   const [selectedStudentTab, setSelectedStudentTab] = useState<string>("");
+  const [currentWeek, setCurrentWeek] = useState(new Date());
+
+  const eventsTimeMin = subWeeks(startOfWeek(currentWeek, { weekStartsOn: 1 }), 1).toISOString();
+  const eventsTimeMax = addWeeks(endOfWeek(currentWeek, { weekStartsOn: 1 }), 2).toISOString();
 
   const { data: teacher, isLoading: teacherLoading, error: teacherError } = useQuery<Teacher>({
     queryKey: ["/api/teachers/me"],
@@ -28,7 +33,12 @@ export default function TeacherDashboard() {
   });
 
   const { data: events = [], isLoading: eventsLoading, error: eventsError, refetch: refetchEvents } = useQuery<CalendarEvent[]>({
-    queryKey: ["/api/calendar/events"],
+    queryKey: ["/api/calendar/events", eventsTimeMin, eventsTimeMax],
+    queryFn: async () => {
+      const res = await fetch(`/api/calendar/events?timeMin=${encodeURIComponent(eventsTimeMin)}&timeMax=${encodeURIComponent(eventsTimeMax)}`);
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+      return res.json();
+    },
     enabled: !!teacher,
   });
 
@@ -138,6 +148,8 @@ export default function TeacherDashboard() {
                 events={events}
                 isLoading={eventsLoading}
                 onRefresh={() => refetchEvents()}
+                currentWeek={currentWeek}
+                onWeekChange={setCurrentWeek}
               />
             )}
           </TabsContent>

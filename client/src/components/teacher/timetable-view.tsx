@@ -11,6 +11,8 @@ interface TimetableViewProps {
   events: CalendarEvent[];
   isLoading: boolean;
   onRefresh: () => void;
+  currentWeek: Date;
+  onWeekChange: (date: Date) => void;
 }
 
 const HOUR_HEIGHT = 60; // pixels per hour
@@ -129,8 +131,7 @@ function layoutEvents(events: CalendarEvent[]): LayoutEvent[] {
   }));
 }
 
-export function TimetableView({ events, isLoading, onRefresh }: TimetableViewProps) {
-  const [currentWeek, setCurrentWeek] = useState(new Date());
+export function TimetableView({ events, isLoading, onRefresh, currentWeek, onWeekChange }: TimetableViewProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   
   // Update current time every minute
@@ -188,7 +189,7 @@ export function TimetableView({ events, isLoading, onRefresh }: TimetableViewPro
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
+              onClick={() => onWeekChange(subWeeks(currentWeek, 1))}
               data-testid="button-prev-week"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -196,7 +197,7 @@ export function TimetableView({ events, isLoading, onRefresh }: TimetableViewPro
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
+              onClick={() => onWeekChange(addWeeks(currentWeek, 1))}
               data-testid="button-next-week"
             >
               <ChevronRight className="h-4 w-4" />
@@ -213,7 +214,7 @@ export function TimetableView({ events, isLoading, onRefresh }: TimetableViewPro
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCurrentWeek(new Date())}
+            onClick={() => onWeekChange(new Date())}
             data-testid="button-today"
           >
             Today

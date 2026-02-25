@@ -149,8 +149,12 @@ export async function registerRoutes(
 
       const calendar = await getGoogleCalendarClient();
       const now = new Date();
-      const timeMin = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // 1 week ago
-      const timeMax = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days ahead
+      const timeMin = req.query.timeMin
+        ? new Date(req.query.timeMin as string)
+        : new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const timeMax = req.query.timeMax
+        ? new Date(req.query.timeMax as string)
+        : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
       // Fetch colors from Google Calendar API
       const [eventsResponse, colorsResponse, calendarListEntry] = await Promise.all([
