@@ -21,19 +21,19 @@ function getReadNotes(): Record<string, boolean> {
   }
 }
 
-function getNoteKey(tab: string, rowIndex: number, note: string): string {
-  return `${tab}:${rowIndex}:${note}`;
+function getNoteKey(tab: string, recordKey: string, note: string): string {
+  return `${tab}:${recordKey}:${note}`;
 }
 
-function markNoteRead(tab: string, rowIndex: number, note: string) {
+function markNoteRead(tab: string, recordKey: string, note: string) {
   const read = getReadNotes();
-  read[getNoteKey(tab, rowIndex, note)] = true;
+  read[getNoteKey(tab, recordKey, note)] = true;
   localStorage.setItem(READ_NOTES_KEY, JSON.stringify(read));
 }
 
-function isNoteRead(tab: string, rowIndex: number, note: string): boolean {
+function isNoteRead(tab: string, recordKey: string, note: string): boolean {
   const read = getReadNotes();
-  return !!read[getNoteKey(tab, rowIndex, note)];
+  return !!read[getNoteKey(tab, recordKey, note)];
 }
 
 interface AttendanceTrackerProps {
@@ -43,7 +43,7 @@ interface AttendanceTrackerProps {
   isLoadingRows: boolean;
   selectedTab: string;
   onSelectTab: (tab: string) => void;
-  onUpdate: (rowIndex: number, value: string) => Promise<void>;
+  onUpdate: (recordId: string, value: string) => Promise<void>;
   onRefresh: () => void;
 }
 
@@ -57,7 +57,7 @@ export function AttendanceTracker({
   onUpdate, 
   onRefresh 
 }: AttendanceTrackerProps) {
-  const [editingRow, setEditingRow] = useState<number | null>(null);
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -69,32 +69,32 @@ export function AttendanceTracker({
   );
 
   const startEdit = (row: AttendanceRow) => {
-    setEditingRow(row.rowIndex);
+    setEditingRecordId(row.recordId || null);
     setEditValue(row.lessonDetails);
   };
 
   const cancelEdit = () => {
-    setEditingRow(null);
+    setEditingRecordId(null);
     setEditValue("");
   };
 
-  const saveEdit = async (rowIndex: number) => {
+  const saveEdit = async (recordId: string) => {
     setIsSaving(true);
     try {
-      await onUpdate(rowIndex, editValue);
-      setEditingRow(null);
+      await onUpdate(recordId, editValue);
+      setEditingRecordId(null);
       setEditValue("");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleNoteClick = useCallback((tab: string, rowIndex: number, note: string) => {
-    markNoteRead(tab, rowIndex, note);
-    setReadNotes(prev => ({ ...prev, [getNoteKey(tab, rowIndex, note)]: true }));
+  const handleNoteClick = useCallback((tab: string, recordKey: string, note: string) => {
+    markNoteRead(tab, recordKey, note);
+    setReadNotes(prev => ({ ...prev, [getNoteKey(tab, recordKey, note)]: true }));
   }, []);
 
-  const currentRow = rows.find(r => r.rowIndex === editingRow);
+  const currentRow = rows.find(r => r.recordId === editingRecordId);
   const hasDropdown = currentRow?.dropdownOptions && currentRow.dropdownOptions.length > 0;
 
   return (
@@ -244,17 +244,20 @@ export function AttendanceTracker({
                 </TableHeader>
                 <TableBody>
                   {filteredRows.map((row) => {
+                    const rowKey = row.recordId || `row-${row.rowIndex}`;
                     const hasNote = !!row.notes?.trim();
-                    const noteKey = getNoteKey(selectedTab, row.rowIndex, row.notes);
-                    const noteIsRead = hasNote && (isNoteRead(selectedTab, row.rowIndex, row.notes) || readNotes[noteKey]);
+                    const noteIndex = row.recordId || String(row.rowIndex);
+                    const noteKey = getNoteKey(selectedTab, noteIndex, row.notes);
+                    const noteIsRead = hasNote && (isNoteRead(selectedTab, noteIndex, row.notes) || readNotes[noteKey]);
                     const isUnread = hasNote && !noteIsRead;
+                    const isEditing = editingRecordId === row.recordId;
 
                     return (
-                      <TableRow key={row.rowIndex} data-testid={`row-attendance-${row.rowIndex}`}>
+                      <TableRow key={rowKey} data-testid={`row-attendance-${rowKey}`}>
                         <TableCell className="font-medium">{row.lessonNo}</TableCell>
                         <TableCell>{row.date}</TableCell>
                         <TableCell>
-                          {editingRow === row.rowIndex ? (
+                          {isEditing ? (
                             row.dropdownOptions && row.dropdownOptions.length > 0 ? (
                               <Select
                                 value={editValue}
@@ -294,18 +297,18 @@ export function AttendanceTracker({
                         <TableCell>
                           {hasNote ? (
                             <Popover onOpenChange={(open) => {
-                              if (open) handleNoteClick(selectedTab, row.rowIndex, row.notes);
+                              if (open) handleNoteClick(selectedTab, noteIndex, row.notes);
                             }}>
                               <PopoverTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="relative h-8 w-8"
-                                  data-testid={`button-note-${row.rowIndex}`}
+                                  data-testid={`button-note-${rowKey}`}
                                 >
                                   <MessageCircle className="h-4 w-4 text-muted-foreground" />
                                   {isUnread && (
-                                    <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white" data-testid={`badge-unread-note-${row.rowIndex}`}>
+                                    <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white" data-testid={`badge-unread-note-${rowKey}`}>
                                       !
                                     </span>
                                   )}
@@ -314,7 +317,7 @@ export function AttendanceTracker({
                               <PopoverContent side="left" className="max-w-xs">
                                 <div className="space-y-1">
                                   <p className="text-xs font-medium text-muted-foreground">Note</p>
-                                  <p className="text-sm whitespace-pre-wrap" data-testid={`text-note-${row.rowIndex}`}>{row.notes}</p>
+                                  <p className="text-sm whitespace-pre-wrap" data-testid={`text-note-${rowKey}`}>{row.notes}</p>
                                 </div>
                               </PopoverContent>
                             </Popover>
@@ -323,12 +326,12 @@ export function AttendanceTracker({
                           )}
                         </TableCell>
                         <TableCell>
-                          {editingRow === row.rowIndex ? (
+                          {isEditing && row.recordId ? (
                             <div className="flex items-center gap-1">
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => saveEdit(row.rowIndex)}
+                                onClick={() => saveEdit(row.recordId!)}
                                 disabled={isSaving}
                                 data-testid="button-save-lesson"
                               >
@@ -349,7 +352,8 @@ export function AttendanceTracker({
                               variant="ghost"
                               size="icon"
                               onClick={() => startEdit(row)}
-                              data-testid={`button-edit-${row.rowIndex}`}
+                              disabled={!row.recordId}
+                              data-testid={`button-edit-${rowKey}`}
                             >
                               <Edit2 className="h-4 w-4" />
                             </Button>

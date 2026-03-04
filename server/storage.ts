@@ -1,6 +1,6 @@
-import { teachers, leaveRequests, bonuses, type Teacher, type InsertTeacher, type LeaveRequest, type InsertLeaveRequest, type UpdateLeaveRequest, type Bonus, type InsertBonus } from "@shared/schema";
+import { teachers, leaveRequests, bonuses, students, lessonRecords, type Teacher, type InsertTeacher, type LeaveRequest, type InsertLeaveRequest, type UpdateLeaveRequest, type Bonus, type InsertBonus, type Student, type InsertStudent, type LessonRecord, type InsertLessonRecord } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Teachers
@@ -24,6 +24,21 @@ export interface IStorage {
   getBonusesByTeacher(teacherId: string): Promise<Bonus[]>;
   createBonus(bonus: InsertBonus): Promise<Bonus>;
   deleteBonus(id: string): Promise<boolean>;
+
+  // Students
+  getStudentsByTeacher(teacherId: string): Promise<Student[]>;
+  getStudent(id: string): Promise<Student | undefined>;
+  createStudent(student: InsertStudent): Promise<Student>;
+  updateStudent(id: string, updates: Partial<InsertStudent>): Promise<Student | undefined>;
+  deleteStudent(id: string): Promise<boolean>;
+
+  // Lesson Records
+  getLessonRecordsByStudent(studentId: string): Promise<LessonRecord[]>;
+  getLessonRecord(id: string): Promise<LessonRecord | undefined>;
+  createLessonRecord(record: InsertLessonRecord): Promise<LessonRecord>;
+  bulkCreateLessonRecords(records: InsertLessonRecord[]): Promise<LessonRecord[]>;
+  updateLessonRecord(id: string, updates: Partial<InsertLessonRecord>): Promise<LessonRecord | undefined>;
+  deleteLessonRecord(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -112,6 +127,70 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBonus(id: string): Promise<boolean> {
     const result = await db.delete(bonuses).where(eq(bonuses.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Students
+  async getStudentsByTeacher(teacherId: string): Promise<Student[]> {
+    return db.select().from(students).where(eq(students.teacherId, teacherId));
+  }
+
+  async getStudent(id: string): Promise<Student | undefined> {
+    const [student] = await db.select().from(students).where(eq(students.id, id));
+    return student;
+  }
+
+  async createStudent(student: InsertStudent): Promise<Student> {
+    const [created] = await db.insert(students).values(student).returning();
+    return created;
+  }
+
+  async updateStudent(id: string, updates: Partial<InsertStudent>): Promise<Student | undefined> {
+    const [updated] = await db
+      .update(students)
+      .set(updates)
+      .where(eq(students.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteStudent(id: string): Promise<boolean> {
+    await db.delete(lessonRecords).where(eq(lessonRecords.studentId, id));
+    const result = await db.delete(students).where(eq(students.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Lesson Records
+  async getLessonRecordsByStudent(studentId: string): Promise<LessonRecord[]> {
+    return db.select().from(lessonRecords).where(eq(lessonRecords.studentId, studentId));
+  }
+
+  async getLessonRecord(id: string): Promise<LessonRecord | undefined> {
+    const [record] = await db.select().from(lessonRecords).where(eq(lessonRecords.id, id));
+    return record;
+  }
+
+  async createLessonRecord(record: InsertLessonRecord): Promise<LessonRecord> {
+    const [created] = await db.insert(lessonRecords).values(record).returning();
+    return created;
+  }
+
+  async bulkCreateLessonRecords(records: InsertLessonRecord[]): Promise<LessonRecord[]> {
+    if (records.length === 0) return [];
+    return db.insert(lessonRecords).values(records).returning();
+  }
+
+  async updateLessonRecord(id: string, updates: Partial<InsertLessonRecord>): Promise<LessonRecord | undefined> {
+    const [updated] = await db
+      .update(lessonRecords)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(lessonRecords.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteLessonRecord(id: string): Promise<boolean> {
+    const result = await db.delete(lessonRecords).where(eq(lessonRecords.id, id)).returning();
     return result.length > 0;
   }
 }

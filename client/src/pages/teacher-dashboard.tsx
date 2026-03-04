@@ -48,9 +48,20 @@ export default function TeacherDashboard() {
     enabled: !!teacher,
   });
 
-  // Fetch attendance data for selected student tab
+  const selectedTab = sheetTabs.find(t => t.studentId === selectedStudentTab || t.name === selectedStudentTab);
+  const selectedStudentId = selectedTab?.studentId;
+
+  // Fetch attendance data for selected student
   const { data: attendance = [], isLoading: attendanceLoading, error: attendanceError, refetch: refetchAttendance } = useQuery<AttendanceRow[]>({
-    queryKey: [`/api/attendance?tab=${encodeURIComponent(selectedStudentTab)}`],
+    queryKey: ["/api/attendance", { studentId: selectedStudentId }],
+    queryFn: async () => {
+      const param = selectedStudentId
+        ? `studentId=${encodeURIComponent(selectedStudentId)}`
+        : `tab=${encodeURIComponent(selectedStudentTab)}`;
+      const res = await fetch(`/api/attendance?${param}`);
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+      return res.json();
+    },
     enabled: !!teacher && !!selectedStudentTab,
   });
 
@@ -72,15 +83,16 @@ export default function TeacherDashboard() {
   }, [teacherError, eventsError, attendanceError, leaveError, tabsError, toast]);
 
   const updateLessonMutation = useMutation({
-    mutationFn: async ({ rowIndex, value }: { rowIndex: number; value: string }) => {
+    mutationFn: async ({ rowIndex, value }: { rowIndex: string; value: string }) => {
       if (!selectedStudentTab) {
         throw new Error("No student tab selected");
       }
-      return apiRequest("PATCH", `/api/attendance/${rowIndex}`, { tabName: selectedStudentTab, value });
+      const tabName = selectedTab?.name || selectedStudentTab;
+      return apiRequest("PATCH", `/api/attendance/${rowIndex}`, { tabName, value });
     },
     onSuccess: () => {
-      toast({ title: "Lesson updated", description: "Changes saved to Google Sheets." });
-      queryClient.invalidateQueries({ queryKey: [`/api/attendance?tab=${encodeURIComponent(selectedStudentTab)}`] });
+      toast({ title: "Lesson updated", description: "Changes saved successfully." });
+      queryClient.invalidateQueries({ queryKey: ["/api/attendance", { studentId: selectedStudentId }] });
     },
     onError: (error) => {
       if (isUnauthorizedError(error as Error)) {
@@ -169,8 +181,8 @@ export default function TeacherDashboard() {
                 isLoadingRows={attendanceLoading}
                 selectedTab={selectedStudentTab}
                 onSelectTab={setSelectedStudentTab}
-                onUpdate={async (rowIndex, value) => {
-                  await updateLessonMutation.mutateAsync({ rowIndex, value });
+                onUpdate={async (recordId, value) => {
+                  await updateLessonMutation.mutateAsync({ rowIndex: recordId, value });
                 }}
                 onRefresh={() => { refetchTabs(); refetchAttendance(); }}
               />

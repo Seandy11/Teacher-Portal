@@ -7,21 +7,23 @@ import { TeacherManagement } from "@/components/admin/teacher-management";
 import { LeaveManagement } from "@/components/admin/leave-management";
 import { CalendarOverview } from "@/components/admin/calendar-overview";
 import { PayrollOverview } from "@/components/admin/payroll-overview";
+import { AttendanceManagement } from "@/components/admin/attendance-management";
 import { FullPageLoader } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/auth-utils";
-import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Wallet } from "lucide-react";
+import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Wallet, BookOpen } from "lucide-react";
 import type { Teacher, LeaveRequest } from "@shared/schema";
 
-type AdminView = "dashboard" | "calendar" | "teachers" | "leave" | "payroll";
+type AdminView = "dashboard" | "calendar" | "teachers" | "attendance" | "leave" | "payroll";
 
 const navItems = [
   { id: "dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
   { id: "calendar" as const, label: "Calendar Overview", icon: Calendar },
   { id: "teachers" as const, label: "Teachers", icon: Users },
+  { id: "attendance" as const, label: "Lesson Tracker", icon: BookOpen },
   { id: "leave" as const, label: "Leave Requests", icon: FileText },
   { id: "payroll" as const, label: "Payroll", icon: Wallet },
 ];
@@ -342,6 +344,10 @@ export default function AdminDashboard() {
                   }}
                 />
               )
+            )}
+
+            {activeView === "attendance" && (
+              <AttendanceManagement teachers={teachers} />
             )}
 
             {activeView === "leave" && (
