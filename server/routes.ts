@@ -1131,7 +1131,7 @@ export async function registerRoutes(
       const isCurrentMonth = month === defaultMonth;
       
       const allTeachers = await storage.getAllTeachers();
-      const activeTeachers = allTeachers.filter(t => t.isActive);
+      const activeTeachers = allTeachers.filter(t => t.isActive && t.email.toLowerCase() !== MASTER_ADMIN_EMAIL);
       
       const calendar = await getGoogleCalendarClient();
       const timeMin = new Date(year, monthNum - 1, 1);

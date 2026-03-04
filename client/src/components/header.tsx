@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,12 +8,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "./theme-toggle";
 import { RoleBadge } from "./role-badge";
-import { LogOut, User, GraduationCap, X, Eye } from "lucide-react";
+import { LogOut, KeyRound, GraduationCap, X, Eye } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 import type { User as AuthUser } from "@shared/models/auth";
 import type { Teacher } from "@shared/schema";
 
@@ -29,7 +41,45 @@ interface ImpersonationStatus {
 
 export function Header({ user, teacher, onLogout }: HeaderProps) {
   const [, setLocation] = useLocation();
-  
+  const { toast } = useToast();
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      toast({ title: "Error", description: "All fields are required", variant: "destructive" });
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      toast({ title: "Error", description: "New passwords do not match", variant: "destructive" });
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast({ title: "Error", description: "Password must be at least 6 characters", variant: "destructive" });
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      const res = await apiRequest("POST", "/api/change-password", {
+        currentPassword,
+        newPassword,
+        confirmNewPassword,
+      });
+      toast({ title: "Success", description: "Password changed successfully" });
+      setPasswordDialogOpen(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to change password", variant: "destructive" });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   const { data: impersonationStatus } = useQuery<ImpersonationStatus>({
     queryKey: ["/api/admin/impersonate/status"],
     staleTime: 5000,
@@ -118,9 +168,9 @@ export function Header({ user, teacher, onLogout }: HeaderProps) {
                 </div>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem disabled className="gap-2">
-                <User className="h-4 w-4" />
-                Profile
+              <DropdownMenuItem onClick={() => setPasswordDialogOpen(true)} className="gap-2" data-testid="button-change-password">
+                <KeyRound className="h-4 w-4" />
+                Change Password
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onLogout} className="gap-2 text-destructive" data-testid="button-logout">
@@ -132,6 +182,62 @@ export function Header({ user, teacher, onLogout }: HeaderProps) {
         </div>
       </div>
     </header>
+
+    <Dialog open={passwordDialogOpen} onOpenChange={(open) => {
+      setPasswordDialogOpen(open);
+      if (!open) {
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmNewPassword("");
+      }
+    }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Change Password</DialogTitle>
+          <DialogDescription>Enter your current password and choose a new one.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label htmlFor="current-password">Current Password</Label>
+            <Input
+              id="current-password"
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              data-testid="input-current-password"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="new-password">New Password</Label>
+            <Input
+              id="new-password"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              data-testid="input-new-password"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-new-password">Confirm New Password</Label>
+            <Input
+              id="confirm-new-password"
+              type="password"
+              value={confirmNewPassword}
+              onChange={(e) => setConfirmNewPassword(e.target.value)}
+              data-testid="input-confirm-new-password"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setPasswordDialogOpen(false)} data-testid="button-cancel-password">
+            Cancel
+          </Button>
+          <Button onClick={handleChangePassword} disabled={isChangingPassword} data-testid="button-submit-password">
+            {isChangingPassword ? "Changing..." : "Change Password"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
