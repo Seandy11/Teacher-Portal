@@ -8,6 +8,8 @@ import { getGoogleSheetsClient } from "./integrations/googleSheets";
 import { insertLeaveRequestSchema, updateLeaveRequestSchema, insertTeacherSchema, insertBonusSchema } from "@shared/schema";
 import type { CalendarEvent, AttendanceRow } from "@shared/schema";
 
+const MASTER_ADMIN_EMAIL = "admin@brighthorizononline";
+
 const requireTeacher: RequestHandler = async (req: any, res, next) => {
   const userId = req.user?.id;
   const userEmail = req.user?.email;
@@ -509,7 +511,20 @@ export async function registerRoutes(
     try {
       const id = req.params.id as string;
       
-      // Sanitize the request body - convert empty strings to null for optional fields
+      const existingTeacher = await storage.getTeacher(id);
+      if (!existingTeacher) {
+        return res.status(404).json({ message: "Teacher not found" });
+      }
+
+      if (existingTeacher.email.toLowerCase() === MASTER_ADMIN_EMAIL) {
+        if (req.body.isActive === false) {
+          return res.status(403).json({ message: "Cannot deactivate the master admin account." });
+        }
+        if (req.body.role && req.body.role !== "admin") {
+          return res.status(403).json({ message: "Cannot change the master admin's role." });
+        }
+      }
+
       const sanitizedBody = { ...req.body };
       const optionalFields = ['hourlyRate', 'sheetId', 'sheetRowStart', 'calendarId'];
       for (const field of optionalFields) {
@@ -519,10 +534,6 @@ export async function registerRoutes(
       }
       
       const teacher = await storage.updateTeacher(id, sanitizedBody);
-      
-      if (!teacher) {
-        return res.status(404).json({ message: "Teacher not found" });
-      }
 
       res.json(teacher);
     } catch (error) {
@@ -536,10 +547,13 @@ export async function registerRoutes(
     try {
       const id = req.params.id as string;
       
-      // Check if teacher exists and is inactive
       const teacher = await storage.getTeacher(id);
       if (!teacher) {
         return res.status(404).json({ message: "Teacher not found" });
+      }
+
+      if (teacher.email.toLowerCase() === MASTER_ADMIN_EMAIL) {
+        return res.status(403).json({ message: "Cannot delete the master admin account." });
       }
       
       if (teacher.isActive) {
