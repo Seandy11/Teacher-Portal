@@ -65,7 +65,7 @@ export default function TeacherDashboard() {
     for (const error of errors) {
       if (error && isUnauthorizedError(error as Error)) {
         toast({ title: "Session expired", description: "Redirecting to login...", variant: "destructive" });
-        setTimeout(() => { window.location.href = "/api/login"; }, 500);
+        setTimeout(() => { window.location.href = "/"; }, 500);
         break;
       }
     }
@@ -85,7 +85,7 @@ export default function TeacherDashboard() {
     onError: (error) => {
       if (isUnauthorizedError(error as Error)) {
         toast({ title: "Session expired", description: "Redirecting to login...", variant: "destructive" });
-        setTimeout(() => { window.location.href = "/api/login"; }, 500);
+        setTimeout(() => { window.location.href = "/"; }, 500);
         return;
       }
       toast({ title: "Error", description: "Failed to update lesson details.", variant: "destructive" });
@@ -103,7 +103,7 @@ export default function TeacherDashboard() {
     onError: (error) => {
       if (isUnauthorizedError(error as Error)) {
         toast({ title: "Session expired", description: "Redirecting to login...", variant: "destructive" });
-        setTimeout(() => { window.location.href = "/api/login"; }, 500);
+        setTimeout(() => { window.location.href = "/"; }, 500);
         return;
       }
       toast({ title: "Error", description: "Failed to submit leave request.", variant: "destructive" });

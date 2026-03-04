@@ -53,7 +53,7 @@ export default function AdminDashboard() {
     for (const error of errors) {
       if (error && isUnauthorizedError(error as Error)) {
         toast({ title: "Session expired", description: "Redirecting to login...", variant: "destructive" });
-        setTimeout(() => { window.location.href = "/api/login"; }, 500);
+        setTimeout(() => { window.location.href = "/"; }, 500);
         break;
       }
     }
@@ -70,7 +70,7 @@ export default function AdminDashboard() {
     onError: (error) => {
       if (isUnauthorizedError(error as Error)) {
         toast({ title: "Session expired", description: "Redirecting to login...", variant: "destructive" });
-        setTimeout(() => { window.location.href = "/api/login"; }, 500);
+        setTimeout(() => { window.location.href = "/"; }, 500);
         return;
       }
       toast({ title: "Error", description: "Failed to add teacher.", variant: "destructive" });
@@ -88,7 +88,7 @@ export default function AdminDashboard() {
     onError: (error) => {
       if (isUnauthorizedError(error as Error)) {
         toast({ title: "Session expired", description: "Redirecting to login...", variant: "destructive" });
-        setTimeout(() => { window.location.href = "/api/login"; }, 500);
+        setTimeout(() => { window.location.href = "/"; }, 500);
         return;
       }
       toast({ title: "Error", description: "Failed to update teacher.", variant: "destructive" });
@@ -106,7 +106,7 @@ export default function AdminDashboard() {
     onError: (error) => {
       if (isUnauthorizedError(error as Error)) {
         toast({ title: "Session expired", description: "Redirecting to login...", variant: "destructive" });
-        setTimeout(() => { window.location.href = "/api/login"; }, 500);
+        setTimeout(() => { window.location.href = "/"; }, 500);
         return;
       }
       toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
@@ -124,7 +124,7 @@ export default function AdminDashboard() {
     onError: (error) => {
       if (isUnauthorizedError(error as Error)) {
         toast({ title: "Session expired", description: "Redirecting to login...", variant: "destructive" });
-        setTimeout(() => { window.location.href = "/api/login"; }, 500);
+        setTimeout(() => { window.location.href = "/"; }, 500);
         return;
       }
       toast({ title: "Error", description: "Failed to delete teacher.", variant: "destructive" });
@@ -142,7 +142,7 @@ export default function AdminDashboard() {
     onError: (error) => {
       if (isUnauthorizedError(error as Error)) {
         toast({ title: "Session expired", description: "Redirecting to login...", variant: "destructive" });
-        setTimeout(() => { window.location.href = "/api/login"; }, 500);
+        setTimeout(() => { window.location.href = "/"; }, 500);
         return;
       }
       toast({ title: "Error", description: "Failed to update leave request.", variant: "destructive" });
@@ -153,12 +153,13 @@ export default function AdminDashboard() {
     return <FullPageLoader />;
   }
 
-  const activeTeachers = teachers.filter(t => t.isActive).length;
+  const teachersOnly = teachers.filter(t => t.role !== "admin");
+  const activeTeachers = teachersOnly.filter(t => t.isActive).length;
   const pendingLeave = allLeaveRequests.filter(r => r.status === "pending").length;
   const approvedLeave = allLeaveRequests.filter(r => r.status === "approved").length;
 
   const stats = [
-    { label: "Total Teachers", value: teachers.length, icon: Users, color: "text-blue-600" },
+    { label: "Total Teachers", value: teachersOnly.length, icon: Users, color: "text-blue-600" },
     { label: "Active Teachers", value: activeTeachers, icon: UserCheck, color: "text-green-600" },
     { label: "Pending Leave", value: pendingLeave, icon: Clock, color: "text-yellow-600" },
     { label: "Approved Leave", value: approvedLeave, icon: CheckCircle, color: "text-emerald-600" },
@@ -277,11 +278,11 @@ export default function AdminDashboard() {
                           <CardTitle className="text-lg">Teacher Activity</CardTitle>
                         </CardHeader>
                         <CardContent>
-                          {teachers.length === 0 ? (
+                          {teachersOnly.length === 0 ? (
                             <p className="text-muted-foreground text-sm">No teachers added yet.</p>
                           ) : (
                             <div className="space-y-3">
-                              {teachers.slice(0, 5).map((t) => (
+                              {teachersOnly.slice(0, 5).map((t) => (
                                 <div key={t.id} className="flex items-center justify-between py-2 border-b last:border-0">
                                   <div>
                                     <p className="font-medium text-sm">{t.name}</p>
