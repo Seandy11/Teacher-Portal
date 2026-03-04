@@ -164,7 +164,6 @@ export async function registerRoutes(
       const calendarDefaultColor = calendarListEntry.data.backgroundColor || "#039be5";
 
       const events: CalendarEvent[] = (eventsResponse.data.items || [])
-        .filter((event: any) => event.colorId !== "8")
         .map((event: any) => {
         let bgColor = calendarDefaultColor;
         if (event.colorId && eventColors[event.colorId]?.background) {
@@ -678,7 +677,6 @@ export async function registerRoutes(
           const calendarDefaultColor = calendarListEntry.data.backgroundColor || teacherColor;
           
           const events = (eventsResponse.data.items || [])
-            .filter((event: any) => event.colorId !== "8")
             .map((event: any) => {
             let bgColor = calendarDefaultColor;
             if (event.colorId && eventColors[event.colorId]?.background) {
