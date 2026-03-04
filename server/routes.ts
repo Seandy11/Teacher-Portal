@@ -8,7 +8,7 @@ import { getGoogleSheetsClient } from "./integrations/googleSheets";
 import { insertLeaveRequestSchema, updateLeaveRequestSchema, insertTeacherSchema, insertBonusSchema } from "@shared/schema";
 import type { CalendarEvent, AttendanceRow } from "@shared/schema";
 
-const MASTER_ADMIN_EMAIL = "admin@brighthorizononline";
+const MASTER_ADMIN_EMAIL = "admin@brighthorizononline.com";
 
 const requireTeacher: RequestHandler = async (req: any, res, next) => {
   const userId = req.user?.id;
