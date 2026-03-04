@@ -5,8 +5,8 @@ import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integra
 import { authStorage } from "./replit_integrations/auth/storage";
 import { getGoogleCalendarClient } from "./integrations/googleCalendar";
 import { getGoogleSheetsClient } from "./integrations/googleSheets";
-import { insertLeaveRequestSchema, updateLeaveRequestSchema, insertTeacherSchema, insertBonusSchema, students, lessonRecords } from "@shared/schema";
-import type { CalendarEvent, AttendanceRow, Student, LessonRecord } from "@shared/schema";
+import { insertLeaveRequestSchema, updateLeaveRequestSchema, insertTeacherSchema, insertBonusSchema } from "@shared/schema";
+import type { CalendarEvent, AttendanceRow } from "@shared/schema";
 
 const MASTER_ADMIN_EMAIL = "admin@brighthorizononline.com";
 
@@ -270,63 +270,100 @@ export async function registerRoutes(
     }
   });
 
-  // ============ ATTENDANCE ROUTES (Database-backed) ============
+  // ============ ATTENDANCE ROUTES ============
 
-  // Get student tabs for the teacher (reads from DB)
+  // Get sheet tabs (worksheets) for the teacher's spreadsheet
   app.get("/api/attendance/tabs", isAuthenticated, requireTeacher, async (req: any, res) => {
     try {
       const teacher = req.teacher;
-      const studentList = await storage.getStudentsByTeacher(teacher.id);
-      const tabs = studentList.map(s => ({
-        name: s.name,
-        sheetId: 0,
-        studentId: s.id,
-        courseName: s.courseName,
-      }));
-      res.json(tabs);
-    } catch (error) {
-      console.error("Error fetching student tabs:", error);
-      res.status(500).json({ message: "Failed to fetch student tabs" });
-    }
-  });
-
-  // Get attendance data from database for a specific student
-  app.get("/api/attendance", isAuthenticated, requireTeacher, async (req: any, res) => {
-    try {
-      const teacher = req.teacher;
-      const studentId = req.query.studentId as string;
-      const tabName = req.query.tab as string;
-
-      if (!studentId && !tabName) {
+      if (!teacher.sheetId) {
         return res.json([]);
       }
 
-      let targetStudentId = studentId;
-      if (!targetStudentId && tabName) {
-        const studentList = await storage.getStudentsByTeacher(teacher.id);
-        const found = studentList.find(s => s.name === tabName);
-        if (!found) return res.json([]);
-        targetStudentId = found.id;
+      const sheets = await getGoogleSheetsClient();
+      const response = await sheets.spreadsheets.get({
+        spreadsheetId: teacher.sheetId,
+        fields: "sheets.properties",
+      });
+
+      const tabs = (response.data.sheets || []).map((sheet: any) => ({
+        name: sheet.properties.title,
+        sheetId: sheet.properties.sheetId,
+      }));
+
+      res.json(tabs);
+    } catch (error) {
+      console.error("Error fetching sheet tabs:", error);
+      res.status(500).json({ message: "Failed to fetch sheet tabs" });
+    }
+  });
+
+  // Get attendance data from Google Sheets for a specific tab
+  // Data starts at row 4 (rows 1-3 are headers)
+  // Structure: A=No., B=Date, C=Lesson details (editable), D=Teacher, E=Lesson time purchased, F=Lesson duration, G=Remaining time, H=Notes
+  app.get("/api/attendance", isAuthenticated, requireTeacher, async (req: any, res) => {
+    try {
+      const teacher = req.teacher;
+      if (!teacher.sheetId) {
+        return res.json([]);
       }
 
-      const student = await storage.getStudent(targetStudentId);
-      const studentDropdownOptions = student?.dropdownOptions || null;
+      const tabName = req.query.tab as string;
+      if (!tabName) {
+        return res.json([]);
+      }
 
-      const records = await storage.getLessonRecordsByStudent(targetStudentId);
-      const attendance: AttendanceRow[] = records.map(r => ({
-        rowIndex: r.sheetRowIndex || 0,
-        recordId: r.id,
-        lessonNo: r.lessonNo || "",
-        date: r.date || "",
-        lessonDetails: r.lessonDetails || "",
-        teacher: r.teacher || "",
-        lessonTimePurchased: r.lessonTimePurchased || "",
-        lessonDuration: r.lessonDuration || "",
-        remainingTime: r.remainingTime || "",
-        referralCredits: r.referralCredits || "",
-        notes: r.notes || "",
-        dropdownOptions: studentDropdownOptions || r.dropdownOptions || undefined,
-      }));
+      const sheets = await getGoogleSheetsClient();
+      
+      // Get cell values (data starts at row 3)
+      const range = `'${tabName}'!A3:I1000`;
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: teacher.sheetId,
+        range: range,
+      });
+
+      const rows = response.data.values || [];
+      
+      // Get data validation for column C to find dropdown options
+      let dropdownOptionsMap: Map<number, string[]> = new Map();
+      try {
+        const validationResponse = await sheets.spreadsheets.get({
+          spreadsheetId: teacher.sheetId,
+          ranges: [`'${tabName}'!C3:C1000`],
+          fields: "sheets.data.rowData.values.dataValidation",
+        });
+        
+        const rowData = validationResponse.data.sheets?.[0]?.data?.[0]?.rowData || [];
+        rowData.forEach((row: any, index: number) => {
+          const validation = row?.values?.[0]?.dataValidation;
+          if (validation?.condition?.type === "ONE_OF_LIST" && validation?.condition?.values) {
+            const options = validation.condition.values.map((v: any) => v.userEnteredValue || "").filter((v: string) => v);
+            if (options.length > 0) {
+              dropdownOptionsMap.set(index + 3, options); // +3 because data starts at row 3
+            }
+          }
+        });
+      } catch (validationError) {
+        console.error("Error fetching data validation:", validationError);
+        // Continue without dropdown options
+      }
+
+      const attendance: AttendanceRow[] = rows.map((row: any[], index: number) => {
+        const rowNum = index + 3; // +3 because data starts at row 3
+        return {
+          rowIndex: rowNum,
+          lessonNo: row[0] || "",
+          date: row[1] || "",
+          lessonDetails: row[2] || "",
+          teacher: row[3] || "",
+          lessonTimePurchased: row[4] || "",
+          lessonDuration: row[5] || "",
+          remainingTime: row[6] || "",
+          referralCredits: row[7] || "",
+          notes: row[8] || "",
+          dropdownOptions: dropdownOptionsMap.get(rowNum),
+        };
+      }).filter((row: AttendanceRow) => row.date || row.lessonNo); // Filter out empty rows
 
       res.json(attendance);
     } catch (error) {
@@ -335,22 +372,35 @@ export async function registerRoutes(
     }
   });
 
-  // Update lesson details — saves to DB and syncs to Google Sheets as backup
-  app.patch("/api/attendance/:recordId", isAuthenticated, requireTeacher, async (req: any, res) => {
+  // Update lesson details (Column C only)
+  app.patch("/api/attendance/:rowIndex", isAuthenticated, requireTeacher, async (req: any, res) => {
     try {
       const teacher = req.teacher;
-      const recordId = req.params.recordId;
-      const { value, tabName } = req.body;
-
-      const record = await storage.getLessonRecord(recordId);
-      if (!record) {
-        return res.status(404).json({ message: "Record not found" });
-      }
-      if (record.teacherId !== teacher.id) {
-        return res.status(403).json({ message: "Not authorized" });
+      if (!teacher.sheetId) {
+        return res.status(400).json({ message: "No sheet assigned" });
       }
 
-      await storage.updateLessonRecord(recordId, { lessonDetails: value });
+      const rowIndex = parseInt(req.params.rowIndex, 10);
+      if (isNaN(rowIndex) || rowIndex < 3) {
+        return res.status(400).json({ message: "Invalid row index" });
+      }
+
+      const { tabName, value } = req.body;
+      if (!tabName) {
+        return res.status(400).json({ message: "Tab name is required" });
+      }
+
+      const sheets = await getGoogleSheetsClient();
+      
+      // Update Column C (lesson details) only
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: teacher.sheetId,
+        range: `'${tabName}'!C${rowIndex}`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: {
+          values: [[value]],
+        },
+      });
 
       res.json({ success: true });
     } catch (error) {
@@ -744,369 +794,6 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error deleting bonus:", error);
       res.status(500).json({ message: "Failed to delete bonus" });
-    }
-  });
-
-  // ============ ADMIN STUDENT & ATTENDANCE MANAGEMENT ============
-
-  // List students for a teacher
-  app.get("/api/admin/students/:teacherId", isAuthenticated, requireAdmin, async (req, res) => {
-    try {
-      const studentList = await storage.getStudentsByTeacher(req.params.teacherId);
-      res.json(studentList);
-    } catch (error) {
-      console.error("Error fetching students:", error);
-      res.status(500).json({ message: "Failed to fetch students" });
-    }
-  });
-
-  // Add a student to a teacher
-  app.post("/api/admin/students/:teacherId", isAuthenticated, requireAdmin, async (req, res) => {
-    try {
-      const { name, courseName } = req.body;
-      if (!name) {
-        return res.status(400).json({ message: "Student name is required" });
-      }
-      const student = await storage.createStudent({
-        teacherId: req.params.teacherId,
-        name,
-        courseName: courseName || name,
-      });
-      res.json(student);
-    } catch (error) {
-      console.error("Error creating student:", error);
-      res.status(500).json({ message: "Failed to create student" });
-    }
-  });
-
-  // Update student (name or course title)
-  app.patch("/api/admin/students/:studentId", isAuthenticated, requireAdmin, async (req, res) => {
-    try {
-      const { name, courseName, dropdownOptions } = req.body;
-      const updates: any = {};
-      if (name !== undefined) updates.name = name;
-      if (courseName !== undefined) updates.courseName = courseName;
-      if (dropdownOptions !== undefined) updates.dropdownOptions = dropdownOptions;
-      const updated = await storage.updateStudent(req.params.studentId, updates);
-      if (!updated) {
-        return res.status(404).json({ message: "Student not found" });
-      }
-      res.json(updated);
-    } catch (error) {
-      console.error("Error updating student:", error);
-      res.status(500).json({ message: "Failed to update student" });
-    }
-  });
-
-  // Delete student (and all their lesson records)
-  app.delete("/api/admin/students/:studentId", isAuthenticated, requireAdmin, async (req, res) => {
-    try {
-      const deleted = await storage.deleteStudent(req.params.studentId);
-      if (!deleted) {
-        return res.status(404).json({ message: "Student not found" });
-      }
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting student:", error);
-      res.status(500).json({ message: "Failed to delete student" });
-    }
-  });
-
-  // Get lesson records for a student (admin)
-  app.get("/api/admin/attendance/:studentId", isAuthenticated, requireAdmin, async (req, res) => {
-    try {
-      const records = await storage.getLessonRecordsByStudent(req.params.studentId);
-      res.json(records);
-    } catch (error) {
-      console.error("Error fetching attendance:", error);
-      res.status(500).json({ message: "Failed to fetch attendance data" });
-    }
-  });
-
-  // Update any field on a lesson record (admin)
-  app.patch("/api/admin/attendance/:recordId", isAuthenticated, requireAdmin, async (req: any, res) => {
-    try {
-      const record = await storage.getLessonRecord(req.params.recordId);
-      if (!record) {
-        return res.status(404).json({ message: "Record not found" });
-      }
-
-      const allowedFields = ["lessonNo", "date", "lessonDetails", "teacher", "lessonTimePurchased", "lessonDuration", "remainingTime", "referralCredits", "notes", "dropdownOptions"];
-      const updates: any = {};
-      for (const field of allowedFields) {
-        if (req.body[field] !== undefined) {
-          updates[field] = req.body[field];
-        }
-      }
-
-      const updated = await storage.updateLessonRecord(req.params.recordId, updates);
-
-      res.json(updated);
-    } catch (error) {
-      console.error("Error updating attendance record:", error);
-      res.status(500).json({ message: "Failed to update record" });
-    }
-  });
-
-  // Add a new lesson record (admin)
-  app.post("/api/admin/attendance/:studentId", isAuthenticated, requireAdmin, async (req, res) => {
-    try {
-      const student = await storage.getStudent(req.params.studentId);
-      if (!student) {
-        return res.status(404).json({ message: "Student not found" });
-      }
-
-      const record = await storage.createLessonRecord({
-        teacherId: student.teacherId,
-        studentId: student.id,
-        lessonNo: req.body.lessonNo || "",
-        date: req.body.date || "",
-        lessonDetails: req.body.lessonDetails || "",
-        teacher: req.body.teacher || "",
-        lessonTimePurchased: req.body.lessonTimePurchased || "",
-        lessonDuration: req.body.lessonDuration || "",
-        remainingTime: req.body.remainingTime || "",
-        referralCredits: req.body.referralCredits || "",
-        notes: req.body.notes || "",
-        dropdownOptions: req.body.dropdownOptions || null,
-      });
-      res.json(record);
-    } catch (error) {
-      console.error("Error creating lesson record:", error);
-      res.status(500).json({ message: "Failed to create record" });
-    }
-  });
-
-  // Delete a lesson record (admin)
-  app.delete("/api/admin/attendance/:recordId", isAuthenticated, requireAdmin, async (req, res) => {
-    try {
-      const deleted = await storage.deleteLessonRecord(req.params.recordId);
-      if (!deleted) {
-        return res.status(404).json({ message: "Record not found" });
-      }
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting record:", error);
-      res.status(500).json({ message: "Failed to delete record" });
-    }
-  });
-
-  // Import attendance data from Google Sheets for a specific teacher
-  app.post("/api/admin/import-attendance/:teacherId", isAuthenticated, requireAdmin, async (req, res) => {
-    try {
-      const teacher = await storage.getTeacher(req.params.teacherId);
-      if (!teacher) {
-        return res.status(404).json({ message: "Teacher not found" });
-      }
-      if (!teacher.sheetId) {
-        return res.status(400).json({ message: "Teacher has no sheet assigned" });
-      }
-
-      const sheets = await getGoogleSheetsClient();
-      const sheetMeta = await sheets.spreadsheets.get({
-        spreadsheetId: teacher.sheetId,
-        fields: "sheets.properties",
-      });
-
-      const tabs = (sheetMeta.data.sheets || []).map((s: any) => s.properties.title);
-      let totalImported = 0;
-
-      for (const tabName of tabs) {
-        // Check if student already exists for this teacher+tab
-        const existingStudents = await storage.getStudentsByTeacher(teacher.id);
-        let student = existingStudents.find(s => s.sheetTab === tabName || s.name === tabName);
-
-        if (!student) {
-          student = await storage.createStudent({
-            teacherId: teacher.id,
-            name: tabName,
-            courseName: tabName,
-            sheetTab: tabName,
-          });
-        }
-
-        // Check if records already exist for this student
-        const existingRecords = await storage.getLessonRecordsByStudent(student.id);
-        if (existingRecords.length > 0) {
-          continue; // Skip if already imported
-        }
-
-        // Fetch data from sheet
-        const range = `'${tabName}'!A3:I1000`;
-        let response;
-        try {
-          response = await sheets.spreadsheets.values.get({
-            spreadsheetId: teacher.sheetId,
-            range,
-          });
-        } catch (e) {
-          console.error(`Error fetching tab ${tabName}:`, e);
-          continue;
-        }
-
-        const rows = response.data.values || [];
-
-        // Get dropdown options for column C
-        let dropdownOptionsMap: Map<number, string[]> = new Map();
-        try {
-          const validationResponse = await sheets.spreadsheets.get({
-            spreadsheetId: teacher.sheetId,
-            ranges: [`'${tabName}'!C3:C1000`],
-            fields: "sheets.data.rowData.values.dataValidation",
-          });
-          const rowData = validationResponse.data.sheets?.[0]?.data?.[0]?.rowData || [];
-          rowData.forEach((row: any, index: number) => {
-            const validation = row?.values?.[0]?.dataValidation;
-            if (validation?.condition?.type === "ONE_OF_LIST" && validation?.condition?.values) {
-              const options = validation.condition.values.map((v: any) => v.userEnteredValue || "").filter((v: string) => v);
-              if (options.length > 0) {
-                dropdownOptionsMap.set(index + 3, options);
-              }
-            }
-          });
-        } catch (e) {
-          // Continue without dropdown options
-        }
-
-        const records = rows
-          .map((row: any[], index: number) => {
-            const rowNum = index + 3;
-            if (!row[0] && !row[1]) return null; // Skip empty rows
-            return {
-              teacherId: teacher.id,
-              studentId: student!.id,
-              lessonNo: row[0] || "",
-              date: row[1] || "",
-              lessonDetails: row[2] || "",
-              teacher: row[3] || "",
-              lessonTimePurchased: row[4] || "",
-              lessonDuration: row[5] || "",
-              remainingTime: row[6] || "",
-              referralCredits: row[7] || "",
-              notes: row[8] || "",
-              dropdownOptions: dropdownOptionsMap.get(rowNum) || null,
-              sheetRowIndex: rowNum,
-            };
-          })
-          .filter(Boolean) as any[];
-
-        if (records.length > 0) {
-          await storage.bulkCreateLessonRecords(records);
-          totalImported += records.length;
-        }
-      }
-
-      res.json({ success: true, tabsProcessed: tabs.length, recordsImported: totalImported });
-    } catch (error) {
-      console.error("Error importing attendance:", error);
-      res.status(500).json({ message: "Failed to import attendance data" });
-    }
-  });
-
-  // Import attendance for all teachers at once
-  app.post("/api/admin/import-attendance-all", isAuthenticated, requireAdmin, async (req, res) => {
-    try {
-      const allTeachers = await storage.getAllTeachers();
-      const teachersWithSheets = allTeachers.filter(t => t.sheetId && t.role === "teacher");
-      const results: any[] = [];
-
-      for (const teacher of teachersWithSheets) {
-        try {
-          const sheets = await getGoogleSheetsClient();
-          const sheetMeta = await sheets.spreadsheets.get({
-            spreadsheetId: teacher.sheetId!,
-            fields: "sheets.properties",
-          });
-
-          const tabs = (sheetMeta.data.sheets || []).map((s: any) => s.properties.title);
-          let teacherImported = 0;
-
-          for (const tabName of tabs) {
-            const existingStudents = await storage.getStudentsByTeacher(teacher.id);
-            let student = existingStudents.find(s => s.sheetTab === tabName || s.name === tabName);
-
-            if (!student) {
-              student = await storage.createStudent({
-                teacherId: teacher.id,
-                name: tabName,
-                courseName: tabName,
-                sheetTab: tabName,
-              });
-            }
-
-            const existingRecords = await storage.getLessonRecordsByStudent(student.id);
-            if (existingRecords.length > 0) continue;
-
-            let response;
-            try {
-              response = await sheets.spreadsheets.values.get({
-                spreadsheetId: teacher.sheetId!,
-                range: `'${tabName}'!A3:I1000`,
-              });
-            } catch (e) {
-              continue;
-            }
-
-            const rows = response.data.values || [];
-
-            let dropdownOptionsMap: Map<number, string[]> = new Map();
-            try {
-              const validationResponse = await sheets.spreadsheets.get({
-                spreadsheetId: teacher.sheetId!,
-                ranges: [`'${tabName}'!C3:C1000`],
-                fields: "sheets.data.rowData.values.dataValidation",
-              });
-              const rowData = validationResponse.data.sheets?.[0]?.data?.[0]?.rowData || [];
-              rowData.forEach((row: any, index: number) => {
-                const validation = row?.values?.[0]?.dataValidation;
-                if (validation?.condition?.type === "ONE_OF_LIST" && validation?.condition?.values) {
-                  const options = validation.condition.values.map((v: any) => v.userEnteredValue || "").filter((v: string) => v);
-                  if (options.length > 0) {
-                    dropdownOptionsMap.set(index + 3, options);
-                  }
-                }
-              });
-            } catch (e) {}
-
-            const records = rows
-              .map((row: any[], index: number) => {
-                const rowNum = index + 3;
-                if (!row[0] && !row[1]) return null;
-                return {
-                  teacherId: teacher.id,
-                  studentId: student!.id,
-                  lessonNo: row[0] || "",
-                  date: row[1] || "",
-                  lessonDetails: row[2] || "",
-                  teacher: row[3] || "",
-                  lessonTimePurchased: row[4] || "",
-                  lessonDuration: row[5] || "",
-                  remainingTime: row[6] || "",
-                  referralCredits: row[7] || "",
-                  notes: row[8] || "",
-                  dropdownOptions: dropdownOptionsMap.get(rowNum) || null,
-                  sheetRowIndex: rowNum,
-                };
-              })
-              .filter(Boolean) as any[];
-
-            if (records.length > 0) {
-              await storage.bulkCreateLessonRecords(records);
-              teacherImported += records.length;
-            }
-          }
-
-          results.push({ teacher: teacher.name, tabs: tabs.length, records: teacherImported });
-        } catch (e) {
-          console.error(`Error importing for ${teacher.name}:`, e);
-          results.push({ teacher: teacher.name, error: "Import failed" });
-        }
-      }
-
-      res.json({ success: true, results });
-    } catch (error) {
-      console.error("Error importing all attendance:", error);
-      res.status(500).json({ message: "Failed to import attendance data" });
     }
   });
 

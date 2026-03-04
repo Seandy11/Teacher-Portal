@@ -76,16 +76,11 @@ shared/
 - **teachers** - Teacher profiles with calendar/sheet assignments, hourly rates
 - **leave_requests** - Leave request records
 - **bonuses** - Teacher bonus records (amount, month, description)
-- **students** - Student profiles linked to teachers (name, courseName, sheetTab for sync)
-- **lesson_records** - Lesson tracking records (all columns from sheet, plus recordId for DB-first editing)
 
 ### Key Relations
 - teachers.userId → users.id
 - leave_requests.teacherId → teachers.id
 - bonuses.teacherId → teachers.id
-- students.teacherId → teachers.id
-- lesson_records.teacherId → teachers.id
-- lesson_records.studentId → students.id
 
 ## API Endpoints
 
@@ -101,9 +96,8 @@ shared/
 - `GET /api/calendar/events` - Get calendar events
 - `POST /api/calendar/availability` - Create availability block
 - `DELETE /api/calendar/availability/:eventId` - Remove availability block
-- `GET /api/attendance/tabs` - Get student list (from DB students table)
-- `GET /api/attendance?studentId=X` - Get lesson records for a student (from DB)
-- `PATCH /api/attendance/:recordId` - Update lesson details (saves to DB, syncs to sheet as backup)
+- `GET /api/attendance` - Get attendance rows
+- `PATCH /api/attendance/:rowIndex` - Update attendance cell
 - `GET /api/leave-requests/me` - Get own leave requests
 - `POST /api/leave-requests` - Submit leave request
 
@@ -122,16 +116,6 @@ shared/
 - `POST /api/admin/impersonate/exit` - Stop impersonating
 - `GET /api/admin/impersonate/status` - Get current impersonation status
 - `GET /api/admin/payroll` - Get pay summaries for all active teachers (accepts ?month=YYYY-MM)
-- `GET /api/admin/students/:teacherId` - List students for a teacher
-- `POST /api/admin/students/:teacherId` - Add student to a teacher
-- `PATCH /api/admin/students/:studentId` - Update student name/course
-- `DELETE /api/admin/students/:studentId` - Delete student and all their records
-- `GET /api/admin/attendance/:studentId` - View lesson records for a student
-- `POST /api/admin/attendance/:studentId` - Add a lesson record
-- `PATCH /api/admin/attendance/:recordId` - Update any field on a record (admin)
-- `DELETE /api/admin/attendance/:recordId` - Delete a lesson record
-- `POST /api/admin/import-attendance/:teacherId` - Import sheet data for one teacher
-- `POST /api/admin/import-attendance-all` - Import sheet data for all teachers
 
 ### Pay Endpoints
 - `GET /api/pay/summary` - Get pay summary (hours worked, base pay, bonuses, total)
@@ -150,15 +134,12 @@ Access is enforced server-side:
 - **Write**: Availability blocks can be created/deleted (syncs back to calendar)
 - Events with "Blocked" or "Unavailable" in title are treated as availability blocks
 
-### Sheets Integration (Lesson Tracking)
-- **Primary storage**: PostgreSQL database (`students` and `lesson_records` tables)
-- **Import**: Admin can import data from Google Sheets via "Import from Sheets" button (per-teacher or all-at-once, idempotent)
-- **No sync-back**: Edits in the app are NOT pushed back to Google Sheets (sheets have their own Apps Script)
-- **Column mapping**: A=No., B=Date, C=Lesson details (editable by teachers), D=Teacher, E=Lesson time purchased, F=Lesson duration, G=Remaining time, H=Referral credits, I=Notes & Parent Feedback
-- **Admin access**: Admins can edit all columns, add/delete students and records, manage dropdown options per student
-- **Teacher access**: Teachers can only edit Column C (lesson details); if dropdown options are set on a student, teachers see a dropdown instead of free text
-- **Dropdown options**: Stored at student level (`students.dropdownOptions` array); admin can add/remove options per student
-- **Notes display**: Notes shown as clickable icon with popover; unread notes have red badge (tracked via localStorage using recordId)
+### Sheets Integration
+- **Read**: Attendance data pulled from assigned sheet range (A3:I1000)
+- **Column mapping**: A=No., B=Date, C=Lesson details (editable), D=Teacher, E=Lesson time purchased, F=Lesson duration, G=Remaining time, H=Referral credits, I=Notes & Parent Feedback
+- **Write**: Only Column C (lesson details) can be edited by teachers
+- **Notes display**: Notes shown as clickable icon with popover; unread notes have red badge (tracked via localStorage)
+- Other columns are read-only and protected
 
 ### Payroll Sheet Integration (Bonuses)
 - **Sheet ID**: Configured via `PAYROLL_SHEET_ID` environment variable

@@ -53,43 +53,10 @@ export const leaveRequests = pgTable("leave_requests", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Students table - each student belongs to a teacher
-export const students = pgTable("students", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  teacherId: varchar("teacher_id").notNull().references(() => teachers.id),
-  name: varchar("name").notNull(),
-  courseName: varchar("course_name"),
-  sheetTab: varchar("sheet_tab"),
-  dropdownOptions: text("dropdown_options").array(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Lesson records table - attendance/tracking data owned by the app
-export const lessonRecords = pgTable("lesson_records", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  teacherId: varchar("teacher_id").notNull().references(() => teachers.id),
-  studentId: varchar("student_id").notNull().references(() => students.id),
-  lessonNo: varchar("lesson_no"),
-  date: varchar("date"),
-  lessonDetails: text("lesson_details"),
-  teacher: varchar("teacher_name"),
-  lessonTimePurchased: varchar("lesson_time_purchased"),
-  lessonDuration: varchar("lesson_duration"),
-  remainingTime: varchar("remaining_time"),
-  referralCredits: varchar("referral_credits"),
-  notes: text("notes"),
-  dropdownOptions: text("dropdown_options").array(),
-  sheetRowIndex: integer("sheet_row_index"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
 // Relations
 export const teachersRelations = relations(teachers, ({ many }) => ({
   leaveRequests: many(leaveRequests),
   bonuses: many(bonuses),
-  students: many(students),
-  lessonRecords: many(lessonRecords),
 }));
 
 export const leaveRequestsRelations = relations(leaveRequests, ({ one }) => ({
@@ -103,25 +70,6 @@ export const bonusesRelations = relations(bonuses, ({ one }) => ({
   teacher: one(teachers, {
     fields: [bonuses.teacherId],
     references: [teachers.id],
-  }),
-}));
-
-export const studentsRelations = relations(students, ({ one, many }) => ({
-  teacher: one(teachers, {
-    fields: [students.teacherId],
-    references: [teachers.id],
-  }),
-  lessonRecords: many(lessonRecords),
-}));
-
-export const lessonRecordsRelations = relations(lessonRecords, ({ one }) => ({
-  teacher: one(teachers, {
-    fields: [lessonRecords.teacherId],
-    references: [teachers.id],
-  }),
-  student: one(students, {
-    fields: [lessonRecords.studentId],
-    references: [students.id],
   }),
 }));
 
@@ -151,19 +99,6 @@ export const insertBonusSchema = createInsertSchema(bonuses).omit({
   createdAt: true,
 });
 
-// Student insert schema
-export const insertStudentSchema = createInsertSchema(students).omit({
-  id: true,
-  createdAt: true,
-});
-
-// Lesson record insert schema
-export const insertLessonRecordSchema = createInsertSchema(lessonRecords).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
 // Types
 export type Teacher = typeof teachers.$inferSelect;
 export type InsertTeacher = z.infer<typeof insertTeacherSchema>;
@@ -172,10 +107,6 @@ export type InsertLeaveRequest = z.infer<typeof insertLeaveRequestSchema>;
 export type UpdateLeaveRequest = z.infer<typeof updateLeaveRequestSchema>;
 export type Bonus = typeof bonuses.$inferSelect;
 export type InsertBonus = z.infer<typeof insertBonusSchema>;
-export type Student = typeof students.$inferSelect;
-export type InsertStudent = z.infer<typeof insertStudentSchema>;
-export type LessonRecord = typeof lessonRecords.$inferSelect;
-export type InsertLessonRecord = z.infer<typeof insertLessonRecordSchema>;
 
 // Calendar event types (not stored in DB, from Google Calendar)
 export interface CalendarEvent {
@@ -193,25 +124,22 @@ export interface CalendarEvent {
 // Structure: A=No., B=Date, C=Lesson details (editable), D=Teacher, E=Lesson time purchased, F=Lesson duration, G=Remaining time, H=Referral credits, I=Notes & Parent Feedback
 export interface AttendanceRow {
   rowIndex: number;
-  recordId?: string;
-  lessonNo: string;
-  date: string;
-  lessonDetails: string;
-  teacher: string;
-  lessonTimePurchased: string;
-  lessonDuration: string;
-  remainingTime: string;
-  referralCredits: string;
-  notes: string;
-  dropdownOptions?: string[];
+  lessonNo: string; // Column A - lesson number
+  date: string; // Column B
+  lessonDetails: string; // Column C - EDITABLE (dropdown or free text)
+  teacher: string; // Column D - read-only
+  lessonTimePurchased: string; // Column E - read-only
+  lessonDuration: string; // Column F - read-only
+  remainingTime: string; // Column G - read-only
+  referralCredits: string; // Column H - read-only
+  notes: string; // Column I - read-only (Notes & Parent Feedback)
+  dropdownOptions?: string[]; // Data validation options for Column C (if any)
 }
 
 // Sheet tab info
 export interface SheetTab {
   name: string;
   sheetId: number;
-  studentId?: string;
-  courseName?: string;
 }
 
 // Pay summary with bonus breakdown from payroll sheet
