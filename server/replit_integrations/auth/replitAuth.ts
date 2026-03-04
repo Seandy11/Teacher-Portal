@@ -39,19 +39,25 @@ export async function setupAuth(app: Express) {
       { usernameField: "email", passwordField: "password" },
       async (email, password, done) => {
         try {
-          const user = await authStorage.getUserByEmail(email.toLowerCase());
+          const normalizedEmail = email.toLowerCase();
+          console.log("[AUTH DEBUG] Login attempt for:", normalizedEmail);
+          const user = await authStorage.getUserByEmail(normalizedEmail);
+          console.log("[AUTH DEBUG] User found:", !!user, user ? `id=${user.id}` : "");
           if (!user) {
             return done(null, false, { message: "Invalid email or password" });
           }
+          console.log("[AUTH DEBUG] Has password:", !!user.password, "pwd length:", user.password?.length);
           if (!user.password) {
             return done(null, false, { message: "Account not set up yet. Please set your password first." });
           }
           const isValid = await bcrypt.compare(password, user.password);
+          console.log("[AUTH DEBUG] Password valid:", isValid);
           if (!isValid) {
             return done(null, false, { message: "Invalid email or password" });
           }
           return done(null, user);
         } catch (error) {
+          console.error("[AUTH DEBUG] Error:", error);
           return done(error);
         }
       }
