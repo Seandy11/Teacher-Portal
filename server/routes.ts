@@ -309,6 +309,9 @@ export async function registerRoutes(
         targetStudentId = found.id;
       }
 
+      const student = await storage.getStudent(targetStudentId);
+      const studentDropdownOptions = student?.dropdownOptions || null;
+
       const records = await storage.getLessonRecordsByStudent(targetStudentId);
       const attendance: AttendanceRow[] = records.map(r => ({
         rowIndex: r.sheetRowIndex || 0,
@@ -322,7 +325,7 @@ export async function registerRoutes(
         remainingTime: r.remainingTime || "",
         referralCredits: r.referralCredits || "",
         notes: r.notes || "",
-        dropdownOptions: r.dropdownOptions || undefined,
+        dropdownOptions: studentDropdownOptions || r.dropdownOptions || undefined,
       }));
 
       res.json(attendance);
@@ -348,21 +351,6 @@ export async function registerRoutes(
       }
 
       await storage.updateLessonRecord(recordId, { lessonDetails: value });
-
-      // Sync to Google Sheets as backup (fire-and-forget)
-      if (teacher.sheetId && record.sheetRowIndex && tabName) {
-        try {
-          const sheets = await getGoogleSheetsClient();
-          await sheets.spreadsheets.values.update({
-            spreadsheetId: teacher.sheetId,
-            range: `'${tabName}'!C${record.sheetRowIndex}`,
-            valueInputOption: "USER_ENTERED",
-            requestBody: { values: [[value]] },
-          });
-        } catch (sheetError) {
-          console.error("Sheet sync failed (non-critical):", sheetError);
-        }
-      }
 
       res.json({ success: true });
     } catch (error) {
@@ -794,8 +782,12 @@ export async function registerRoutes(
   // Update student (name or course title)
   app.patch("/api/admin/students/:studentId", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const { name, courseName } = req.body;
-      const updated = await storage.updateStudent(req.params.studentId, { name, courseName });
+      const { name, courseName, dropdownOptions } = req.body;
+      const updates: any = {};
+      if (name !== undefined) updates.name = name;
+      if (courseName !== undefined) updates.courseName = courseName;
+      if (dropdownOptions !== undefined) updates.dropdownOptions = dropdownOptions;
+      const updated = await storage.updateStudent(req.params.studentId, updates);
       if (!updated) {
         return res.status(404).json({ message: "Student not found" });
       }
@@ -848,34 +840,6 @@ export async function registerRoutes(
       }
 
       const updated = await storage.updateLessonRecord(req.params.recordId, updates);
-
-      // Sync to sheet as backup if possible
-      const student = await storage.getStudent(record.studentId);
-      const teacher = await storage.getTeacher(record.teacherId);
-      if (teacher?.sheetId && record.sheetRowIndex && student?.sheetTab) {
-        try {
-          const sheets = await getGoogleSheetsClient();
-          const rowValues = [
-            updated?.lessonNo || "",
-            updated?.date || "",
-            updated?.lessonDetails || "",
-            updated?.teacher || "",
-            updated?.lessonTimePurchased || "",
-            updated?.lessonDuration || "",
-            updated?.remainingTime || "",
-            updated?.referralCredits || "",
-            updated?.notes || "",
-          ];
-          await sheets.spreadsheets.values.update({
-            spreadsheetId: teacher.sheetId,
-            range: `'${student.sheetTab}'!A${record.sheetRowIndex}:I${record.sheetRowIndex}`,
-            valueInputOption: "USER_ENTERED",
-            requestBody: { values: [rowValues] },
-          });
-        } catch (sheetError) {
-          console.error("Sheet sync failed (non-critical):", sheetError);
-        }
-      }
 
       res.json(updated);
     } catch (error) {

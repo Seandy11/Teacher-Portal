@@ -60,6 +60,7 @@ export const students = pgTable("students", {
   name: varchar("name").notNull(),
   courseName: varchar("course_name"),
   sheetTab: varchar("sheet_tab"),
+  dropdownOptions: text("dropdown_options").array(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

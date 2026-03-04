@@ -153,10 +153,11 @@ Access is enforced server-side:
 ### Sheets Integration (Lesson Tracking)
 - **Primary storage**: PostgreSQL database (`students` and `lesson_records` tables)
 - **Import**: Admin can import data from Google Sheets via "Import from Sheets" button (per-teacher or all-at-once, idempotent)
-- **Sheet sync-back**: When teachers edit lesson details, changes are saved to DB first, then synced to Google Sheet as fire-and-forget backup
+- **No sync-back**: Edits in the app are NOT pushed back to Google Sheets (sheets have their own Apps Script)
 - **Column mapping**: A=No., B=Date, C=Lesson details (editable by teachers), D=Teacher, E=Lesson time purchased, F=Lesson duration, G=Remaining time, H=Referral credits, I=Notes & Parent Feedback
-- **Admin access**: Admins can edit all columns, add/delete students and records
-- **Teacher access**: Teachers can only edit Column C (lesson details)
+- **Admin access**: Admins can edit all columns, add/delete students and records, manage dropdown options per student
+- **Teacher access**: Teachers can only edit Column C (lesson details); if dropdown options are set on a student, teachers see a dropdown instead of free text
+- **Dropdown options**: Stored at student level (`students.dropdownOptions` array); admin can add/remove options per student
 - **Notes display**: Notes shown as clickable icon with popover; unread notes have red badge (tracked via localStorage using recordId)
 
 ### Payroll Sheet Integration (Bonuses)
