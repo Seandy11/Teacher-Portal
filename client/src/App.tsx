@@ -17,7 +17,7 @@ interface ImpersonationStatus {
 }
 
 function AuthenticatedApp() {
-  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth();
   
   const { data: teacher, isLoading: teacherLoading } = useQuery<Teacher>({
     queryKey: ["/api/teachers/me"],
@@ -45,9 +45,9 @@ function AuthenticatedApp() {
           <p className="text-muted-foreground mb-4">
             Your account is not yet set up in the Teacher Portal. Please contact your administrator.
           </p>
-          <a href="/api/logout" className="text-primary hover:underline">
+          <button onClick={() => logout()} className="text-primary hover:underline">
             Sign out
-          </a>
+          </button>
         </div>
       </div>
     );
@@ -61,9 +61,9 @@ function AuthenticatedApp() {
           <p className="text-muted-foreground mb-4">
             Your account has been deactivated. Please contact your administrator if you believe this is an error.
           </p>
-          <a href="/api/logout" className="text-primary hover:underline">
+          <button onClick={() => logout()} className="text-primary hover:underline">
             Sign out
-          </a>
+          </button>
         </div>
       </div>
     );

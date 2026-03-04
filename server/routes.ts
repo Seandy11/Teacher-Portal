@@ -2,28 +2,25 @@ import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { authStorage } from "./replit_integrations/auth/storage";
 import { getGoogleCalendarClient } from "./integrations/googleCalendar";
 import { getGoogleSheetsClient } from "./integrations/googleSheets";
 import { insertLeaveRequestSchema, updateLeaveRequestSchema, insertTeacherSchema, insertBonusSchema } from "@shared/schema";
 import type { CalendarEvent, AttendanceRow } from "@shared/schema";
 
-// Role-based access control middleware
 const requireTeacher: RequestHandler = async (req: any, res, next) => {
-  const userId = req.user?.claims?.sub;
-  const userEmail = req.user?.claims?.email;
+  const userId = req.user?.id;
+  const userEmail = req.user?.email;
   
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  // First get the actual logged-in user's teacher record
   let actualTeacher = await storage.getTeacherByUserId(userId);
   
-  // If not found by userId, try by email and link the account
   if (!actualTeacher && userEmail) {
     actualTeacher = await storage.getTeacherByEmail(userEmail);
     if (actualTeacher && !actualTeacher.userId) {
-      // Link this user to the existing teacher record
       actualTeacher = await storage.updateTeacher(actualTeacher.id, { userId });
     }
   }
@@ -36,14 +33,13 @@ const requireTeacher: RequestHandler = async (req: any, res, next) => {
     return res.status(403).json({ message: "Account deactivated" });
   }
 
-  // Check if admin is impersonating a teacher - only allow if the actual user is an admin
   const impersonateTeacherId = req.session?.impersonateTeacherId;
   if (impersonateTeacherId && actualTeacher.role === "admin") {
     const impersonatedTeacher = await storage.getTeacher(impersonateTeacherId);
     if (impersonatedTeacher) {
       req.teacher = impersonatedTeacher;
       req.isImpersonating = true;
-      req.actualAdmin = actualTeacher; // Store the real admin for reference
+      req.actualAdmin = actualTeacher;
       return next();
     }
   }
@@ -53,21 +49,18 @@ const requireTeacher: RequestHandler = async (req: any, res, next) => {
 };
 
 const requireAdmin: RequestHandler = async (req, res, next) => {
-  const userId = (req.user as any)?.claims?.sub;
-  const userEmail = (req.user as any)?.claims?.email;
+  const userId = (req.user as any)?.id;
+  const userEmail = (req.user as any)?.email;
   
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  // First try to find by userId
   let teacher = await storage.getTeacherByUserId(userId);
   
-  // If not found by userId, try by email and link the account
   if (!teacher && userEmail) {
     teacher = await storage.getTeacherByEmail(userEmail);
     if (teacher && !teacher.userId) {
-      // Link this user to the existing teacher record
       teacher = await storage.updateTeacher(teacher.id, { userId });
     }
   }
@@ -94,24 +87,20 @@ export async function registerRoutes(
 
   // ============ TEACHER ROUTES ============
 
-  // Get current teacher's profile (respects impersonation)
   app.get("/api/teachers/me", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      // First get the actual logged-in user's teacher record
       let actualTeacher = await storage.getTeacherByUserId(userId);
       
-      // If not found, try by email (for first-time users)
       if (!actualTeacher) {
-        const email = req.user?.claims?.email;
+        const email = req.user?.email;
         if (email) {
           actualTeacher = await storage.getTeacherByEmail(email);
           if (actualTeacher) {
-            // Link the user ID to the teacher record
             actualTeacher = await storage.updateTeacher(actualTeacher.id, { userId });
           }
         }
@@ -121,7 +110,6 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Teacher not found" });
       }
 
-      // If admin is impersonating, return the impersonated teacher's data
       const impersonateTeacherId = req.session?.impersonateTeacherId;
       if (impersonateTeacherId && actualTeacher.role === "admin") {
         const impersonatedTeacher = await storage.getTeacher(impersonateTeacherId);
@@ -487,18 +475,23 @@ export async function registerRoutes(
     }
   });
 
-  // Create teacher (admin only)
   app.post("/api/admin/teachers", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const validatedData = insertTeacherSchema.parse({
-        ...req.body,
-        userId: req.body.userId || `pending_${Date.now()}`, // Placeholder until user logs in
-      });
-
-      const existing = await storage.getTeacherByEmail(validatedData.email);
+      const existing = await storage.getTeacherByEmail(req.body.email);
       if (existing) {
         return res.status(400).json({ message: "Teacher with this email already exists" });
       }
+
+      const user = await authStorage.upsertUser({
+        email: req.body.email.toLowerCase(),
+        firstName: req.body.name?.split(" ")[0] || "",
+        lastName: req.body.name?.split(" ").slice(1).join(" ") || "",
+      });
+
+      const validatedData = insertTeacherSchema.parse({
+        ...req.body,
+        userId: user.id,
+      });
 
       const teacher = await storage.createTeacher(validatedData);
       res.status(201).json(teacher);
@@ -565,7 +558,26 @@ export async function registerRoutes(
     }
   });
 
-  // Get all leave requests (admin only)
+  app.post("/api/admin/teachers/:id/reset-password", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const id = req.params.id as string;
+      const teacher = await storage.getTeacher(id);
+      if (!teacher) {
+        return res.status(404).json({ message: "Teacher not found" });
+      }
+
+      if (teacher.userId) {
+        await authStorage.clearPassword(teacher.userId);
+        await authStorage.destroyUserSessions(teacher.userId);
+      }
+
+      res.json({ success: true, message: `Password reset for ${teacher.name}. They can now set a new password.` });
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      res.status(500).json({ message: "Failed to reset password" });
+    }
+  });
+
   app.get("/api/admin/leave-requests", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const requests = await storage.getAllLeaveRequests();
@@ -1275,23 +1287,20 @@ export async function registerRoutes(
     }
   });
 
-  // Get impersonation status (must verify admin before returning impersonation data)
   app.get("/api/admin/impersonate/status", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
-      const userEmail = req.user?.claims?.email;
+      const userId = req.user?.id;
+      const userEmail = req.user?.email;
       
       if (!userId) {
         return res.json({ isImpersonating: false });
       }
 
-      // First verify the user is an admin
       let actualTeacher = await storage.getTeacherByUserId(userId);
       if (!actualTeacher && userEmail) {
         actualTeacher = await storage.getTeacherByEmail(userEmail);
       }
       
-      // Only admins can have impersonation status
       if (!actualTeacher || actualTeacher.role !== "admin") {
         return res.json({ isImpersonating: false });
       }

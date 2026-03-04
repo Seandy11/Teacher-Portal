@@ -15,7 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { EmptyState } from "@/components/empty-state";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { RoleBadge } from "@/components/role-badge";
-import { Users, Plus, Edit2, Power, Search, Calendar, FileSpreadsheet, RefreshCw, Eye, Trash2 } from "lucide-react";
+import { Users, Plus, Edit2, Power, Search, Calendar, FileSpreadsheet, RefreshCw, Eye, Trash2, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -57,6 +57,7 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [toggleTarget, setToggleTarget] = useState<Teacher | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Teacher | null>(null);
+  const [resetPasswordTarget, setResetPasswordTarget] = useState<Teacher | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -141,6 +142,27 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
     try {
       await onDelete(deleteTarget.id);
       setDeleteTarget(null);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetPasswordTarget) return;
+    setIsSubmitting(true);
+    try {
+      await apiRequest("POST", `/api/admin/teachers/${resetPasswordTarget.id}/reset-password`);
+      toast({
+        title: "Password Reset",
+        description: `${resetPasswordTarget.name} can now set a new password.`,
+      });
+      setResetPasswordTarget(null);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reset password",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -464,6 +486,15 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
                           >
                             <Power className="h-4 w-4" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setResetPasswordTarget(teacher)}
+                            title="Reset password"
+                            data-testid={`button-reset-password-${teacher.id}`}
+                          >
+                            <KeyRound className="h-4 w-4" />
+                          </Button>
                           {!teacher.isActive && (
                             <Button
                               variant="ghost"
@@ -541,6 +572,27 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
               data-testid="button-confirm-delete"
             >
               {isSubmitting ? <LoadingSpinner size="sm" /> : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!resetPasswordTarget} onOpenChange={() => setResetPasswordTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Password?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will clear {resetPasswordTarget?.name}'s password. They will need to set a new password using the "Set Up Account" option on the login page.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting} data-testid="button-cancel-reset-password">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleResetPassword}
+              disabled={isSubmitting}
+              data-testid="button-confirm-reset-password"
+            >
+              {isSubmitting ? <LoadingSpinner size="sm" /> : "Reset Password"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

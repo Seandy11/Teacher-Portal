@@ -39,7 +39,7 @@ This is an internal teacher portal with the following core features:
 ### Backend
 - **Express.js** server
 - **PostgreSQL** database with Drizzle ORM
-- **Replit Auth** (OpenID Connect) for Google login
+- **Email/password authentication** with Passport.js local strategy and bcryptjs
 - **Google Calendar API** for timetable and availability
 - **Google Sheets API** for attendance tracking
 
@@ -71,8 +71,8 @@ shared/
 ## Database Schema
 
 ### Tables
-- **users** - Auth user records (from Replit Auth)
-- **sessions** - Session storage (from Replit Auth)
+- **users** - Auth user records (email/password auth, password is nullable for first-time setup flow)
+- **sessions** - Session storage (PostgreSQL-backed via connect-pg-simple)
 - **teachers** - Teacher profiles with calendar/sheet assignments, hourly rates
 - **leave_requests** - Leave request records
 - **bonuses** - Teacher bonus records (amount, month, description)
@@ -85,8 +85,10 @@ shared/
 ## API Endpoints
 
 ### Auth
-- `GET /api/login` - Initiate login
-- `GET /api/logout` - Logout
+- `POST /api/login` - Email/password login
+- `POST /api/register` - First-time password setup (email must be pre-registered by admin)
+- `POST /api/logout` - Logout (destroys session)
+- `GET /api/logout` - Logout (redirects to home)
 - `GET /api/auth/user` - Get current user
 
 ### Teacher Endpoints
@@ -109,6 +111,7 @@ shared/
 - `GET /api/admin/bonuses` - List bonuses (filtered by teacher/month)
 - `POST /api/admin/bonuses` - Add bonus
 - `DELETE /api/admin/bonuses/:id` - Delete bonus
+- `POST /api/admin/teachers/:id/reset-password` - Reset teacher's password (admin only)
 - `POST /api/admin/impersonate/:teacherId` - Start impersonating a teacher
 - `POST /api/admin/impersonate/exit` - Stop impersonating
 - `GET /api/admin/impersonate/status` - Get current impersonation status
