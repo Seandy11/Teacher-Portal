@@ -22,7 +22,8 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production" || !!process.env.REPL_SLUG,
+      sameSite: "lax" as const,
       maxAge: sessionTtl,
     },
   });
@@ -76,17 +77,12 @@ export async function setupAuth(app: Express) {
       if (!user) {
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
-      req.session.regenerate((regenerateErr) => {
-        if (regenerateErr) {
+      req.logIn(user, (loginErr) => {
+        if (loginErr) {
           return res.status(500).json({ message: "Login failed" });
         }
-        req.logIn(user, (loginErr) => {
-          if (loginErr) {
-            return res.status(500).json({ message: "Login failed" });
-          }
-          const { password, ...safeUser } = user;
-          return res.json(safeUser);
-        });
+        const { password, ...safeUser } = user;
+        return res.json(safeUser);
       });
     })(req, res, next);
   });
