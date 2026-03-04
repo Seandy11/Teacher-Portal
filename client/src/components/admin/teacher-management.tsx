@@ -67,7 +67,8 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
 
   const calendarMap = new Map(calendars.map(c => [c.id, c.name]));
 
-  const filteredTeachers = teachers.filter(t =>
+  const teachersOnly = teachers.filter(t => t.role !== "admin");
+  const filteredTeachers = teachersOnly.filter(t =>
     t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     t.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
