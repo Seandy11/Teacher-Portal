@@ -22,10 +22,13 @@ This is an internal teacher portal with the following core features:
 
 ### Calendar Display Features:
 - **Google Calendar Colors**: Events display using their assigned Google Calendar color (colorId 1-11)
+- **Grey Event Exclusion**: Events with colorId 8 (grey) are excluded from timetable display and pay calculations
 - **Past Event Fading**: Completed lessons appear faded (opacity 50%)
 - **Current Time Indicator**: Animated red dot with time display, updates every minute
 - **Hover Tooltips**: Full event details on hover (teacher, date, time, completion status)
-- **Overlapping Events**: Events at the same time shown side-by-side
+- **Click to Focus**: Click an event to bring it to front with details panel
+- **Overlapping Events**: Events at the same time shown side-by-side with minimum visible width
+- **Defined Borders**: Events have colored borders and subtle shadows for clarity
 
 ## Architecture
 

@@ -332,19 +332,6 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="sheetRowStart"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Sheet Row Range (e.g., A2:F100)</FormLabel>
-              <FormControl>
-                <Input placeholder="A2:F100" {...field} data-testid="input-sheet-row" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
         <DialogFooter>
           <Button type="submit" disabled={isSubmitting} data-testid="button-save-teacher">
             {isSubmitting ? <LoadingSpinner size="sm" /> : submitLabel}

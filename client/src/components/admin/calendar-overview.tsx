@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ChevronLeft, ChevronRight, Lock, Eye, EyeOff, Clock, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Eye, EyeOff, Clock, User, X } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, isSameDay, parseISO, eachDayOfInterval, isPast } from "date-fns";
 import type { CalendarEvent } from "@shared/schema";
 
@@ -30,7 +30,6 @@ const START_HOUR = 7; // 07:00
 const END_HOUR = 20; // 20:00
 const HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
-// Helper function to get contrasting text color
 function getContrastColor(hexColor: string): string {
   const hex = hexColor.replace('#', '');
   const r = parseInt(hex.substr(0, 2), 16);
@@ -38,6 +37,14 @@ function getContrastColor(hexColor: string): string {
   const b = parseInt(hex.substr(4, 2), 16);
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   return luminance > 0.5 ? '#000000' : '#ffffff';
+}
+
+function darkenColor(hexColor: string, amount: number): string {
+  const hex = hexColor.replace('#', '');
+  const r = Math.max(0, parseInt(hex.substr(0, 2), 16) - amount);
+  const g = Math.max(0, parseInt(hex.substr(2, 2), 16) - amount);
+  const b = Math.max(0, parseInt(hex.substr(4, 2), 16) - amount);
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
 // Get event duration in minutes
@@ -135,6 +142,8 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
   const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [visibleTeacherIds, setVisibleTeacherIds] = useState<Set<string>>(new Set());
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [selectedEventKey, setSelectedEventKey] = useState<string | null>(null);
+  const [frontEventKey, setFrontEventKey] = useState<string | null>(null);
   const hasInitialized = useRef(false);
 
   useEffect(() => {
@@ -244,6 +253,20 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
   const clearAll = () => {
     setVisibleTeacherIds(new Set());
   };
+
+  const handleEventClick = useCallback((eventKey: string) => {
+    if (frontEventKey === eventKey) {
+      setSelectedEventKey(prev => prev === eventKey ? null : eventKey);
+    } else {
+      setFrontEventKey(eventKey);
+      setSelectedEventKey(eventKey);
+    }
+  }, [frontEventKey]);
+
+  const selectedEvent = useMemo(() => {
+    if (!selectedEventKey) return null;
+    return filteredEvents.find(e => `${e.teacherId}-${e.id}` === selectedEventKey) || null;
+  }, [selectedEventKey, filteredEvents]);
 
   const goToPreviousWeek = () => setCurrentWeekStart(subWeeks(currentWeekStart, 1));
   const goToNextWeek = () => setCurrentWeekStart(addWeeks(currentWeekStart, 1));
@@ -362,8 +385,56 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
         </Card>
       )}
 
+      {/* Selected Event Details Panel */}
+      {selectedEvent && (
+        <Card data-testid="panel-event-details">
+          <CardHeader className="py-3 px-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-3 h-3 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: selectedEvent.backgroundColor || selectedEvent.teacherColor }}
+                />
+                <CardTitle className="text-sm font-medium">{selectedEvent.title}</CardTitle>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setSelectedEventKey(null);
+                  setFrontEventKey(null);
+                }}
+                data-testid="button-close-event-details"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="py-2 px-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <User className="h-4 w-4 flex-shrink-0" />
+                <span>{selectedEvent.teacherName}</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Clock className="h-4 w-4 flex-shrink-0" />
+                <span>
+                  {format(parseISO(selectedEvent.start), "EEEE, MMM d")} &middot; {format(parseISO(selectedEvent.start), "HH:mm")} - {format(parseISO(selectedEvent.end), "HH:mm")}
+                </span>
+              </div>
+              {selectedEvent.isAvailabilityBlock && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Lock className="h-4 w-4 flex-shrink-0" />
+                  <span>Availability Block</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Timeline Calendar Grid */}
-      <div className="border rounded-lg overflow-hidden">
+      <div className="border rounded-lg overflow-hidden" onClick={() => { setSelectedEventKey(null); setFrontEventKey(null); }}>
         {/* Header row with days */}
         <div className="flex border-b bg-muted/50">
           <div className="w-14 flex-shrink-0 border-r" />
@@ -429,31 +500,45 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
 
                 {/* Events */}
                 {dayEvents.map((event) => {
+                  const eventKey = `${event.teacherId}-${event.id}`;
                   const displayColor = event.backgroundColor || event.teacherColor;
+                  const borderColor = darkenColor(displayColor, 50);
                   const isPastEvent = isPast(parseISO(event.end));
                   const style = getEventStyle(event);
                   const durationMinutes = getEventDurationMinutes(event);
+                  const isFront = frontEventKey === eventKey;
+                  const isSelected = selectedEventKey === eventKey;
                   
-                  // Use pre-calculated layout
-                  const width = `${100 / event.totalColumns}%`;
+                  const minWidthPx = 28;
+                  const colWidth = 100 / event.totalColumns;
+                  const width = event.totalColumns > 1
+                    ? `max(${minWidthPx}px, ${colWidth}%)`
+                    : "100%";
                   const left = `${(event.column * 100) / event.totalColumns}%`;
                   
-                  // Adaptive content based on duration
                   const showTeacher = durationMinutes >= 25;
                   const showTime = durationMinutes >= 35;
                   
                   return (
-                    <Tooltip key={`${event.teacherId}-${event.id}`}>
+                    <Tooltip key={eventKey}>
                       <TooltipTrigger asChild>
                         <div
-                          className={`absolute rounded-sm cursor-pointer overflow-hidden text-xs p-1 transition-opacity ${isPastEvent ? "opacity-50" : ""}`}
+                          className={`absolute rounded-sm cursor-pointer overflow-hidden text-xs p-1 transition-all duration-150 ${isPastEvent ? "opacity-50" : ""} ${isSelected ? "ring-2 ring-foreground/40" : ""}`}
                           style={{
                             ...style,
                             width,
                             left,
                             backgroundColor: displayColor,
                             color: getContrastColor(displayColor),
-                            zIndex: 10,
+                            border: `1.5px solid ${borderColor}`,
+                            boxShadow: isFront
+                              ? "0 4px 12px rgba(0,0,0,0.25)"
+                              : "0 1px 3px rgba(0,0,0,0.15)",
+                            zIndex: isFront ? 30 : 10,
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEventClick(eventKey);
                           }}
                           data-testid={`event-${event.id}`}
                         >

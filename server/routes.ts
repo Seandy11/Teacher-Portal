@@ -163,8 +163,9 @@ export async function registerRoutes(
       const eventColors = colorsResponse.data.event || {};
       const calendarDefaultColor = calendarListEntry.data.backgroundColor || "#039be5";
 
-      const events: CalendarEvent[] = (eventsResponse.data.items || []).map((event: any) => {
-        // Priority: eventColors[colorId] > calendar default
+      const events: CalendarEvent[] = (eventsResponse.data.items || [])
+        .filter((event: any) => event.colorId !== "8")
+        .map((event: any) => {
         let bgColor = calendarDefaultColor;
         if (event.colorId && eventColors[event.colorId]?.background) {
           bgColor = eventColors[event.colorId].background!;
@@ -676,8 +677,9 @@ export async function registerRoutes(
           const teacherColor = getColorForTeacher(teacher.id);
           const calendarDefaultColor = calendarListEntry.data.backgroundColor || teacherColor;
           
-          const events = (eventsResponse.data.items || []).map((event: any) => {
-            // Priority: eventColors[colorId] > calendar default
+          const events = (eventsResponse.data.items || [])
+            .filter((event: any) => event.colorId !== "8")
+            .map((event: any) => {
             let bgColor = calendarDefaultColor;
             if (event.colorId && eventColors[event.colorId]?.background) {
               bgColor = eventColors[event.colorId].background!;
@@ -919,6 +921,11 @@ export async function registerRoutes(
             const title = event.summary || "";
             const titleLower = title.toLowerCase();
             
+            if (event.colorId === "8") {
+              skippedEvents.push({ title, reason: "grey event" });
+              continue;
+            }
+
             const isAvailabilityBlock = titleLower.includes("blocked") || 
                                        titleLower.includes("unavailable") ||
                                        event.extendedProperties?.private?.type === "availability_block";
@@ -1047,6 +1054,11 @@ export async function registerRoutes(
             const title = event.summary || "";
             const titleLower = title.toLowerCase();
             
+            if (event.colorId === "8") {
+              skippedEvents.push({ title, reason: "grey event" });
+              continue;
+            }
+
             const isAvailabilityBlock = titleLower.includes("blocked") || 
                                        titleLower.includes("unavailable") ||
                                        event.extendedProperties?.private?.type === "availability_block";
@@ -1159,6 +1171,11 @@ export async function registerRoutes(
                 const title = event.summary || "";
                 const titleLower = title.toLowerCase();
                 
+                if (event.colorId === "8") {
+                  skippedEvents.push({ title, reason: "grey event" });
+                  continue;
+                }
+
                 const isAvailabilityBlock = titleLower.includes("blocked") || 
                                            titleLower.includes("unavailable") ||
                                            event.extendedProperties?.private?.type === "availability_block";
