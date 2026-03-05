@@ -150,7 +150,7 @@ export default function LoginPage() {
             <div className="relative grid lg:grid-cols-2 gap-12 items-center">
               <div className="space-y-8">
                 <div className="space-y-6">
-                  <img src={logoImage} alt="Bright Horizon" className="w-full max-w-sm object-contain" data-testid="img-login-logo" />
+                  <img src={logoImage} alt="Bright Horizon" className="w-64 object-contain" data-testid="img-login-logo" />
                   <h1 className="text-4xl sm:text-5xl font-serif font-medium tracking-tight">
                     Teacher Portal
                   </h1>
@@ -175,7 +175,7 @@ export default function LoginPage() {
               <img
                 src={airplaneImage}
                 alt=""
-                className="hidden lg:block absolute left-1/2 top-0 h-full -translate-x-1/2 object-contain opacity-15 pointer-events-none dark:invert"
+                className="hidden lg:block absolute left-[35%] top-0 h-full -translate-x-1/2 object-contain opacity-30 pointer-events-none dark:invert"
                 data-testid="img-paper-airplane"
               />
 
