@@ -204,19 +204,7 @@ export function AttendanceTracker({
                     <TableHead className="min-w-[100px]">
                       <div className="flex items-center gap-1">
                         <Lock className="h-3 w-3 text-muted-foreground" />
-                        Time Purchased
-                      </div>
-                    </TableHead>
-                    <TableHead className="min-w-[100px]">
-                      <div className="flex items-center gap-1">
-                        <Lock className="h-3 w-3 text-muted-foreground" />
                         Duration
-                      </div>
-                    </TableHead>
-                    <TableHead className="min-w-[100px]">
-                      <div className="flex items-center gap-1">
-                        <Lock className="h-3 w-3 text-muted-foreground" />
-                        Remaining
                       </div>
                     </TableHead>
                     <TableHead className="min-w-[80px]">
@@ -287,9 +275,7 @@ export function AttendanceTracker({
                           )}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">{row.teacher || "—"}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">{row.lessonTimePurchased || "—"}</TableCell>
                         <TableCell className="text-muted-foreground text-sm">{row.lessonDuration || "—"}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">{row.remainingTime || "—"}</TableCell>
                         <TableCell className="text-muted-foreground text-sm">{row.referralCredits || "—"}</TableCell>
                         <TableCell>
                           {hasNote ? (

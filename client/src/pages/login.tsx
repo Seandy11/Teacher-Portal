@@ -9,7 +9,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
-import { GraduationCap, Calendar, FileSpreadsheet, Clock, LogIn, UserPlus, ArrowLeft } from "lucide-react";
+import { Calendar, FileSpreadsheet, Clock, LogIn, UserPlus, ArrowLeft } from "lucide-react";
+import logoImage from "@assets/bright-horizon-logo.png";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -134,9 +135,7 @@ export default function LoginPage() {
       <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-14 items-center justify-between px-4 max-w-7xl mx-auto">
           <div className="flex items-center gap-2">
-            <div className="rounded-lg bg-primary p-1.5">
-              <GraduationCap className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <img src={logoImage} alt="Bright Horizon" className="h-8 object-contain" />
             <span className="font-medium text-lg">Teacher Portal</span>
           </div>
           <ThemeToggle />
@@ -149,27 +148,32 @@ export default function LoginPage() {
           <div className="relative max-w-7xl mx-auto px-4 py-16 sm:py-24">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               <div className="space-y-8">
-                <div className="space-y-4">
+                <div className="space-y-6">
+                  <img src={logoImage} alt="Bright Horizon" className="h-16 object-contain" data-testid="img-login-logo" />
                   <h1 className="text-4xl sm:text-5xl font-serif font-medium tracking-tight">
-                    Your Teaching Hub,{" "}
-                    <span className="text-primary">Simplified</span>
+                    Teacher Portal
                   </h1>
                   <p className="text-lg text-muted-foreground max-w-lg">
-                    Access your timetable, track student attendance, manage your availability, 
+                    Access your timetable, track student lessons, manage your availability, 
                     and submit leave requests — all in one place.
                   </p>
                 </div>
 
                 <div className="flex items-center gap-6 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1.5">
-                    <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary" />
                     Secure login
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary" />
                     Real-time sync
                   </span>
                 </div>
+
+                <svg className="absolute bottom-4 right-4 opacity-10 w-32 h-32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 90 L50 50 L90 70 L50 10 Z" stroke="currentColor" strokeWidth="2" fill="none" className="text-primary" />
+                  <path d="M10 90 L50 50" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 3" className="text-primary" />
+                </svg>
               </div>
 
               <Card className="relative bg-card/80 backdrop-blur border-card-border">

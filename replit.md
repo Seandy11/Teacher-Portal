@@ -1,6 +1,11 @@
-# Teacher Portal
+# Bright Horizon Teacher Portal
 
-A secure, role-based Teacher Portal for ESL schools that replaces and improves upon Google Apps Script workflows.
+A secure, role-based Teacher Portal for Bright Horizon ESL school that replaces and improves upon Google Apps Script workflows.
+
+## Branding
+- **Logo**: Transparent PNG at `attached_assets/bright-horizon-logo.png`, used in login page and app header
+- **Primary Color**: Teal/light-blue (HSL 195 72% 47% light / 195 72% 52% dark) matching the Bright Horizon brand
+- **Currency**: South African Rand (R)
 
 ## Overview
 

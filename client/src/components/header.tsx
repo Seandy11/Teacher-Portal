@@ -20,7 +20,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "./theme-toggle";
 import { RoleBadge } from "./role-badge";
-import { LogOut, KeyRound, GraduationCap, X, Eye } from "lucide-react";
+import { LogOut, KeyRound, X, Eye } from "lucide-react";
+import logoImage from "@assets/bright-horizon-logo.png";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -131,9 +132,7 @@ export function Header({ user, teacher, onLogout }: HeaderProps) {
         <div className="flex h-14 items-center justify-between px-4 gap-4">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-primary p-1.5">
-                <GraduationCap className="h-5 w-5 text-primary-foreground" />
-              </div>
+              <img src={logoImage} alt="Bright Horizon" className="h-7 object-contain" data-testid="img-header-logo" />
               <span className="font-medium text-lg hidden sm:inline">Teacher Portal</span>
             </div>
           </div>
