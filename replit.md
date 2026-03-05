@@ -5,7 +5,7 @@ A secure, role-based Teacher Portal for Bright Horizon ESL school that replaces 
 ## Branding
 - **Logo**: Transparent PNG at `attached_assets/bright-horizon-text-logo.png`, used in login page and app header
 - **Paper Airplane**: Transparent PNG at `attached_assets/paper-airplane.png`, decorative element on login page
-- **Primary Color**: Teal/light-blue (HSL 195 72% 47% light / 195 72% 52% dark) matching the Bright Horizon brand
+- **Primary Color**: Navy blue (HSL 210 55% 23% light / 210 55% 40% dark) matching the "HORIZON" text in the Bright Horizon logo
 - **Currency**: South African Rand (R)
 
 ## Overview

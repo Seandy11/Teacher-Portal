@@ -150,7 +150,7 @@ export default function LoginPage() {
             <div className="relative grid lg:grid-cols-2 gap-12 items-center">
               <div className="space-y-8">
                 <div className="space-y-6">
-                  <img src={logoImage} alt="Bright Horizon" className="w-64 object-contain" data-testid="img-login-logo" />
+                  <img src={logoImage} alt="Bright Horizon" className="w-[270px] object-contain" data-testid="img-login-logo" />
                   <h1 className="text-4xl sm:text-5xl font-serif font-medium tracking-tight">
                     Teacher Portal
                   </h1>
@@ -175,7 +175,7 @@ export default function LoginPage() {
               <img
                 src={airplaneImage}
                 alt=""
-                className="hidden lg:block absolute left-[35%] top-0 h-full -translate-x-1/2 object-contain opacity-30 pointer-events-none dark:invert"
+                className="hidden lg:block absolute left-[45%] top-0 h-full -translate-x-1/2 object-contain opacity-30 pointer-events-none dark:invert"
                 data-testid="img-paper-airplane"
               />
 
@@ -389,7 +389,7 @@ export default function LoginPage() {
 
         <footer className="border-t py-8">
           <div className="max-w-7xl mx-auto px-4 text-center text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} ESL School Teacher Portal. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Bright Horizon Online Teacher Portal. All rights reserved.</p>
           </div>
         </footer>
       </main>
