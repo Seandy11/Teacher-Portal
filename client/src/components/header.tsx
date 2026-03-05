@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "./theme-toggle";
 import { RoleBadge } from "./role-badge";
 import { LogOut, KeyRound, X, Eye } from "lucide-react";
-import logoImage from "@assets/bright-horizon-logo.png";
+import logoImage from "@assets/bright-horizon-text-logo.png";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";

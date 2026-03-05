@@ -10,7 +10,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { Calendar, FileSpreadsheet, Clock, LogIn, UserPlus, ArrowLeft } from "lucide-react";
-import logoImage from "@assets/bright-horizon-logo.png";
+import logoImage from "@assets/bright-horizon-text-logo.png";
+import airplaneImage from "@assets/paper-airplane.png";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -146,10 +147,10 @@ export default function LoginPage() {
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/10" />
           <div className="relative max-w-7xl mx-auto px-4 py-16 sm:py-24">
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="relative grid lg:grid-cols-2 gap-12 items-center">
               <div className="space-y-8">
                 <div className="space-y-6">
-                  <img src={logoImage} alt="Bright Horizon" className="h-16 object-contain" data-testid="img-login-logo" />
+                  <img src={logoImage} alt="Bright Horizon" className="w-full max-w-sm object-contain" data-testid="img-login-logo" />
                   <h1 className="text-4xl sm:text-5xl font-serif font-medium tracking-tight">
                     Teacher Portal
                   </h1>
@@ -169,12 +170,14 @@ export default function LoginPage() {
                     Real-time sync
                   </span>
                 </div>
-
-                <svg className="absolute bottom-4 right-4 opacity-10 w-32 h-32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10 90 L50 50 L90 70 L50 10 Z" stroke="currentColor" strokeWidth="2" fill="none" className="text-primary" />
-                  <path d="M10 90 L50 50" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 3" className="text-primary" />
-                </svg>
               </div>
+
+              <img
+                src={airplaneImage}
+                alt=""
+                className="hidden lg:block absolute left-1/2 top-0 h-full -translate-x-1/2 object-contain opacity-15 pointer-events-none dark:invert"
+                data-testid="img-paper-airplane"
+              />
 
               <Card className="relative bg-card/80 backdrop-blur border-card-border">
                 {mode === "login" ? (
