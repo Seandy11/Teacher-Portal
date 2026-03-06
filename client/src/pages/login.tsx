@@ -134,12 +134,12 @@ export default function LoginPage() {
               <div className="space-y-8">
                 <div className="space-y-6">
                   <img src={logoImage} alt="Bright Horizon" className="w-[270px] object-contain" data-testid="img-login-logo" />
-                  <h1 className="text-[2rem] sm:text-[2.6rem] font-serif font-medium tracking-tight leading-tight">
+                  <h1 className="text-[2rem] sm:text-[2.85rem] font-serif font-medium tracking-tight leading-tight">
                     Teacher Portal
                   </h1>
                   <p className="text-lg text-muted-foreground max-w-lg">
                     Access your timetable, track student lessons, 
-                    and submit leave requests — all in one place.
+                    and view your monthly pay — all in one place.
                   </p>
                 </div>
 
