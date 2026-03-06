@@ -44,6 +44,9 @@ export default function LoginPage() {
       }
     };
     measure();
+    document.fonts.ready.then(() => {
+      measure();
+    });
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
   }, []);
@@ -146,7 +149,7 @@ export default function LoginPage() {
               <div className="space-y-8">
                 <div className="space-y-2">
                   <div>
-                    <img src={logoImage} alt="Bright Horizon" className="block h-auto" style={{ width: logoWidth || 'auto' }} data-testid="img-login-logo" />
+                    <img src={logoImage} alt="Bright Horizon" className="block h-auto transition-opacity duration-200" style={{ width: logoWidth ? logoWidth + 'px' : '0px', opacity: logoWidth ? 1 : 0 }} data-testid="img-login-logo" />
                     <h1 ref={headingRef} className="text-4xl sm:text-5xl font-serif font-medium tracking-tight whitespace-nowrap mt-1">
                       Teacher Portal
                     </h1>
