@@ -131,8 +131,8 @@ export default function LoginPage() {
           <div className="relative max-w-7xl mx-auto px-4 py-16 sm:py-24">
             <div className="relative grid lg:grid-cols-2 gap-12 items-center">
               <div className="space-y-8">
-                <div className="space-y-6">
-                  <img src={logoImage} alt="Bright Horizon" className="w-[240px] object-contain" data-testid="img-login-logo" />
+                <div className="space-y-4">
+                  <img src={logoImage} alt="Bright Horizon" className="h-[72px] object-contain object-left -ml-1" data-testid="img-login-logo" />
                   <h1 className="text-4xl sm:text-5xl font-serif font-medium tracking-tight">
                     Teacher Portal
                   </h1>
