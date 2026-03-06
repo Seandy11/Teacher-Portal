@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
-import { LogIn, UserPlus, ArrowLeft } from "lucide-react";
+import { Calendar, FileSpreadsheet, Clock, LogIn, UserPlus, ArrowLeft } from "lucide-react";
 import logoImage from "@assets/bright-horizon-text-logo.png";
 import airplaneImage from "@assets/paper-airplane.png";
 
@@ -33,23 +33,7 @@ type RegisterValues = z.infer<typeof registerSchema>;
 export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [logoWidth, setLogoWidth] = useState<number | null>(null);
-  const headingRef = useRef<HTMLHeadingElement>(null);
   const { toast } = useToast();
-
-  useEffect(() => {
-    const measure = () => {
-      if (headingRef.current) {
-        setLogoWidth(headingRef.current.offsetWidth);
-      }
-    };
-    measure();
-    document.fonts.ready.then(() => {
-      measure();
-    });
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, []);
 
   const loginForm = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -129,6 +113,24 @@ export default function LoginPage() {
     }
   };
 
+  const features = [
+    {
+      icon: Calendar,
+      title: "View Your Timetable",
+      description: "See your classes synced from Google Calendar",
+    },
+    {
+      icon: FileSpreadsheet,
+      title: "Track Lessons",
+      description: "Update lesson details directly in the portal",
+    },
+    {
+      icon: Clock,
+      title: "Manage Availability",
+      description: "Block or open time slots in your calendar",
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -147,15 +149,13 @@ export default function LoginPage() {
           <div className="relative max-w-7xl mx-auto px-4 py-16 sm:py-24">
             <div className="relative grid lg:grid-cols-2 gap-12 items-center">
               <div className="space-y-8">
-                <div className="space-y-2">
-                  <div>
-                    <img src={logoImage} alt="Bright Horizon" className="block h-auto transition-opacity duration-200" style={{ width: logoWidth ? logoWidth + 'px' : '0px', opacity: logoWidth ? 1 : 0 }} data-testid="img-login-logo" />
-                    <h1 ref={headingRef} className="text-4xl sm:text-5xl font-serif font-medium tracking-tight whitespace-nowrap mt-1">
-                      Teacher Portal
-                    </h1>
-                  </div>
+                <div className="space-y-6">
+                  <img src={logoImage} alt="Bright Horizon" className="w-[270px] object-contain" data-testid="img-login-logo" />
+                  <h1 className="text-4xl sm:text-5xl font-serif font-medium tracking-tight">
+                    Teacher Portal
+                  </h1>
                   <p className="text-lg text-muted-foreground max-w-lg">
-                    Access your timetable, track student lessons, 
+                    Access your timetable, track student lessons, manage your availability, 
                     and submit leave requests — all in one place.
                   </p>
                 </div>
@@ -364,6 +364,34 @@ export default function LoginPage() {
           </div>
         </section>
 
+        <section className="border-t bg-muted/30">
+          <div className="max-w-7xl mx-auto px-4 py-16">
+            <div className="text-center mb-12">
+              <h2 className="text-2xl font-medium mb-2">Everything You Need</h2>
+              <p className="text-muted-foreground">Streamlined tools for busy teachers</p>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-6">
+              {features.map((feature) => (
+                <Card key={feature.title} className="hover-elevate bg-background">
+                  <CardContent className="pt-6">
+                    <div className="rounded-lg bg-primary/10 p-3 w-fit mb-4">
+                      <feature.icon className="h-6 w-6 text-primary" />
+                    </div>
+                    <h3 className="font-medium mb-2">{feature.title}</h3>
+                    <p className="text-sm text-muted-foreground">{feature.description}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <footer className="border-t py-8">
+          <div className="max-w-7xl mx-auto px-4 text-center text-sm text-muted-foreground">
+            <p>&copy; {new Date().getFullYear()} Bright Horizon Online Teacher Portal. All rights reserved.</p>
+          </div>
+        </footer>
       </main>
     </div>
   );
