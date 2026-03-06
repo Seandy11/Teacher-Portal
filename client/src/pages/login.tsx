@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -33,7 +33,20 @@ type RegisterValues = z.infer<typeof registerSchema>;
 export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [logoWidth, setLogoWidth] = useState<number | null>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const measure = () => {
+      if (headingRef.current) {
+        setLogoWidth(headingRef.current.offsetWidth);
+      }
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
 
   const loginForm = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -132,9 +145,9 @@ export default function LoginPage() {
             <div className="relative grid lg:grid-cols-2 gap-12 items-center">
               <div className="space-y-8">
                 <div className="space-y-2">
-                  <div className="w-fit space-y-1">
-                    <img src={logoImage} alt="Bright Horizon" className="block w-full h-auto" data-testid="img-login-logo" />
-                    <h1 className="text-4xl sm:text-5xl font-serif font-medium tracking-tight whitespace-nowrap">
+                  <div>
+                    <img src={logoImage} alt="Bright Horizon" className="block h-auto" style={{ width: logoWidth || 'auto' }} data-testid="img-login-logo" />
+                    <h1 ref={headingRef} className="text-4xl sm:text-5xl font-serif font-medium tracking-tight whitespace-nowrap mt-1">
                       Teacher Portal
                     </h1>
                   </div>
