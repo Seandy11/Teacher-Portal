@@ -3,7 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { authStorage } from "./replit_integrations/auth/storage";
-import { getGoogleCalendarClient } from "./integrations/googleCalendar";
+import crypto from "crypto";
+import { getGoogleCalendarClient, getAuthUrl, exchangeCodeForTokens, isGoogleConnected } from "./integrations/googleCalendar";
 import { getGoogleSheetsClient } from "./integrations/googleSheets";
 import { insertLeaveRequestSchema, updateLeaveRequestSchema, insertTeacherSchema, insertBonusSchema } from "@shared/schema";
 import type { CalendarEvent, AttendanceRow } from "@shared/schema";
@@ -86,6 +87,48 @@ export async function registerRoutes(
   // Setup auth (must be before other routes)
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  // ============ GOOGLE OAUTH ROUTES ============
+
+  app.get("/api/auth/google", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const state = crypto.randomBytes(32).toString("hex");
+      req.session.googleOAuthState = state;
+      const url = getAuthUrl(state);
+      res.redirect(url);
+    } catch (error) {
+      console.error("Google auth error:", error);
+      res.status(500).json({ message: "Failed to initiate Google auth" });
+    }
+  });
+
+  app.get("/api/auth/google/callback", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const code = req.query.code as string;
+      const state = req.query.state as string;
+      const expectedState = req.session.googleOAuthState;
+
+      if (!code || !state || state !== expectedState) {
+        return res.redirect("/?google=error");
+      }
+
+      delete req.session.googleOAuthState;
+      await exchangeCodeForTokens(code);
+      res.redirect("/?google=connected");
+    } catch (error) {
+      console.error("Google callback error:", error);
+      res.redirect("/?google=error");
+    }
+  });
+
+  app.get("/api/auth/google/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const connected = await isGoogleConnected();
+      res.json({ connected });
+    } catch (error) {
+      res.json({ connected: false });
+    }
+  });
 
   // ============ TEACHER ROUTES ============
 

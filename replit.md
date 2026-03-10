@@ -85,6 +85,7 @@ shared/
 - **teachers** - Teacher profiles with calendar/sheet assignments, hourly rates
 - **leave_requests** - Leave request records
 - **bonuses** - Teacher bonus records (amount, month, description)
+- **google_tokens** - Singleton table storing Google OAuth2 tokens (access_token, refresh_token, expires_at)
 
 ### Key Relations
 - teachers.userId → users.id
@@ -138,6 +139,14 @@ Access is enforced server-side:
 
 ## Google Integrations
 
+### OAuth2 Authentication
+- Uses standard Google OAuth2 (not Replit connectors) for portability
+- Admin initiates OAuth flow via "Connect Google" button on dashboard
+- Tokens stored in `google_tokens` singleton table (access_token, refresh_token, expires_at)
+- Auto-refreshes access tokens using stored refresh_token
+- Both Calendar and Sheets share the same OAuth client (`server/integrations/googleCalendar.ts`)
+- `server/integrations/googleSheets.ts` re-exports from googleCalendar.ts
+
 ### Calendar Integration
 - **Read**: Classes are synced one-way from Google Calendar (read-only in app)
 - **Write**: Availability blocks can be created/deleted (syncs back to calendar)
@@ -171,8 +180,8 @@ Required:
 - `DATABASE_URL` - PostgreSQL connection string
 - `SESSION_SECRET` - Session encryption key
 - `PAYROLL_SHEET_ID` - Google Sheet ID for payroll/bonuses data
-- Google Calendar connector (configured via Replit integrations)
-- Google Sheets connector (configured via Replit integrations)
+- `GOOGLE_CLIENT_ID` - Google OAuth2 Client ID
+- `GOOGLE_CLIENT_SECRET` - Google OAuth2 Client Secret
 
 ## Timezone
 - School is in South Africa (SAST, UTC+2)

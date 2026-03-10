@@ -13,7 +13,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/auth-utils";
-import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Wallet } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Wallet, Link2, Link2Off, RefreshCw } from "lucide-react";
 import type { Teacher, LeaveRequest } from "@shared/schema";
 
 type AdminView = "dashboard" | "calendar" | "teachers" | "leave" | "payroll";
@@ -37,6 +38,11 @@ export default function AdminDashboard() {
     enabled: !!user,
   });
 
+  const { data: googleStatus } = useQuery<{ connected: boolean }>({
+    queryKey: ["/api/auth/google/status"],
+    enabled: !!user,
+  });
+
   const { data: teachers = [], isLoading: teachersLoading, error: teachersError, refetch: refetchTeachers } = useQuery<Teacher[]>({
     queryKey: ["/api/admin/teachers"],
     enabled: !!user,
@@ -46,6 +52,19 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/leave-requests"],
     enabled: !!user,
   });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const googleParam = params.get("google");
+    if (googleParam === "connected") {
+      toast({ title: "Google Connected", description: "Google account has been linked successfully." });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/google/status"] });
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (googleParam === "error") {
+      toast({ title: "Connection Failed", description: "Could not connect Google account. Please try again.", variant: "destructive" });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [toast, queryClient]);
 
   // Handle unauthorized errors
   useEffect(() => {
@@ -240,6 +259,40 @@ export default function AdminDashboard() {
                         </Card>
                       ))}
                     </div>
+
+                    <Card data-testid="card-google-connection">
+                      <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Google Integration</CardTitle>
+                        {googleStatus?.connected ? (
+                          <Link2 className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <Link2Off className="h-5 w-5 text-red-500" />
+                        )}
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium" data-testid="text-google-status">
+                              {googleStatus?.connected ? "Connected" : "Not Connected"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {googleStatus?.connected
+                                ? "Calendar and Sheets are linked"
+                                : "Connect to enable Calendar and Sheets"}
+                            </p>
+                          </div>
+                          <Button
+                            variant={googleStatus?.connected ? "outline" : "default"}
+                            size="sm"
+                            onClick={() => { window.location.href = "/api/auth/google"; }}
+                            data-testid="button-connect-google"
+                          >
+                            <RefreshCw className="h-4 w-4 mr-1" />
+                            {googleStatus?.connected ? "Reconnect" : "Connect Google"}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
 
                     <div className="grid gap-6 lg:grid-cols-2">
                       <Card>

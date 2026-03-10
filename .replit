@@ -49,3 +49,5 @@ integrations = ["javascript_log_in_with_replit:2.0.0", "javascript_database:1.0.
 
 [userenv.shared]
 PAYROLL_SHEET_ID = "1dk-ALW2w6Qm6FanHEPDPr32Pmr3MuuPwuB2DnNEUXZE"
+GOOGLE_CLIENT_ID = "128038204938-scj0cvqd4v9fin0rmc011rsbg0g47f3h.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET = "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"

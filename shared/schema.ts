@@ -53,6 +53,15 @@ export const leaveRequests = pgTable("leave_requests", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Google OAuth tokens table - stores admin's Google OAuth refresh token
+export const googleTokens = pgTable("google_tokens", {
+  id: varchar("id").primaryKey().default("singleton"),
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const teachersRelations = relations(teachers, ({ many }) => ({
   leaveRequests: many(leaveRequests),
