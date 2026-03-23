@@ -1,4 +1,4 @@
-import { teachers, leaveRequests, bonuses, type Teacher, type InsertTeacher, type LeaveRequest, type InsertLeaveRequest, type UpdateLeaveRequest, type Bonus, type InsertBonus } from "@shared/schema";
+import { teachers, leaveRequests, bonuses, appSettings, type Teacher, type InsertTeacher, type LeaveRequest, type InsertLeaveRequest, type UpdateLeaveRequest, type Bonus, type InsertBonus, type AppSetting } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 
@@ -24,6 +24,10 @@ export interface IStorage {
   getBonusesByTeacher(teacherId: string): Promise<Bonus[]>;
   createBonus(bonus: InsertBonus): Promise<Bonus>;
   deleteBonus(id: string): Promise<boolean>;
+
+  // App Settings
+  getSetting(key: string): Promise<string | null>;
+  setSetting(key: string, value: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -113,6 +117,19 @@ export class DatabaseStorage implements IStorage {
   async deleteBonus(id: string): Promise<boolean> {
     const result = await db.delete(bonuses).where(eq(bonuses.id, id)).returning();
     return result.length > 0;
+  }
+
+  // App Settings
+  async getSetting(key: string): Promise<string | null> {
+    const [row] = await db.select().from(appSettings).where(eq(appSettings.key, key));
+    return row ? row.value : null;
+  }
+
+  async setSetting(key: string, value: string): Promise<void> {
+    await db
+      .insert(appSettings)
+      .values({ key, value, updatedAt: new Date() })
+      .onConflictDoUpdate({ target: appSettings.key, set: { value, updatedAt: new Date() } });
   }
 }
 

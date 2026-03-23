@@ -34,9 +34,17 @@ export const bonuses = pgTable("bonuses", {
   teacherId: varchar("teacher_id").notNull().references(() => teachers.id),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   reason: text("reason").notNull(),
+  category: varchar("category"), // assessment | training | referral | retention | demo | other
   month: varchar("month").notNull(), // Format: YYYY-MM
   createdBy: varchar("created_by"), // Admin user ID who created the bonus
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// App settings table - key/value store for app-wide configuration
+export const appSettings = pgTable("app_settings", {
+  key: varchar("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Leave requests table
@@ -116,6 +124,10 @@ export type InsertLeaveRequest = z.infer<typeof insertLeaveRequestSchema>;
 export type UpdateLeaveRequest = z.infer<typeof updateLeaveRequestSchema>;
 export type Bonus = typeof bonuses.$inferSelect;
 export type InsertBonus = z.infer<typeof insertBonusSchema>;
+export type AppSetting = typeof appSettings.$inferSelect;
+
+export const BONUS_CATEGORIES = ["assessment", "training", "referral", "retention", "demo"] as const;
+export type BonusCategory = typeof BONUS_CATEGORIES[number];
 
 // Calendar event types (not stored in DB, from Google Calendar)
 export interface CalendarEvent {

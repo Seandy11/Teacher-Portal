@@ -840,6 +840,36 @@ export async function registerRoutes(
     }
   });
 
+  // ============ SETTINGS ROUTES ============
+
+  // Get a setting value (admin only)
+  app.get("/api/admin/settings/:key", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const key = req.params.key as string;
+      const value = await storage.getSetting(key);
+      res.json({ key, value: value ?? null });
+    } catch (error) {
+      console.error("Error fetching setting:", error);
+      res.status(500).json({ message: "Failed to fetch setting" });
+    }
+  });
+
+  // Set a setting value (admin only)
+  app.put("/api/admin/settings/:key", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const key = req.params.key as string;
+      const { value } = req.body;
+      if (value === undefined || value === null) {
+        return res.status(400).json({ message: "Value is required" });
+      }
+      await storage.setSetting(key, String(value));
+      res.json({ key, value: String(value) });
+    } catch (error) {
+      console.error("Error saving setting:", error);
+      res.status(500).json({ message: "Failed to save setting" });
+    }
+  });
+
   // ============ PAY CALCULATION ROUTES ============
 
   // Helper function to parse currency value (e.g., "R100.00" -> 100.00, "-R50" -> -50)
@@ -1023,8 +1053,27 @@ export async function registerRoutes(
       const hourlyRate = teacher.hourlyRate ? parseFloat(teacher.hourlyRate) : 0;
       const hoursWorked = totalMinutes / 60;
       const basePay = hoursWorked * hourlyRate;
-      const totalPay = basePay + bonuses.total;
-      
+
+      // Merge DB bonuses by category on top of sheet bonuses
+      const dbBonuses = await storage.getBonusesByTeacherAndMonth(teacher.id, month);
+      const dbByCategory = { assessment: 0, training: 0, referral: 0, retention: 0, demo: 0, other: 0 };
+      for (const b of dbBonuses) {
+        const cat = (b.category || "other") as keyof typeof dbByCategory;
+        if (cat in dbByCategory) dbByCategory[cat] += parseFloat(b.amount);
+        else dbByCategory.other += parseFloat(b.amount);
+      }
+
+      const mergedBonuses = {
+        assessment: bonuses.assessment + dbByCategory.assessment,
+        training: bonuses.training + dbByCategory.training,
+        referral: bonuses.referral + dbByCategory.referral,
+        retention: bonuses.retention + dbByCategory.retention,
+        demo: bonuses.demo + dbByCategory.demo,
+        other: dbByCategory.other,
+        total: bonuses.total + dbBonuses.reduce((s, b) => s + parseFloat(b.amount), 0),
+      };
+
+      const totalPay = basePay + mergedBonuses.total;
       const isCurrentMonth = month === defaultMonth;
       
       res.json({
@@ -1036,12 +1085,13 @@ export async function registerRoutes(
         hoursWorked: parseFloat(hoursWorked.toFixed(2)),
         basePay: parseFloat(basePay.toFixed(2)),
         bonuses: {
-          assessment: parseFloat(bonuses.assessment.toFixed(2)),
-          training: parseFloat(bonuses.training.toFixed(2)),
-          referral: parseFloat(bonuses.referral.toFixed(2)),
-          retention: parseFloat(bonuses.retention.toFixed(2)),
-          demo: parseFloat(bonuses.demo.toFixed(2)),
-          total: parseFloat(bonuses.total.toFixed(2)),
+          assessment: parseFloat(mergedBonuses.assessment.toFixed(2)),
+          training: parseFloat(mergedBonuses.training.toFixed(2)),
+          referral: parseFloat(mergedBonuses.referral.toFixed(2)),
+          retention: parseFloat(mergedBonuses.retention.toFixed(2)),
+          demo: parseFloat(mergedBonuses.demo.toFixed(2)),
+          other: parseFloat(mergedBonuses.other.toFixed(2)),
+          total: parseFloat(mergedBonuses.total.toFixed(2)),
         },
         totalPay: parseFloat(totalPay.toFixed(2)),
         isCurrentMonth,
@@ -1050,6 +1100,7 @@ export async function registerRoutes(
           skipped: skippedEvents,
         },
         bonusRows: bonuses.matchedRows,
+        dbBonuses: dbBonuses,
       });
     } catch (error) {
       console.error("Error calculating pay summary:", error);
@@ -1140,8 +1191,27 @@ export async function registerRoutes(
       const hourlyRate = teacher.hourlyRate ? parseFloat(teacher.hourlyRate) : 0;
       const hoursWorked = totalMinutes / 60;
       const basePay = hoursWorked * hourlyRate;
-      const totalPay = basePay + bonuses.total;
-      
+
+      // Merge DB bonuses by category on top of sheet bonuses
+      const dbBonuses = await storage.getBonusesByTeacherAndMonth(teacher.id, month);
+      const dbByCategory = { assessment: 0, training: 0, referral: 0, retention: 0, demo: 0, other: 0 };
+      for (const b of dbBonuses) {
+        const cat = (b.category || "other") as keyof typeof dbByCategory;
+        if (cat in dbByCategory) dbByCategory[cat] += parseFloat(b.amount);
+        else dbByCategory.other += parseFloat(b.amount);
+      }
+
+      const mergedBonuses = {
+        assessment: bonuses.assessment + dbByCategory.assessment,
+        training: bonuses.training + dbByCategory.training,
+        referral: bonuses.referral + dbByCategory.referral,
+        retention: bonuses.retention + dbByCategory.retention,
+        demo: bonuses.demo + dbByCategory.demo,
+        other: dbByCategory.other,
+        total: bonuses.total + dbBonuses.reduce((s, b) => s + parseFloat(b.amount), 0),
+      };
+
+      const totalPay = basePay + mergedBonuses.total;
       const isCurrentMonth = month === defaultMonth;
       
       res.json({
@@ -1153,12 +1223,13 @@ export async function registerRoutes(
         hoursWorked: parseFloat(hoursWorked.toFixed(2)),
         basePay: parseFloat(basePay.toFixed(2)),
         bonuses: {
-          assessment: parseFloat(bonuses.assessment.toFixed(2)),
-          training: parseFloat(bonuses.training.toFixed(2)),
-          referral: parseFloat(bonuses.referral.toFixed(2)),
-          retention: parseFloat(bonuses.retention.toFixed(2)),
-          demo: parseFloat(bonuses.demo.toFixed(2)),
-          total: parseFloat(bonuses.total.toFixed(2)),
+          assessment: parseFloat(mergedBonuses.assessment.toFixed(2)),
+          training: parseFloat(mergedBonuses.training.toFixed(2)),
+          referral: parseFloat(mergedBonuses.referral.toFixed(2)),
+          retention: parseFloat(mergedBonuses.retention.toFixed(2)),
+          demo: parseFloat(mergedBonuses.demo.toFixed(2)),
+          other: parseFloat(mergedBonuses.other.toFixed(2)),
+          total: parseFloat(mergedBonuses.total.toFixed(2)),
         },
         totalPay: parseFloat(totalPay.toFixed(2)),
         isCurrentMonth,
@@ -1167,6 +1238,7 @@ export async function registerRoutes(
           skipped: skippedEvents,
         },
         bonusRows: bonuses.matchedRows,
+        dbBonuses: dbBonuses,
       });
     } catch (error) {
       console.error("Error calculating pay summary:", error);
@@ -1257,7 +1329,24 @@ export async function registerRoutes(
           const hourlyRate = teacher.hourlyRate ? parseFloat(teacher.hourlyRate) : 0;
           const hoursWorked = totalMinutes / 60;
           const basePay = hoursWorked * hourlyRate;
-          const totalPay = basePay + bonuses.total;
+
+          const dbBonusesForTeacher = await storage.getBonusesByTeacherAndMonth(teacher.id, month);
+          const dbByCat = { assessment: 0, training: 0, referral: 0, retention: 0, demo: 0, other: 0 };
+          for (const b of dbBonusesForTeacher) {
+            const cat = (b.category || "other") as keyof typeof dbByCat;
+            if (cat in dbByCat) dbByCat[cat] += parseFloat(b.amount);
+            else dbByCat.other += parseFloat(b.amount);
+          }
+          const merged = {
+            assessment: bonuses.assessment + dbByCat.assessment,
+            training: bonuses.training + dbByCat.training,
+            referral: bonuses.referral + dbByCat.referral,
+            retention: bonuses.retention + dbByCat.retention,
+            demo: bonuses.demo + dbByCat.demo,
+            other: dbByCat.other,
+            total: bonuses.total + dbBonusesForTeacher.reduce((s, b) => s + parseFloat(b.amount), 0),
+          };
+          const totalPay = basePay + merged.total;
           
           return {
             month,
@@ -1268,12 +1357,13 @@ export async function registerRoutes(
             hoursWorked: parseFloat(hoursWorked.toFixed(2)),
             basePay: parseFloat(basePay.toFixed(2)),
             bonuses: {
-              assessment: parseFloat(bonuses.assessment.toFixed(2)),
-              training: parseFloat(bonuses.training.toFixed(2)),
-              referral: parseFloat(bonuses.referral.toFixed(2)),
-              retention: parseFloat(bonuses.retention.toFixed(2)),
-              demo: parseFloat(bonuses.demo.toFixed(2)),
-              total: parseFloat(bonuses.total.toFixed(2)),
+              assessment: parseFloat(merged.assessment.toFixed(2)),
+              training: parseFloat(merged.training.toFixed(2)),
+              referral: parseFloat(merged.referral.toFixed(2)),
+              retention: parseFloat(merged.retention.toFixed(2)),
+              demo: parseFloat(merged.demo.toFixed(2)),
+              other: parseFloat(merged.other.toFixed(2)),
+              total: parseFloat(merged.total.toFixed(2)),
             },
             totalPay: parseFloat(totalPay.toFixed(2)),
             isCurrentMonth,
