@@ -740,6 +740,7 @@ export async function registerRoutes(
               teacherId: teacher.id,
               teacherName: teacher.name,
               teacherColor: teacherColor,
+              calendarId: teacher.calendarId,
             };
           });
 
@@ -757,6 +758,109 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching all calendar events:", error);
       res.status(500).json({ message: "Failed to fetch calendar overview" });
+    }
+  });
+
+  // Create a class event in a teacher's Google Calendar (admin only)
+  app.post("/api/admin/calendar/events", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { teacherId, title, startDateTime, durationMinutes, colorId, recurrence } = req.body;
+      if (!teacherId || !title || !startDateTime || !durationMinutes) {
+        return res.status(400).json({ message: "teacherId, title, startDateTime, durationMinutes required" });
+      }
+      const teacher = await storage.getTeacher(teacherId);
+      if (!teacher || !teacher.calendarId) {
+        return res.status(404).json({ message: "Teacher not found or has no calendar assigned" });
+      }
+      const start = new Date(startDateTime);
+      const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+      const calendar = await getGoogleCalendarClient();
+      const eventBody: any = {
+        summary: title,
+        start: { dateTime: start.toISOString() },
+        end: { dateTime: end.toISOString() },
+      };
+      if (colorId) eventBody.colorId = String(colorId);
+      if (recurrence === "weekly") {
+        eventBody.recurrence = ["RRULE:FREQ=WEEKLY"];
+      }
+      const response = await calendar.events.insert({
+        calendarId: teacher.calendarId,
+        requestBody: eventBody,
+      });
+      res.json({
+        id: response.data.id,
+        title: response.data.summary,
+        start: response.data.start?.dateTime,
+        end: response.data.end?.dateTime,
+        colorId: response.data.colorId,
+      });
+    } catch (error) {
+      console.error("Error creating calendar event:", error);
+      res.status(500).json({ message: "Failed to create calendar event" });
+    }
+  });
+
+  // Update a class event in a teacher's Google Calendar (admin only)
+  app.patch("/api/admin/calendar/events/:eventId", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { eventId } = req.params;
+      const { calendarId, title, startDateTime, durationMinutes, colorId } = req.body;
+      if (!calendarId) {
+        return res.status(400).json({ message: "calendarId required" });
+      }
+      const calendar = await getGoogleCalendarClient();
+      // Fetch current event first
+      const existing = await calendar.events.get({ calendarId, eventId });
+      const patch: any = {};
+      if (title !== undefined) patch.summary = title;
+      if (colorId !== undefined) patch.colorId = colorId ? String(colorId) : null;
+      if (startDateTime !== undefined && durationMinutes !== undefined) {
+        const start = new Date(startDateTime);
+        const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+        patch.start = { dateTime: start.toISOString() };
+        patch.end = { dateTime: end.toISOString() };
+      } else if (startDateTime !== undefined) {
+        const origStart = new Date(existing.data.start?.dateTime || existing.data.start?.date!);
+        const origEnd = new Date(existing.data.end?.dateTime || existing.data.end?.date!);
+        const origDurationMs = origEnd.getTime() - origStart.getTime();
+        const newStart = new Date(startDateTime);
+        const newEnd = new Date(newStart.getTime() + origDurationMs);
+        patch.start = { dateTime: newStart.toISOString() };
+        patch.end = { dateTime: newEnd.toISOString() };
+      }
+      const response = await calendar.events.patch({
+        calendarId,
+        eventId,
+        requestBody: patch,
+      });
+      res.json({
+        id: response.data.id,
+        title: response.data.summary,
+        start: response.data.start?.dateTime,
+        end: response.data.end?.dateTime,
+        colorId: response.data.colorId,
+      });
+    } catch (error) {
+      console.error("Error updating calendar event:", error);
+      res.status(500).json({ message: "Failed to update calendar event" });
+    }
+  });
+
+  // Delete a class event from a teacher's Google Calendar (admin only)
+  app.delete("/api/admin/calendar/events/:eventId", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { eventId } = req.params;
+      const calendarId = req.query.calendarId as string;
+      if (!calendarId) {
+        return res.status(400).json({ message: "calendarId query param required" });
+      }
+      const calendar = await getGoogleCalendarClient();
+      await calendar.events.delete({ calendarId, eventId });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting calendar event:", error);
+      res.status(500).json({ message: "Failed to delete calendar event" });
     }
   });
 
