@@ -72,6 +72,17 @@ const WEEKDAYS = [
   { value: 6, label: "Sa" },
 ];
 
+// Deterministic teacher colour from ID hash (same algorithm as server)
+function getTeacherColor(teacherId: string): string {
+  const palette = ["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#06b6d4","#84cc16"];
+  let hash = 0;
+  for (let i = 0; i < teacherId.length; i++) {
+    hash = ((hash << 5) - hash) + teacherId.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return palette[Math.abs(hash) % palette.length];
+}
+
 function getContrastColor(hexColor: string): string {
   const hex = hexColor.replace("#", "");
   const r = parseInt(hex.substr(0, 2), 16);
@@ -528,29 +539,20 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
 
   const weekDays = eachDayOfInterval({ start: currentWeekStart, end: weekEnd });
 
+  // Build teacher list from the full teachers list — not from current-week events.
+  // This means all active teachers always appear in the filter regardless of whether
+  // they have events this week, and visibility choices persist across week navigation.
   const teacherList = useMemo(() => {
-    const teacherMap = new Map<string, { name: string; color: string }>();
-    for (const event of events) {
-      if (!teacherMap.has(event.teacherId))
-        teacherMap.set(event.teacherId, { name: event.teacherName, color: event.teacherColor });
-    }
-    return Array.from(teacherMap.entries()).map(([id, data]) => ({ id, ...data }));
-  }, [events]);
+    return teachers
+      .filter((t) => t.isActive)
+      .map((t) => ({ id: t.id, name: t.name, color: getTeacherColor(t.id) }));
+  }, [teachers]);
 
+  // Initialise all teachers as visible on first load only
   useEffect(() => {
-    if (teacherList.length > 0) {
-      if (!hasInitialized.current) {
-        setVisibleTeacherIds(new Set(teacherList.map((t) => t.id)));
-        hasInitialized.current = true;
-      } else {
-        setVisibleTeacherIds((prev) => {
-          const next = new Set(prev);
-          for (const teacher of teacherList) {
-            if (!prev.has(teacher.id)) next.add(teacher.id);
-          }
-          return next;
-        });
-      }
+    if (teacherList.length > 0 && !hasInitialized.current) {
+      setVisibleTeacherIds(new Set(teacherList.map((t) => t.id)));
+      hasInitialized.current = true;
     }
   }, [teacherList]);
 
