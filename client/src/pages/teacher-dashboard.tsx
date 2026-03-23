@@ -4,6 +4,7 @@ import { Header } from "@/components/header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TimetableView } from "@/components/teacher/timetable-view";
 import { AttendanceTracker } from "@/components/teacher/attendance-tracker";
+import { AvailabilityManager } from "@/components/teacher/availability-manager";
 import { LeaveForm } from "@/components/teacher/leave-form";
 import { PayDashboard } from "@/components/teacher/pay-dashboard";
 import { FullPageLoader } from "@/components/loading-spinner";
@@ -12,7 +13,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/auth-utils";
-import { Calendar, FileSpreadsheet, CalendarDays, Wallet } from "lucide-react";
+import { Calendar, FileSpreadsheet, CalendarDays, Wallet, CalendarClock } from "lucide-react";
 import { startOfWeek, endOfWeek, subWeeks, addWeeks } from "date-fns";
 import type { Teacher, CalendarEvent, AttendanceRow, LeaveRequest, SheetTab } from "@shared/schema";
 
@@ -117,6 +118,7 @@ export default function TeacherDashboard() {
   const tabs = [
     { id: "timetable", label: "My Timetable", icon: Calendar },
     { id: "attendance", label: "Lesson Tracker", icon: FileSpreadsheet },
+    { id: "availability", label: "Availability", icon: CalendarClock },
     { id: "pay", label: "My Pay", icon: Wallet },
     { id: "leave", label: "Leave", icon: CalendarDays },
   ];
@@ -127,7 +129,7 @@ export default function TeacherDashboard() {
       
       <main className="max-w-7xl mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex" data-testid="tabs-teacher-nav">
+          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-flex" data-testid="tabs-teacher-nav">
             {tabs.map((tab) => (
               <TabsTrigger key={tab.id} value={tab.id} className="gap-2" data-testid={`tab-${tab.id}`}>
                 <tab.icon className="h-4 w-4 hidden sm:block" />
@@ -175,6 +177,10 @@ export default function TeacherDashboard() {
                 onRefresh={() => { refetchTabs(); refetchAttendance(); }}
               />
             )}
+          </TabsContent>
+
+          <TabsContent value="availability" className="space-y-6">
+            <AvailabilityManager />
           </TabsContent>
 
           <TabsContent value="pay" className="space-y-6">
