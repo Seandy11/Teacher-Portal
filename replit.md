@@ -86,6 +86,7 @@ shared/
 - **leave_requests** - Leave request records
 - **bonuses** - Teacher bonus records (amount, month, description)
 - **google_tokens** - Singleton table storing Google OAuth2 tokens (access_token, refresh_token, expires_at)
+- **class_events** - `recurrenceGroupId` column links all events in a recurring series
 
 ### Key Relations
 - teachers.userId → users.id

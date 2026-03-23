@@ -38,6 +38,10 @@ export interface IStorage {
   updateClassEventByGoogleId(googleEventId: string, updates: Partial<InsertClassEvent>): Promise<ClassEvent | undefined>;
   deleteClassEvent(id: string): Promise<boolean>;
   deleteClassEventByGoogleId(googleEventId: string): Promise<boolean>;
+  getClassEventsByGroupId(groupId: string): Promise<ClassEvent[]>;
+  getClassEventsByTitleAndTeacher(teacherId: string, title: string): Promise<ClassEvent[]>;
+  deleteClassEventsByGroupId(groupId: string): Promise<number>;
+  deleteClassEventsByTitleAndTeacher(teacherId: string, title: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -168,6 +172,7 @@ export class DatabaseStorage implements IStorage {
         backgroundColor: classEvents.backgroundColor,
         isAvailabilityBlock: classEvents.isAvailabilityBlock,
         isRecurring: classEvents.isRecurring,
+        recurrenceGroupId: classEvents.recurrenceGroupId,
         recurrenceRule: classEvents.recurrenceRule,
         createdAt: classEvents.createdAt,
         updatedAt: classEvents.updatedAt,
@@ -240,6 +245,24 @@ export class DatabaseStorage implements IStorage {
   async deleteClassEventByGoogleId(googleEventId: string): Promise<boolean> {
     const result = await db.delete(classEvents).where(eq(classEvents.googleEventId, googleEventId)).returning();
     return result.length > 0;
+  }
+
+  async getClassEventsByGroupId(groupId: string): Promise<ClassEvent[]> {
+    return db.select().from(classEvents).where(eq(classEvents.recurrenceGroupId, groupId));
+  }
+
+  async getClassEventsByTitleAndTeacher(teacherId: string, title: string): Promise<ClassEvent[]> {
+    return db.select().from(classEvents).where(and(eq(classEvents.teacherId, teacherId), eq(classEvents.title, title)));
+  }
+
+  async deleteClassEventsByGroupId(groupId: string): Promise<number> {
+    const result = await db.delete(classEvents).where(eq(classEvents.recurrenceGroupId, groupId)).returning();
+    return result.length;
+  }
+
+  async deleteClassEventsByTitleAndTeacher(teacherId: string, title: string): Promise<number> {
+    const result = await db.delete(classEvents).where(and(eq(classEvents.teacherId, teacherId), eq(classEvents.title, title))).returning();
+    return result.length;
   }
 }
 

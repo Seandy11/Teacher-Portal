@@ -780,6 +780,8 @@ export async function registerRoutes(
         start: e.startDateTime.toISOString(),
         end: e.endDateTime.toISOString(),
         isAvailabilityBlock: e.isAvailabilityBlock ?? false,
+        isRecurring: e.isRecurring ?? false,
+        recurrenceGroupId: e.recurrenceGroupId ?? null,
         colorId: e.colorId ?? undefined,
         backgroundColor: e.backgroundColor ?? undefined,
         googleEventId: e.googleEventId,
@@ -800,7 +802,7 @@ export async function registerRoutes(
   // Create a class event — writes to DB first, then syncs to Google if enabled
   app.post("/api/admin/calendar/events", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const { teacherId, title, startDateTime, durationMinutes, colorId, recurrence } = req.body;
+      const { teacherId, title, startDateTime, durationMinutes, colorId, recurrence, days } = req.body;
       if (!teacherId || !title || !startDateTime || !durationMinutes) {
         return res.status(400).json({ message: "teacherId, title, startDateTime, durationMinutes required" });
       }
@@ -808,17 +810,79 @@ export async function registerRoutes(
       if (!teacher) return res.status(404).json({ message: "Teacher not found" });
 
       const start = new Date(startDateTime);
-      const end = new Date(start.getTime() + Number(durationMinutes) * 60 * 1000);
+      const durationMs = Number(durationMinutes) * 60 * 1000;
       const bgColor = colorId ? (GC_COLOR_HEX[String(colorId)] ?? null) : null;
-
-      let googleEventId: string | null = null;
       const syncEnabled = (await storage.getSetting("google-calendar-sync")) !== "false";
+
+      if (recurrence === "weekly") {
+        // Multi-day recurring: create individual DB events for each selected day over 52 weeks
+        const selectedDays: number[] = Array.isArray(days) && days.length > 0
+          ? days.map(Number)
+          : [start.getDay()]; // Default to the day of startDateTime
+
+        const recurrenceGroupId = crypto.randomUUID();
+        const WEEKS_AHEAD = 52;
+
+        // Get the Sunday of the week containing start
+        const weekSunday = new Date(start);
+        weekSunday.setDate(weekSunday.getDate() - weekSunday.getDay());
+        weekSunday.setHours(0, 0, 0, 0);
+
+        // Collect all event dates to create
+        const eventSlots: { start: Date; end: Date }[] = [];
+        const startDateOnly = new Date(start);
+        startDateOnly.setHours(0, 0, 0, 0);
+
+        for (let week = 0; week < WEEKS_AHEAD; week++) {
+          for (const dayOfWeek of selectedDays) {
+            const eventDate = new Date(weekSunday);
+            eventDate.setDate(weekSunday.getDate() + week * 7 + dayOfWeek);
+            if (eventDate < startDateOnly) continue; // Skip dates before start date
+            const eventStart = new Date(eventDate);
+            eventStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
+            eventSlots.push({ start: eventStart, end: new Date(eventStart.getTime() + durationMs) });
+          }
+        }
+
+        // Optionally sync first occurrence to Google as a recurring event
+        if (syncEnabled && teacher.calendarId && await isGoogleConnected()) {
+          try {
+            const dayNames = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+            const byDay = selectedDays.map(d => dayNames[d]).join(',');
+            const calendar = await getGoogleCalendarClient();
+            const eventBody: any = {
+              summary: title,
+              start: { dateTime: start.toISOString() },
+              end: { dateTime: new Date(start.getTime() + durationMs).toISOString() },
+              recurrence: [`RRULE:FREQ=WEEKLY;BYDAY=${byDay}`],
+            };
+            if (colorId) eventBody.colorId = String(colorId);
+            await calendar.events.insert({ calendarId: teacher.calendarId, requestBody: eventBody });
+          } catch (gErr) { console.error("Google recurring write failed:", gErr); }
+        }
+
+        // Create all DB events
+        await Promise.all(eventSlots.map(slot =>
+          storage.createClassEvent({
+            teacherId, calendarId: teacher.calendarId || null, googleEventId: null,
+            title, description: null,
+            startDateTime: slot.start, endDateTime: slot.end,
+            colorId: colorId ? String(colorId) : null, backgroundColor: bgColor,
+            isAvailabilityBlock: false, isRecurring: true,
+            recurrenceGroupId, recurrenceRule: null,
+          })
+        ));
+
+        return res.json({ success: true, eventsCreated: eventSlots.length, recurrenceGroupId });
+      }
+
+      // Once-off event
+      let googleEventId: string | null = null;
       if (syncEnabled && teacher.calendarId && await isGoogleConnected()) {
         try {
           const calendar = await getGoogleCalendarClient();
-          const eventBody: any = { summary: title, start: { dateTime: start.toISOString() }, end: { dateTime: end.toISOString() } };
+          const eventBody: any = { summary: title, start: { dateTime: start.toISOString() }, end: { dateTime: new Date(start.getTime() + durationMs).toISOString() } };
           if (colorId) eventBody.colorId = String(colorId);
-          if (recurrence === "weekly") eventBody.recurrence = ["RRULE:FREQ=WEEKLY"];
           const gRes = await calendar.events.insert({ calendarId: teacher.calendarId, requestBody: eventBody });
           googleEventId = gRes.data.id || null;
         } catch (gErr) { console.error("Google write failed:", gErr); }
@@ -827,10 +891,10 @@ export async function registerRoutes(
       const dbEvent = await storage.createClassEvent({
         teacherId, calendarId: teacher.calendarId || null, googleEventId,
         title, description: null,
-        startDateTime: start, endDateTime: end,
+        startDateTime: start, endDateTime: new Date(start.getTime() + durationMs),
         colorId: colorId ? String(colorId) : null, backgroundColor: bgColor,
-        isAvailabilityBlock: false, isRecurring: recurrence === "weekly",
-        recurrenceRule: recurrence === "weekly" ? "RRULE:FREQ=WEEKLY" : null,
+        isAvailabilityBlock: false, isRecurring: false,
+        recurrenceGroupId: null, recurrenceRule: null,
       });
 
       res.json({ id: dbEvent.id, title: dbEvent.title, start: dbEvent.startDateTime.toISOString(), end: dbEvent.endDateTime.toISOString(), colorId: dbEvent.colorId });
@@ -884,25 +948,46 @@ export async function registerRoutes(
     }
   });
 
-  // Delete a class event — deletes from DB, then syncs to Google if enabled
+  // Delete a class event — supports deleteType: "single" | "series" | "student"
   app.delete("/api/admin/calendar/events/:eventId", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { eventId } = req.params;
+      const deleteType: "single" | "series" | "student" = req.body?.deleteType || "single";
 
-      // Look up the DB event first to get googleEventId + calendarId
+      // Look up the base event
       const allEvents = await storage.getAllClassEventsInRange(new Date(0), new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000));
       const dbEvent = allEvents.find(e => e.id === eventId);
 
       const syncEnabled = (await storage.getSetting("google-calendar-sync")) !== "false";
-      if (syncEnabled && dbEvent?.googleEventId && dbEvent?.calendarId && await isGoogleConnected()) {
-        try {
-          const calendar = await getGoogleCalendarClient();
-          await calendar.events.delete({ calendarId: dbEvent.calendarId!, eventId: dbEvent.googleEventId });
-        } catch (gErr) { console.error("Google delete failed:", gErr); }
+
+      const tryDeleteFromGoogle = async (events: { googleEventId?: string | null; calendarId?: string | null }[]) => {
+        if (!syncEnabled || !await isGoogleConnected()) return;
+        const calendar = await getGoogleCalendarClient();
+        for (const e of events) {
+          if (e.googleEventId && e.calendarId) {
+            try { await calendar.events.delete({ calendarId: e.calendarId, eventId: e.googleEventId }); } catch {}
+          }
+        }
+      };
+
+      if (deleteType === "series" && dbEvent?.recurrenceGroupId) {
+        const seriesEvents = await storage.getClassEventsByGroupId(dbEvent.recurrenceGroupId);
+        await tryDeleteFromGoogle(seriesEvents);
+        const count = await storage.deleteClassEventsByGroupId(dbEvent.recurrenceGroupId);
+        return res.json({ success: true, deleted: count });
       }
 
+      if (deleteType === "student" && dbEvent) {
+        const studentEvents = await storage.getClassEventsByTitleAndTeacher(dbEvent.teacherId, dbEvent.title);
+        await tryDeleteFromGoogle(studentEvents);
+        const count = await storage.deleteClassEventsByTitleAndTeacher(dbEvent.teacherId, dbEvent.title);
+        return res.json({ success: true, deleted: count });
+      }
+
+      // Single delete
+      await tryDeleteFromGoogle(dbEvent ? [dbEvent] : []);
       await storage.deleteClassEvent(eventId);
-      res.json({ success: true });
+      res.json({ success: true, deleted: 1 });
     } catch (error) {
       console.error("Error deleting calendar event:", error);
       res.status(500).json({ message: "Failed to delete calendar event" });

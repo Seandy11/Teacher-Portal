@@ -200,7 +200,7 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
     }
   };
 
-  const TeacherFormContent = ({ form, onSubmit, submitLabel }: { form: any; onSubmit: (data: TeacherFormValues) => void; submitLabel: string }) => (
+  const TeacherFormContent = ({ form, onSubmit, submitLabel, showGoogleFields = true }: { form: any; onSubmit: (data: TeacherFormValues) => void; submitLabel: string; showGoogleFields?: boolean }) => (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
@@ -273,65 +273,69 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="calendarId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Google Calendar</FormLabel>
-              <div className="flex items-center gap-2">
-                <Select onValueChange={field.onChange} value={field.value || ""}>
+        {showGoogleFields && (
+          <>
+            <FormField
+              control={form.control}
+              name="calendarId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Google Calendar</FormLabel>
+                  <div className="flex items-center gap-2">
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-calendar-id" className="flex-1">
+                          <SelectValue placeholder={calendarsLoading ? "Loading calendars..." : "Select a calendar"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">No calendar</SelectItem>
+                        {calendars.map((cal) => (
+                          <SelectItem key={cal.id} value={cal.id}>
+                            <span className="inline-flex items-center gap-2">
+                              <span
+                                className="inline-block w-3 h-3 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: cal.backgroundColor }}
+                              />
+                              {cal.name}{cal.primary ? " (Primary)" : ""}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => refetchCalendars()}
+                      disabled={calendarsLoading}
+                      data-testid="button-refresh-calendars"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${calendarsLoading ? "animate-spin" : ""}`} />
+                    </Button>
+                  </div>
+                  <FormDescription>
+                    Select the Google Calendar containing this teacher's classes
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="sheetId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Google Sheet ID</FormLabel>
                   <FormControl>
-                    <SelectTrigger data-testid="select-calendar-id" className="flex-1">
-                      <SelectValue placeholder={calendarsLoading ? "Loading calendars..." : "Select a calendar"} />
-                    </SelectTrigger>
+                    <Input placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms" {...field} data-testid="input-sheet-id" />
                   </FormControl>
-                  <SelectContent>
-                    <SelectItem value="none">No calendar</SelectItem>
-                    {calendars.map((cal) => (
-                      <SelectItem key={cal.id} value={cal.id}>
-                        <span className="inline-flex items-center gap-2">
-                          <span
-                            className="inline-block w-3 h-3 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: cal.backgroundColor }}
-                          />
-                          {cal.name}{cal.primary ? " (Primary)" : ""}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => refetchCalendars()}
-                  disabled={calendarsLoading}
-                  data-testid="button-refresh-calendars"
-                >
-                  <RefreshCw className={`h-4 w-4 ${calendarsLoading ? "animate-spin" : ""}`} />
-                </Button>
-              </div>
-              <FormDescription>
-                Select the Google Calendar containing this teacher's classes
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="sheetId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Google Sheet ID</FormLabel>
-              <FormControl>
-                <Input placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms" {...field} data-testid="input-sheet-id" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
         <DialogFooter>
           <Button type="submit" disabled={isSubmitting} data-testid="button-save-teacher">
             {isSubmitting ? <LoadingSpinner size="sm" /> : submitLabel}
@@ -371,9 +375,9 @@ export function TeacherManagement({ teachers, isLoading, onAdd, onUpdate, onTogg
             <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Teacher</DialogTitle>
-                <DialogDescription>Create a new teacher account and assign their calendar and sheet.</DialogDescription>
+                <DialogDescription>Create a new teacher account. You can assign their Google Calendar and Sheet later by editing the teacher.</DialogDescription>
               </DialogHeader>
-              <TeacherFormContent form={addForm} onSubmit={handleAdd} submitLabel="Add Teacher" />
+              <TeacherFormContent form={addForm} onSubmit={handleAdd} submitLabel="Add Teacher" showGoogleFields={false} />
             </DialogContent>
           </Dialog>
         </div>

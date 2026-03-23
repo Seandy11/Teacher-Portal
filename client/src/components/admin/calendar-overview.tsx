@@ -11,10 +11,6 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -66,14 +62,14 @@ const GC_COLORS = [
   { id: "11", label: "Grape",      hex: "#8E24AA" },
 ];
 
-const DURATION_OPTIONS = [
-  { value: "30",  label: "30 min" },
-  { value: "45",  label: "45 min" },
-  { value: "60",  label: "1 hour" },
-  { value: "75",  label: "1 h 15 min" },
-  { value: "90",  label: "1 h 30 min" },
-  { value: "105", label: "1 h 45 min" },
-  { value: "120", label: "2 hours" },
+const WEEKDAYS = [
+  { value: 0, label: "Su" },
+  { value: 1, label: "Mo" },
+  { value: 2, label: "Tu" },
+  { value: 3, label: "We" },
+  { value: 4, label: "Th" },
+  { value: 5, label: "Fr" },
+  { value: 6, label: "Sa" },
 ];
 
 function getContrastColor(hexColor: string): string {
@@ -182,18 +178,35 @@ function EventFormDialog({
   const [durationMinutes, setDurationMinutes] = useState(initialValues.durationMinutes ?? "60");
   const [colorId, setColorId] = useState(initialValues.colorId ?? "7");
   const [recurrence, setRecurrence] = useState<"none" | "weekly">(initialValues.recurrence ?? "none");
+  const [selectedDays, setSelectedDays] = useState<number[]>([new Date().getDay()]);
 
   useEffect(() => {
     if (open) {
       setTitle(initialValues.title ?? "");
       setTeacherId(initialValues.teacherId ?? "");
-      setDate(initialValues.date ?? "");
+      const initDate = initialValues.date ?? "";
+      setDate(initDate);
       setStartTime(initialValues.startTime ?? "10:00");
       setDurationMinutes(initialValues.durationMinutes ?? "60");
       setColorId(initialValues.colorId ?? "7");
-      setRecurrence(initialValues.recurrence ?? "none");
+      const initRecurrence = initialValues.recurrence ?? "none";
+      setRecurrence(initRecurrence);
+      setSelectedDays(initDate ? [new Date(initDate).getDay()] : [1]);
     }
   }, [open]);
+
+  const toggleDay = (day: number) => {
+    setSelectedDays((prev) => prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]);
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = e.target.value;
+    setDate(newDate);
+    if (recurrence === "weekly" && newDate) {
+      const day = new Date(newDate).getDay();
+      setSelectedDays((prev) => prev.includes(day) ? prev : [...prev, day]);
+    }
+  };
 
   const buildStartDateTime = () => {
     const [h, m] = startTime.split(":").map(Number);
@@ -204,9 +217,13 @@ function EventFormDialog({
 
   const createMutation = useMutation({
     mutationFn: (payload: object) => apiRequest("POST", "/api/admin/calendar/events", payload),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: calendarQueryKey });
-      toast({ title: "Event created", description: `"${title}" added to calendar.` });
+      if (data?.eventsCreated) {
+        toast({ title: `${data.eventsCreated} lessons created`, description: `"${title}" scheduled for ${data.eventsCreated} sessions.` });
+      } else {
+        toast({ title: "Event created", description: `"${title}" added to calendar.` });
+      }
       onClose();
     },
     onError: (err: any) => {
@@ -242,11 +259,16 @@ function EventFormDialog({
       toast({ title: "Date and time required", variant: "destructive" });
       return;
     }
+    if (recurrence === "weekly" && selectedDays.length === 0) {
+      toast({ title: "Please select at least one day of the week", variant: "destructive" });
+      return;
+    }
+    const dur = Math.max(5, Math.round(Number(durationMinutes) / 5) * 5) || 60;
     const startDateTime = buildStartDateTime();
     if (mode === "create") {
-      createMutation.mutate({ teacherId, title, startDateTime, durationMinutes: Number(durationMinutes), colorId, recurrence });
+      createMutation.mutate({ teacherId, title, startDateTime, durationMinutes: dur, colorId, recurrence, days: recurrence === "weekly" ? selectedDays : undefined });
     } else {
-      updateMutation.mutate({ calendarId: editCalendarId, title, startDateTime, durationMinutes: Number(durationMinutes), colorId });
+      updateMutation.mutate({ calendarId: editCalendarId, title, startDateTime, durationMinutes: dur, colorId });
     }
   };
 
@@ -279,7 +301,7 @@ function EventFormDialog({
                   <SelectValue placeholder="Select teacher…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {teachers.filter((t) => t.isActive && t.calendarId).map((t) => (
+                  {teachers.filter((t) => t.isActive).map((t) => (
                     <SelectItem key={t.id} value={t.id} data-testid={`option-teacher-${t.id}`}>
                       {t.name}
                     </SelectItem>
@@ -297,7 +319,7 @@ function EventFormDialog({
                 id="event-date"
                 type="date"
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={handleDateChange}
                 data-testid="input-event-date"
               />
             </div>
@@ -315,17 +337,17 @@ function EventFormDialog({
 
           {/* Duration */}
           <div className="space-y-1.5">
-            <Label>Duration</Label>
-            <Select value={durationMinutes} onValueChange={setDurationMinutes}>
-              <SelectTrigger data-testid="select-event-duration">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DURATION_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="event-duration">Duration (minutes)</Label>
+            <Input
+              id="event-duration"
+              type="number"
+              min={5}
+              step={5}
+              value={durationMinutes}
+              onChange={(e) => setDurationMinutes(e.target.value)}
+              placeholder="e.g. 60"
+              data-testid="input-event-duration"
+            />
           </div>
 
           {/* Color */}
@@ -362,9 +384,39 @@ function EventFormDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Once-off</SelectItem>
-                  <SelectItem value="weekly">Weekly (same time, every week)</SelectItem>
+                  <SelectItem value="weekly">Weekly (repeats every week)</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {/* Day-of-week selector — only when weekly recurring */}
+          {mode === "create" && recurrence === "weekly" && (
+            <div className="space-y-1.5">
+              <Label>Days of the week</Label>
+              <div className="flex gap-1.5 flex-wrap" data-testid="day-picker">
+                {WEEKDAYS.map((day) => (
+                  <button
+                    key={day.value}
+                    type="button"
+                    onClick={() => toggleDay(day.value)}
+                    className={`w-9 h-9 rounded-full text-sm font-medium border-2 transition-colors ${
+                      selectedDays.includes(day.value)
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border hover:border-primary/50 text-muted-foreground"
+                    }`}
+                    data-testid={`day-btn-${day.value}`}
+                    aria-label={day.label}
+                    aria-pressed={selectedDays.includes(day.value)}
+                  >
+                    {day.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Creates individual lessons for each selected day, 52 weeks ahead.</p>
+              {selectedDays.length === 0 && (
+                <p className="text-xs text-destructive">Please select at least one day.</p>
+              )}
             </div>
           )}
         </div>
@@ -402,7 +454,14 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
   const [editEventId, setEditEventId] = useState<string | undefined>();
   const [editCalendarId, setEditCalendarId] = useState<string | undefined>();
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ eventId: string; calendarId: string; title: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    eventId: string;
+    calendarId: string;
+    title: string;
+    isRecurring: boolean;
+    recurrenceGroupId: string | null;
+    teacherId: string;
+  } | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -579,11 +638,12 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
 
   // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: ({ eventId }: { eventId: string; calendarId: string; title: string }) =>
-      apiRequest("DELETE", `/api/admin/calendar/events/${eventId}`),
-    onSuccess: () => {
+    mutationFn: ({ eventId, deleteType }: { eventId: string; deleteType: "single" | "series" | "student"; [k: string]: any }) =>
+      apiRequest("DELETE", `/api/admin/calendar/events/${eventId}`, { deleteType }),
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: calendarQueryKey });
-      toast({ title: "Event deleted" });
+      const count = data?.deleted ?? 1;
+      toast({ title: "Deleted", description: count > 1 ? `${count} lessons removed.` : "Lesson removed." });
       setSelectedEventKey(null);
       setFrontEventKey(null);
       setDeleteConfirmOpen(false);
@@ -598,16 +658,12 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
   const openEdit = (event: TeacherCalendarEvent) => {
     const startDt = parseISO(event.start);
     const endDt = parseISO(event.end);
-    const durationMs = endDt.getTime() - startDt.getTime();
-    const durationMin = String(Math.round(durationMs / 60000));
-    const closestDuration = DURATION_OPTIONS.map((o) => o.value).reduce((prev, curr) =>
-      Math.abs(Number(curr) - Number(durationMin)) < Math.abs(Number(prev) - Number(durationMin)) ? curr : prev
-    );
+    const durationMin = String(Math.round((endDt.getTime() - startDt.getTime()) / 60000));
     setEditInitial({
       title: event.title,
       date: format(startDt, "yyyy-MM-dd"),
       startTime: format(startDt, "HH:mm"),
-      durationMinutes: closestDuration,
+      durationMinutes: durationMin,
       colorId: event.colorId ?? "7",
     });
     setEditEventId(event.id);
@@ -616,7 +672,14 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
   };
 
   const openDelete = (event: TeacherCalendarEvent) => {
-    setDeleteTarget({ eventId: event.id, calendarId: event.calendarId ?? "", title: event.title });
+    setDeleteTarget({
+      eventId: event.id,
+      calendarId: event.calendarId ?? "",
+      title: event.title,
+      isRecurring: event.isRecurring ?? false,
+      recurrenceGroupId: event.recurrenceGroupId ?? null,
+      teacherId: event.teacherId,
+    });
     setDeleteConfirmOpen(true);
   };
 
@@ -986,26 +1049,74 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
       />
 
       {/* Delete Confirmation */}
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete event?</AlertDialogTitle>
-            <AlertDialogDescription>
-              "{deleteTarget?.title}" will be permanently removed from Google Calendar. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              data-testid="button-confirm-delete"
+      <Dialog open={deleteConfirmOpen} onOpenChange={(v) => { if (!v && !deleteMutation.isPending) { setDeleteConfirmOpen(false); setDeleteTarget(null); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete lesson?</DialogTitle>
+          </DialogHeader>
+          <div className="py-1 space-y-3">
+            <p className="text-sm font-medium truncate">"{deleteTarget?.title}"</p>
+            {deleteTarget?.isRecurring ? (
+              <>
+                <p className="text-sm text-muted-foreground">This is part of a recurring series. What would you like to delete?</p>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    className="justify-start"
+                    disabled={deleteMutation.isPending}
+                    data-testid="button-delete-single"
+                    onClick={() => deleteTarget && deleteMutation.mutate({ ...deleteTarget, deleteType: "single" })}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2 text-destructive" />
+                    This lesson only
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="justify-start"
+                    disabled={deleteMutation.isPending}
+                    data-testid="button-delete-series"
+                    onClick={() => deleteTarget && deleteMutation.mutate({ ...deleteTarget, deleteType: "series" })}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2 text-destructive" />
+                    All lessons in this series
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="justify-start"
+                    disabled={deleteMutation.isPending}
+                    data-testid="button-delete-student"
+                    onClick={() => deleteTarget && deleteMutation.mutate({ ...deleteTarget, deleteType: "student" })}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2 text-destructive" />
+                    All lessons for this student (same title)
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">This event will be permanently removed. This cannot be undone.</p>
+            )}
+          </div>
+          <DialogFooter>
+            {!deleteTarget?.isRecurring && (
+              <Button
+                variant="destructive"
+                onClick={() => deleteTarget && deleteMutation.mutate({ ...deleteTarget, deleteType: "single" })}
+                disabled={deleteMutation.isPending}
+                data-testid="button-confirm-delete"
+              >
+                {deleteMutation.isPending ? "Deleting…" : "Delete"}
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              onClick={() => { setDeleteConfirmOpen(false); setDeleteTarget(null); }}
+              disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? "Deleting…" : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

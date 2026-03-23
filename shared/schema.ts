@@ -143,6 +143,7 @@ export const classEvents = pgTable("class_events", {
   backgroundColor: varchar("background_color"),
   isAvailabilityBlock: boolean("is_availability_block").default(false),
   isRecurring: boolean("is_recurring").default(false),
+  recurrenceGroupId: varchar("recurrence_group_id"), // Links all events in a recurring series
   recurrenceRule: text("recurrence_rule"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -171,6 +172,8 @@ export interface CalendarEvent {
   backgroundColor?: string;
   googleEventId?: string | null;
   calendarId?: string | null;
+  isRecurring?: boolean;
+  recurrenceGroupId?: string | null;
 }
 
 // Attendance row type (from Google Sheets)
