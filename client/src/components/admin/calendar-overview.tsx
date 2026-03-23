@@ -18,9 +18,10 @@ import {
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
 import {
   ChevronLeft, ChevronRight, Lock, Eye, EyeOff, Clock, User, X,
-  Plus, Pencil, Trash2,
+  Plus, Pencil, Trash2, RefreshCw,
 } from "lucide-react";
 import {
   format, startOfWeek, endOfWeek, addWeeks, subWeeks, isSameDay,
@@ -411,6 +412,46 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
   const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
   const calendarQueryKey = ["/api/admin/calendar/all", currentWeekStart.toISOString(), weekEnd.toISOString()];
 
+  // Sync settings
+  const { data: syncSettingData } = useQuery<{ value: string | null }>({
+    queryKey: ["/api/admin/settings", "google-calendar-sync"],
+    queryFn: async () => {
+      const r = await fetch("/api/admin/settings/google-calendar-sync");
+      if (!r.ok) return { value: null };
+      return r.json();
+    },
+  });
+  const syncEnabled = syncSettingData?.value !== "false";
+
+  const { data: lastSyncData } = useQuery<{ value: string | null }>({
+    queryKey: ["/api/admin/settings", "calendar-last-sync"],
+    queryFn: async () => {
+      const r = await fetch("/api/admin/settings/calendar-last-sync");
+      if (!r.ok) return { value: null };
+      return r.json();
+    },
+  });
+
+  const toggleSyncMutation = useMutation({
+    mutationFn: (enabled: boolean) =>
+      apiRequest("PUT", "/api/admin/settings/google-calendar-sync", { value: enabled ? "true" : "false" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/settings", "google-calendar-sync"] });
+      toast({ title: "Google sync setting updated" });
+    },
+    onError: () => toast({ title: "Failed to update sync setting", variant: "destructive" }),
+  });
+
+  const syncNowMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/admin/sync-calendar", {}),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/calendar/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/settings", "calendar-last-sync"] });
+      toast({ title: "Sync complete", description: `${data?.teachersSynced ?? 0} teacher(s) synced from Google.` });
+    },
+    onError: (err: any) => toast({ title: "Sync failed", description: err?.message ?? "Unknown error", variant: "destructive" }),
+  });
+
   const { data: events = [], isLoading, error, refetch } = useQuery<TeacherCalendarEvent[]>({
     queryKey: calendarQueryKey,
     queryFn: async () => {
@@ -538,8 +579,8 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
 
   // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: ({ eventId, calendarId }: { eventId: string; calendarId: string }) =>
-      apiRequest("DELETE", `/api/admin/calendar/events/${eventId}?calendarId=${encodeURIComponent(calendarId)}`),
+    mutationFn: ({ eventId }: { eventId: string; calendarId: string; title: string }) =>
+      apiRequest("DELETE", `/api/admin/calendar/events/${eventId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: calendarQueryKey });
       toast({ title: "Event deleted" });
@@ -575,11 +616,7 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
   };
 
   const openDelete = (event: TeacherCalendarEvent) => {
-    if (!event.calendarId) {
-      toast({ title: "Cannot delete: no calendar ID", variant: "destructive" });
-      return;
-    }
-    setDeleteTarget({ eventId: event.id, calendarId: event.calendarId, title: event.title });
+    setDeleteTarget({ eventId: event.id, calendarId: event.calendarId ?? "", title: event.title });
     setDeleteConfirmOpen(true);
   };
 
@@ -625,16 +662,49 @@ export function CalendarOverview({ className }: CalendarOverviewProps) {
             {format(currentWeekStart, "MMM d")} – {format(weekEnd, "MMM d, yyyy")}
           </span>
         </div>
-        <Button
-          onClick={() => {
-            setCreateInitial({ durationMinutes: "60", colorId: "7", recurrence: "none" });
-            setCreateOpen(true);
-          }}
-          data-testid="button-add-event"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Event
-        </Button>
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Google sync toggle */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Switch
+              checked={syncEnabled}
+              onCheckedChange={(v) => toggleSyncMutation.mutate(v)}
+              disabled={toggleSyncMutation.isPending}
+              data-testid="switch-google-sync"
+            />
+            <span className="hidden sm:inline">Google Sync</span>
+          </div>
+          {syncEnabled && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => syncNowMutation.mutate()}
+                  disabled={syncNowMutation.isPending}
+                  data-testid="button-sync-now"
+                >
+                  <RefreshCw className={`h-3 w-3 mr-1 ${syncNowMutation.isPending ? "animate-spin" : ""}`} />
+                  Sync
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {lastSyncData?.value
+                  ? `Last synced: ${new Date(lastSyncData.value).toLocaleString()}`
+                  : "Pull latest events from Google Calendar"}
+              </TooltipContent>
+            </Tooltip>
+          )}
+          <Button
+            onClick={() => {
+              setCreateInitial({ durationMinutes: "60", colorId: "7", recurrence: "none" });
+              setCreateOpen(true);
+            }}
+            data-testid="button-add-event"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Event
+          </Button>
+        </div>
       </div>
 
       {/* Teacher filters */}

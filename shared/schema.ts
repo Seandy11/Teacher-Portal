@@ -129,16 +129,48 @@ export type AppSetting = typeof appSettings.$inferSelect;
 export const BONUS_CATEGORIES = ["assessment", "training", "referral", "retention", "demo"] as const;
 export type BonusCategory = typeof BONUS_CATEGORIES[number];
 
-// Calendar event types (not stored in DB, from Google Calendar)
+// Class events table - portal-native storage (replaces Google Calendar as source of truth)
+export const classEvents = pgTable("class_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teacherId: varchar("teacher_id").notNull().references(() => teachers.id),
+  calendarId: varchar("calendar_id"), // Teacher's Google Calendar ID (used for sync back)
+  googleEventId: varchar("google_event_id").unique(), // Google's event ID; null = portal-native event
+  title: varchar("title").notNull(),
+  description: text("description"),
+  startDateTime: timestamp("start_date_time", { withTimezone: true }).notNull(),
+  endDateTime: timestamp("end_date_time", { withTimezone: true }).notNull(),
+  colorId: varchar("color_id"),
+  backgroundColor: varchar("background_color"),
+  isAvailabilityBlock: boolean("is_availability_block").default(false),
+  isRecurring: boolean("is_recurring").default(false),
+  recurrenceRule: text("recurrence_rule"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const classEventsRelations = relations(classEvents, ({ one }) => ({
+  teacher: one(teachers, { fields: [classEvents.teacherId], references: [teachers.id] }),
+}));
+
+export const insertClassEventSchema = createInsertSchema(classEvents).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+
+export type ClassEvent = typeof classEvents.$inferSelect;
+export type InsertClassEvent = z.infer<typeof insertClassEventSchema>;
+
+// Calendar event interface (the shape returned by API — compatible with both DB and Google)
 export interface CalendarEvent {
   id: string;
   title: string;
   description?: string;
-  start: string;
-  end: string;
-  isAvailabilityBlock: boolean; // true = availability block (editable), false = class (read-only)
-  colorId?: string; // Google Calendar color ID
-  backgroundColor?: string; // Resolved background color
+  start: string; // ISO string
+  end: string;   // ISO string
+  isAvailabilityBlock: boolean;
+  colorId?: string;
+  backgroundColor?: string;
+  googleEventId?: string | null;
+  calendarId?: string | null;
 }
 
 // Attendance row type (from Google Sheets)

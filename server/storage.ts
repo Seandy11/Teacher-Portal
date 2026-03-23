@@ -1,6 +1,6 @@
-import { teachers, leaveRequests, bonuses, appSettings, type Teacher, type InsertTeacher, type LeaveRequest, type InsertLeaveRequest, type UpdateLeaveRequest, type Bonus, type InsertBonus, type AppSetting } from "@shared/schema";
+import { teachers, leaveRequests, bonuses, appSettings, classEvents, type Teacher, type InsertTeacher, type LeaveRequest, type InsertLeaveRequest, type UpdateLeaveRequest, type Bonus, type InsertBonus, type AppSetting, type ClassEvent, type InsertClassEvent } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // Teachers
@@ -28,6 +28,16 @@ export interface IStorage {
   // App Settings
   getSetting(key: string): Promise<string | null>;
   setSetting(key: string, value: string): Promise<void>;
+
+  // Class Events
+  getClassEventsByTeacherAndRange(teacherId: string, start: Date, end: Date): Promise<ClassEvent[]>;
+  getAllClassEventsInRange(start: Date, end: Date): Promise<Array<ClassEvent & { teacherName: string; teacherCalendarId: string | null }>>;
+  createClassEvent(event: InsertClassEvent): Promise<ClassEvent>;
+  upsertClassEventByGoogleId(googleEventId: string, event: InsertClassEvent): Promise<ClassEvent>;
+  updateClassEvent(id: string, updates: Partial<InsertClassEvent>): Promise<ClassEvent | undefined>;
+  updateClassEventByGoogleId(googleEventId: string, updates: Partial<InsertClassEvent>): Promise<ClassEvent | undefined>;
+  deleteClassEvent(id: string): Promise<boolean>;
+  deleteClassEventByGoogleId(googleEventId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -130,6 +140,106 @@ export class DatabaseStorage implements IStorage {
       .insert(appSettings)
       .values({ key, value, updatedAt: new Date() })
       .onConflictDoUpdate({ target: appSettings.key, set: { value, updatedAt: new Date() } });
+  }
+
+  // Class Events
+  async getClassEventsByTeacherAndRange(teacherId: string, start: Date, end: Date): Promise<ClassEvent[]> {
+    return db.select().from(classEvents).where(
+      and(
+        eq(classEvents.teacherId, teacherId),
+        gte(classEvents.startDateTime, start),
+        lte(classEvents.startDateTime, end),
+      )
+    );
+  }
+
+  async getAllClassEventsInRange(start: Date, end: Date): Promise<Array<ClassEvent & { teacherName: string; teacherCalendarId: string | null }>> {
+    const rows = await db
+      .select({
+        id: classEvents.id,
+        teacherId: classEvents.teacherId,
+        calendarId: classEvents.calendarId,
+        googleEventId: classEvents.googleEventId,
+        title: classEvents.title,
+        description: classEvents.description,
+        startDateTime: classEvents.startDateTime,
+        endDateTime: classEvents.endDateTime,
+        colorId: classEvents.colorId,
+        backgroundColor: classEvents.backgroundColor,
+        isAvailabilityBlock: classEvents.isAvailabilityBlock,
+        isRecurring: classEvents.isRecurring,
+        recurrenceRule: classEvents.recurrenceRule,
+        createdAt: classEvents.createdAt,
+        updatedAt: classEvents.updatedAt,
+        teacherName: teachers.name,
+        teacherCalendarId: teachers.calendarId,
+      })
+      .from(classEvents)
+      .innerJoin(teachers, eq(classEvents.teacherId, teachers.id))
+      .where(
+        and(
+          gte(classEvents.startDateTime, start),
+          lte(classEvents.startDateTime, end),
+        )
+      );
+    return rows;
+  }
+
+  async createClassEvent(event: InsertClassEvent): Promise<ClassEvent> {
+    const [created] = await db.insert(classEvents).values({ ...event, updatedAt: new Date() }).returning();
+    return created;
+  }
+
+  async upsertClassEventByGoogleId(googleEventId: string, event: InsertClassEvent): Promise<ClassEvent> {
+    const [upserted] = await db
+      .insert(classEvents)
+      .values({ ...event, googleEventId, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: classEvents.googleEventId,
+        set: {
+          title: event.title,
+          description: event.description,
+          startDateTime: event.startDateTime,
+          endDateTime: event.endDateTime,
+          colorId: event.colorId,
+          backgroundColor: event.backgroundColor,
+          isAvailabilityBlock: event.isAvailabilityBlock,
+          isRecurring: event.isRecurring,
+          recurrenceRule: event.recurrenceRule,
+          calendarId: event.calendarId,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return upserted;
+  }
+
+  async updateClassEvent(id: string, updates: Partial<InsertClassEvent>): Promise<ClassEvent | undefined> {
+    const [updated] = await db
+      .update(classEvents)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(classEvents.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updateClassEventByGoogleId(googleEventId: string, updates: Partial<InsertClassEvent>): Promise<ClassEvent | undefined> {
+    const [updated] = await db
+      .update(classEvents)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(classEvents.googleEventId, googleEventId))
+      .returning();
+    return updated;
+  }
+
+  async deleteClassEvent(id: string): Promise<boolean> {
+    const result = await db.delete(classEvents).where(eq(classEvents.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async deleteClassEventByGoogleId(googleEventId: string): Promise<boolean> {
+    const result = await db.delete(classEvents).where(eq(classEvents.googleEventId, googleEventId)).returning();
+    return result.length > 0;
   }
 }
 

@@ -13,11 +13,11 @@ A secure, role-based Teacher Portal for Bright Horizon ESL school that replaces 
 This is an internal teacher portal with the following core features:
 
 ### For Teachers:
-- **My Timetable**: Read-only view of classes synced from Google Calendar
+- **My Timetable**: Read-only view of classes from the portal's own DB (synced from Google Calendar when sync is enabled)
 - **Attendance Tracking**: Fill in specific allowed columns (attendance, notes) that write back to Google Sheets
-- **Weekly Availability**: Block/reopen time slots that sync back to Google Calendar
+- **Weekly Availability**: Block/reopen time slots stored in portal DB; optionally syncs back to Google Calendar
 - **Leave Requests**: Submit leave requests visible to admin
-- **Pay Dashboard**: View monthly earnings with breakdown of hours worked, base pay, and bonuses
+- **Pay Dashboard**: View monthly earnings with breakdown of hours worked, base pay, and bonuses (pay calculated from DB events)
 
 ### For Admins:
 - **Dashboard**: Overview stats of teachers, pending leave requests
@@ -126,6 +126,7 @@ shared/
 - `POST /api/admin/impersonate/exit` - Stop impersonating
 - `GET /api/admin/impersonate/status` - Get current impersonation status
 - `GET /api/admin/payroll` - Get pay summaries for all active teachers (accepts ?month=YYYY-MM)
+- `POST /api/admin/sync-calendar` - Sync Google Calendar events into the portal DB (requires sync enabled + Google connected)
 
 ### Pay Endpoints
 - `GET /api/pay/summary` - Get pay summary (hours worked, base pay, bonuses, total)
@@ -147,10 +148,14 @@ Access is enforced server-side:
 - Both Calendar and Sheets share the same OAuth client (`server/integrations/googleCalendar.ts`)
 - `server/integrations/googleSheets.ts` re-exports from googleCalendar.ts
 
-### Calendar Integration
-- **Read**: Classes are synced one-way from Google Calendar (read-only in app)
-- **Write**: Availability blocks can be created/deleted (syncs back to calendar)
-- Events with "Blocked" or "Unavailable" in title are treated as availability blocks
+### Calendar Integration (DB-first, Google optional)
+- **Primary storage**: All events stored in `class_events` DB table (portal-native, no Google required)
+- **Google sync toggle**: `app_settings` key `google-calendar-sync`; `"false"` = sync OFF; any other value = sync ON (default ON)
+- **Sync to DB**: Admin can trigger "Sync from Google" (`POST /api/admin/sync-calendar`) to pull events from all teachers' Google Calendars into DB
+- **Write**: New events/availability blocks created in DB first; synced to Google Calendar if sync is enabled
+- **Delete/Edit**: Events updated/deleted in DB; synced to Google Calendar if event has `googleEventId` and sync is on
+- Events with "Blocked" or "Unavailable" in title (or `isAvailabilityBlock=true` in DB) are treated as availability blocks
+- **Last sync timestamp** stored in `app_settings` key `calendar-last-sync`
 
 ### Sheets Integration
 - **Read**: Attendance data pulled from assigned sheet range (A3:I1000)

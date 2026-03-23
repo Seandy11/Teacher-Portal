@@ -11,6 +11,102 @@ import type { CalendarEvent, AttendanceRow } from "@shared/schema";
 
 const MASTER_ADMIN_EMAIL = "admin@brighthorizononline.com";
 
+// Google Calendar color palette (colorId → hex)
+const GC_COLOR_HEX: Record<string, string> = {
+  "1": "#D50000", "2": "#E67C73", "3": "#F4511E", "4": "#F6BF26",
+  "5": "#33B679", "6": "#0B8043", "7": "#039BE5", "8": "#616161",
+  "9": "#3F51B5", "10": "#7986CB", "11": "#8E24AA",
+};
+
+// Deterministic teacher color from ID hash
+function getTeacherColor(teacherId: string): string {
+  const palette = ["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#06b6d4","#84cc16"];
+  let hash = 0;
+  for (let i = 0; i < teacherId.length; i++) {
+    hash = ((hash << 5) - hash) + teacherId.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return palette[Math.abs(hash) % palette.length];
+}
+
+// Sync one teacher's Google Calendar events into the class_events DB table
+async function syncTeacherEventsFromGoogle(
+  teacherId: string, calendarId: string,
+  timeMin: Date, timeMax: Date,
+): Promise<void> {
+  const calendar = await getGoogleCalendarClient();
+  const [eventsResponse, colorsResponse, calListEntry] = await Promise.all([
+    calendar.events.list({ calendarId, timeMin: timeMin.toISOString(), timeMax: timeMax.toISOString(), singleEvents: true, orderBy: "startTime" }),
+    calendar.colors.get(),
+    calendar.calendarList.get({ calendarId }).catch(() => ({ data: { backgroundColor: "#039be5" } })),
+  ]);
+  const eventColors = colorsResponse.data.event || {};
+  const calendarDefaultColor = (calListEntry as any).data?.backgroundColor || "#039be5";
+
+  for (const event of eventsResponse.data.items || []) {
+    if (!event.id) continue;
+    const start = event.start?.dateTime || event.start?.date;
+    const end = event.end?.dateTime || event.end?.date;
+    if (!start || !end) continue;
+
+    let bgColor = calendarDefaultColor;
+    if (event.colorId && eventColors[event.colorId]?.background) {
+      bgColor = eventColors[event.colorId].background!;
+    }
+    const isAvailabilityBlock = !!(
+      event.summary?.toLowerCase().includes("blocked") ||
+      event.summary?.toLowerCase().includes("unavailable") ||
+      event.extendedProperties?.private?.type === "availability_block"
+    );
+    await storage.upsertClassEventByGoogleId(event.id, {
+      teacherId,
+      calendarId,
+      title: event.summary || "Untitled",
+      description: event.description || null,
+      startDateTime: new Date(start),
+      endDateTime: new Date(end),
+      colorId: event.colorId || null,
+      backgroundColor: bgColor,
+      isAvailabilityBlock,
+      isRecurring: !!(event.recurrence || event.recurringEventId),
+      recurrenceRule: event.recurrence?.[0] || null,
+    });
+  }
+}
+
+// Calculate pay from DB class_events (replaces Google Calendar reads in pay routes)
+async function calculatePayFromDB(teacherId: string, year: number, monthNum: number) {
+  const timeMin = new Date(year, monthNum - 1, 1);
+  const timeMax = new Date(year, monthNum, 0, 23, 59, 59);
+  const now = new Date();
+  const events = await storage.getClassEventsByTeacherAndRange(teacherId, timeMin, timeMax);
+  let totalMinutes = 0;
+  const countedEvents: { title: string; duration: number; date: string; time: string }[] = [];
+  const skippedEvents: { title: string; reason: string }[] = [];
+  for (const event of events) {
+    const title = event.title;
+    const titleLower = title.toLowerCase();
+    if (event.colorId === "8") { skippedEvents.push({ title, reason: "grey event" }); continue; }
+    if (event.isAvailabilityBlock) { skippedEvents.push({ title, reason: "availability block" }); continue; }
+    if (titleLower.includes("demo")) { skippedEvents.push({ title, reason: "DEMO class" }); continue; }
+    if (titleLower.includes("leave")) { skippedEvents.push({ title, reason: "LEAVE" }); continue; }
+    const start = event.startDateTime;
+    const end = event.endDateTime;
+    if (end.getTime() <= now.getTime()) {
+      const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+      totalMinutes += durationMinutes;
+      countedEvents.push({
+        title, duration: durationMinutes,
+        date: start.toLocaleDateString("en-ZA", { timeZone: "Africa/Johannesburg" }),
+        time: `${start.toLocaleTimeString("en-ZA", { timeZone: "Africa/Johannesburg", hour: "2-digit", minute: "2-digit" })} - ${end.toLocaleTimeString("en-ZA", { timeZone: "Africa/Johannesburg", hour: "2-digit", minute: "2-digit" })}`,
+      });
+    } else {
+      skippedEvents.push({ title, reason: "not ended yet" });
+    }
+  }
+  return { totalMinutes, countedEvents, skippedEvents };
+}
+
 const requireTeacher: RequestHandler = async (req: any, res, next) => {
   const userId = req.user?.id;
   const userEmail = req.user?.email;
@@ -176,11 +272,6 @@ export async function registerRoutes(
   app.get("/api/calendar/events", isAuthenticated, requireTeacher, async (req: any, res) => {
     try {
       const teacher = req.teacher;
-      if (!teacher.calendarId) {
-        return res.json([]);
-      }
-
-      const calendar = await getGoogleCalendarClient();
       const now = new Date();
       const timeMin = req.query.timeMin
         ? new Date(req.query.timeMin as string)
@@ -189,43 +280,19 @@ export async function registerRoutes(
         ? new Date(req.query.timeMax as string)
         : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-      // Fetch colors from Google Calendar API
-      const [eventsResponse, colorsResponse, calendarListEntry] = await Promise.all([
-        calendar.events.list({
-          calendarId: teacher.calendarId,
-          timeMin: timeMin.toISOString(),
-          timeMax: timeMax.toISOString(),
-          singleEvents: true,
-          orderBy: "startTime",
-        }),
-        calendar.colors.get(),
-        calendar.calendarList.get({ calendarId: teacher.calendarId }),
-      ]);
-
-      // Build color map from API response
-      const eventColors = colorsResponse.data.event || {};
-      const calendarDefaultColor = calendarListEntry.data.backgroundColor || "#039be5";
-
-      const events: CalendarEvent[] = (eventsResponse.data.items || [])
-        .map((event: any) => {
-        let bgColor = calendarDefaultColor;
-        if (event.colorId && eventColors[event.colorId]?.background) {
-          bgColor = eventColors[event.colorId].background!;
-        }
-        
-        return {
-          id: event.id,
-          title: event.summary || "Untitled",
-          description: event.description || "",
-          start: event.start?.dateTime || event.start?.date,
-          end: event.end?.dateTime || event.end?.date,
-          isAvailabilityBlock: event.summary?.toLowerCase().includes("blocked") || 
-                               event.summary?.toLowerCase().includes("unavailable") ||
-                               event.extendedProperties?.private?.type === "availability_block",
-          colorId: event.colorId,
-          backgroundColor: bgColor,
-        };
-      });
+      const dbEvents = await storage.getClassEventsByTeacherAndRange(teacher.id, timeMin, timeMax);
+      const events: CalendarEvent[] = dbEvents.map((e) => ({
+        id: e.id,
+        title: e.title,
+        description: e.description || "",
+        start: e.startDateTime.toISOString(),
+        end: e.endDateTime.toISOString(),
+        isAvailabilityBlock: e.isAvailabilityBlock ?? false,
+        colorId: e.colorId ?? undefined,
+        backgroundColor: e.backgroundColor ?? undefined,
+        googleEventId: e.googleEventId,
+        calendarId: e.calendarId,
+      }));
 
       res.json(events);
     } catch (error) {
@@ -238,34 +305,50 @@ export async function registerRoutes(
   app.post("/api/calendar/availability", isAuthenticated, requireTeacher, async (req: any, res) => {
     try {
       const teacher = req.teacher;
-      if (!teacher.calendarId) {
-        return res.status(400).json({ message: "No calendar assigned" });
-      }
-
       const { start, end } = req.body;
-      if (!start || !end) {
-        return res.status(400).json({ message: "Start and end times required" });
+      if (!start || !end) return res.status(400).json({ message: "Start and end times required" });
+
+      const syncEnabled = (await storage.getSetting("google-calendar-sync")) !== "false";
+      let googleEventId: string | null = null;
+
+      // Write to Google Calendar if sync is on and teacher has a calendar
+      if (syncEnabled && teacher.calendarId && await isGoogleConnected()) {
+        try {
+          const calendar = await getGoogleCalendarClient();
+          const response = await calendar.events.insert({
+            calendarId: teacher.calendarId,
+            requestBody: {
+              summary: "Blocked - Unavailable",
+              description: "Availability blocked via Teacher Portal",
+              start: { dateTime: start },
+              end: { dateTime: end },
+              extendedProperties: { private: { type: "availability_block" } },
+            },
+          });
+          googleEventId = response.data.id || null;
+        } catch (gErr) {
+          console.error("Google Calendar write failed for availability block:", gErr);
+        }
       }
 
-      const calendar = await getGoogleCalendarClient();
-      const response = await calendar.events.insert({
-        calendarId: teacher.calendarId,
-        requestBody: {
-          summary: "Blocked - Unavailable",
-          description: "Availability blocked via Teacher Portal",
-          start: { dateTime: start },
-          end: { dateTime: end },
-          extendedProperties: {
-            private: { type: "availability_block" },
-          },
-        },
+      // Always write to DB
+      const dbEvent = await storage.createClassEvent({
+        teacherId: teacher.id,
+        calendarId: teacher.calendarId || null,
+        googleEventId,
+        title: "Blocked - Unavailable",
+        description: "Availability blocked via Teacher Portal",
+        startDateTime: new Date(start),
+        endDateTime: new Date(end),
+        colorId: null, backgroundColor: null,
+        isAvailabilityBlock: true, isRecurring: false, recurrenceRule: null,
       });
 
       res.json({
-        id: response.data.id,
-        title: response.data.summary,
-        start: response.data.start?.dateTime,
-        end: response.data.end?.dateTime,
+        id: dbEvent.id,
+        title: dbEvent.title,
+        start: dbEvent.startDateTime.toISOString(),
+        end: dbEvent.endDateTime.toISOString(),
         isAvailabilityBlock: true,
       });
     } catch (error) {
@@ -274,38 +357,32 @@ export async function registerRoutes(
     }
   });
 
-  // Delete availability block (only availability blocks, not class events)
+  // Delete availability block
   app.delete("/api/calendar/availability/:eventId", isAuthenticated, requireTeacher, async (req: any, res) => {
     try {
       const teacher = req.teacher;
-      if (!teacher.calendarId) {
-        return res.status(400).json({ message: "No calendar assigned" });
-      }
-
       const { eventId } = req.params;
-      const calendar = await getGoogleCalendarClient();
-      
-      // First, fetch the event to verify it's an availability block
-      const eventResponse = await calendar.events.get({
-        calendarId: teacher.calendarId,
-        eventId: eventId,
-      });
 
-      const event = eventResponse.data;
-      const isAvailabilityBlock = 
-        event.summary?.toLowerCase().includes("blocked") || 
-        event.summary?.toLowerCase().includes("unavailable") ||
-        event.extendedProperties?.private?.type === "availability_block";
+      // Look up the DB event (eventId can be DB UUID or Google event ID)
+      // Try DB UUID first, then fall back to googleEventId lookup
+      let dbEvent = (await storage.getClassEventsByTeacherAndRange(teacher.id, new Date(0), new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)))
+        .find(e => e.id === eventId || e.googleEventId === eventId);
 
-      if (!isAvailabilityBlock) {
-        return res.status(403).json({ message: "Cannot delete class events - only availability blocks can be removed" });
+      if (!dbEvent || !dbEvent.isAvailabilityBlock) {
+        return res.status(403).json({ message: "Cannot delete: not an availability block or not found" });
       }
-      
-      await calendar.events.delete({
-        calendarId: teacher.calendarId,
-        eventId: eventId,
-      });
 
+      const syncEnabled = (await storage.getSetting("google-calendar-sync")) !== "false";
+      if (syncEnabled && dbEvent.calendarId && dbEvent.googleEventId && await isGoogleConnected()) {
+        try {
+          const calendar = await getGoogleCalendarClient();
+          await calendar.events.delete({ calendarId: dbEvent.calendarId, eventId: dbEvent.googleEventId });
+        } catch (gErr) {
+          console.error("Google Calendar delete failed:", gErr);
+        }
+      }
+
+      await storage.deleteClassEvent(dbEvent.id);
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting availability block:", error);
@@ -655,105 +732,64 @@ export async function registerRoutes(
     }
   });
 
-  // Get all teachers' calendar events (admin overview)
+  // Sync Google Calendar events into the portal DB (admin only)
+  app.post("/api/admin/sync-calendar", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const syncEnabled = (await storage.getSetting("google-calendar-sync")) !== "false";
+      if (!syncEnabled) return res.status(400).json({ message: "Google sync is disabled" });
+      if (!await isGoogleConnected()) return res.status(400).json({ message: "Google not connected" });
+
+      const timeMin = req.body.timeMin ? new Date(req.body.timeMin) : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+      const timeMax = req.body.timeMax ? new Date(req.body.timeMax) : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+
+      const allTeachers = await storage.getAllTeachers();
+      const active = allTeachers.filter(t => t.isActive && t.calendarId);
+
+      let synced = 0;
+      const errors: string[] = [];
+      for (const teacher of active) {
+        try {
+          await syncTeacherEventsFromGoogle(teacher.id, teacher.calendarId!, timeMin, timeMax);
+          synced++;
+        } catch (e: any) {
+          errors.push(`${teacher.name}: ${e?.message}`);
+        }
+      }
+      await storage.setSetting("calendar-last-sync", new Date().toISOString());
+      res.json({ success: true, teachersSynced: synced, errors });
+    } catch (error) {
+      console.error("Error syncing calendar:", error);
+      res.status(500).json({ message: "Sync failed" });
+    }
+  });
+
+  // Get all teachers' calendar events (admin overview) — reads from DB
   app.get("/api/admin/calendar/all", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const teachers = await storage.getAllTeachers();
-      const activeTeachersWithCalendars = teachers.filter(t => t.isActive && t.calendarId);
-      
-      if (activeTeachersWithCalendars.length === 0) {
-        return res.json([]);
-      }
-
-      const calendar = await getGoogleCalendarClient();
-      
-      // Accept week start/end parameters for fetching specific weeks
       const timeMinParam = req.query.timeMin as string;
       const timeMaxParam = req.query.timeMax as string;
-      
       const timeMin = timeMinParam ? new Date(timeMinParam) : new Date();
       const timeMax = timeMaxParam ? new Date(timeMaxParam) : new Date(timeMin.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-      const allEvents: Array<CalendarEvent & { teacherId: string; teacherName: string; teacherColor: string }> = [];
+      const dbEvents = await storage.getAllClassEventsInRange(timeMin, timeMax);
 
-      // Generate deterministic colors based on teacher ID hash
-      const colors = [
-        "#3b82f6", // blue
-        "#10b981", // emerald
-        "#f59e0b", // amber
-        "#ef4444", // red
-        "#8b5cf6", // violet
-        "#ec4899", // pink
-        "#06b6d4", // cyan
-        "#84cc16", // lime
-      ];
+      const allEvents = dbEvents.map((e) => ({
+        id: e.id,
+        title: e.title,
+        description: e.description || "",
+        start: e.startDateTime.toISOString(),
+        end: e.endDateTime.toISOString(),
+        isAvailabilityBlock: e.isAvailabilityBlock ?? false,
+        colorId: e.colorId ?? undefined,
+        backgroundColor: e.backgroundColor ?? undefined,
+        googleEventId: e.googleEventId,
+        calendarId: e.calendarId,
+        teacherId: e.teacherId,
+        teacherName: e.teacherName,
+        teacherColor: getTeacherColor(e.teacherId),
+      }));
 
-      // Simple hash function to get consistent color from teacher ID
-      const getColorForTeacher = (teacherId: string): string => {
-        let hash = 0;
-        for (let i = 0; i < teacherId.length; i++) {
-          const char = teacherId.charCodeAt(i);
-          hash = ((hash << 5) - hash) + char;
-          hash = hash & hash;
-        }
-        return colors[Math.abs(hash) % colors.length];
-      };
-
-      // Fetch colors from Google Calendar API once
-      const colorsResponse = await calendar.colors.get();
-      const eventColors = colorsResponse.data.event || {};
-
-      for (const teacher of activeTeachersWithCalendars) {
-        try {
-          const [eventsResponse, calendarListEntry] = await Promise.all([
-            calendar.events.list({
-              calendarId: teacher.calendarId!,
-              timeMin: timeMin.toISOString(),
-              timeMax: timeMax.toISOString(),
-              singleEvents: true,
-              orderBy: "startTime",
-            }),
-            calendar.calendarList.get({ calendarId: teacher.calendarId! }),
-          ]);
-
-          const teacherColor = getColorForTeacher(teacher.id);
-          const calendarDefaultColor = calendarListEntry.data.backgroundColor || teacherColor;
-          
-          const events = (eventsResponse.data.items || [])
-            .map((event: any) => {
-            let bgColor = calendarDefaultColor;
-            if (event.colorId && eventColors[event.colorId]?.background) {
-              bgColor = eventColors[event.colorId].background!;
-            }
-            
-            return {
-              id: event.id,
-              title: event.summary || "Untitled",
-              description: event.description || "",
-              start: event.start?.dateTime || event.start?.date,
-              end: event.end?.dateTime || event.end?.date,
-              isAvailabilityBlock: event.summary?.toLowerCase().includes("blocked") || 
-                                   event.summary?.toLowerCase().includes("unavailable") ||
-                                   event.extendedProperties?.private?.type === "availability_block",
-              colorId: event.colorId,
-              backgroundColor: bgColor,
-              teacherId: teacher.id,
-              teacherName: teacher.name,
-              teacherColor: teacherColor,
-              calendarId: teacher.calendarId,
-            };
-          });
-
-          allEvents.push(...events);
-        } catch (calendarError) {
-          console.error(`Error fetching calendar for teacher ${teacher.id}:`, calendarError);
-          // Continue with other teachers even if one fails
-        }
-      }
-
-      // Sort by start time
       allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-
       res.json(allEvents);
     } catch (error) {
       console.error("Error fetching all calendar events:", error);
@@ -761,7 +797,7 @@ export async function registerRoutes(
     }
   });
 
-  // Create a class event in a teacher's Google Calendar (admin only)
+  // Create a class event — writes to DB first, then syncs to Google if enabled
   app.post("/api/admin/calendar/events", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { teacherId, title, startDateTime, durationMinutes, colorId, recurrence } = req.body;
@@ -769,94 +805,103 @@ export async function registerRoutes(
         return res.status(400).json({ message: "teacherId, title, startDateTime, durationMinutes required" });
       }
       const teacher = await storage.getTeacher(teacherId);
-      if (!teacher || !teacher.calendarId) {
-        return res.status(404).json({ message: "Teacher not found or has no calendar assigned" });
-      }
+      if (!teacher) return res.status(404).json({ message: "Teacher not found" });
+
       const start = new Date(startDateTime);
-      const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
-      const calendar = await getGoogleCalendarClient();
-      const eventBody: any = {
-        summary: title,
-        start: { dateTime: start.toISOString() },
-        end: { dateTime: end.toISOString() },
-      };
-      if (colorId) eventBody.colorId = String(colorId);
-      if (recurrence === "weekly") {
-        eventBody.recurrence = ["RRULE:FREQ=WEEKLY"];
+      const end = new Date(start.getTime() + Number(durationMinutes) * 60 * 1000);
+      const bgColor = colorId ? (GC_COLOR_HEX[String(colorId)] ?? null) : null;
+
+      let googleEventId: string | null = null;
+      const syncEnabled = (await storage.getSetting("google-calendar-sync")) !== "false";
+      if (syncEnabled && teacher.calendarId && await isGoogleConnected()) {
+        try {
+          const calendar = await getGoogleCalendarClient();
+          const eventBody: any = { summary: title, start: { dateTime: start.toISOString() }, end: { dateTime: end.toISOString() } };
+          if (colorId) eventBody.colorId = String(colorId);
+          if (recurrence === "weekly") eventBody.recurrence = ["RRULE:FREQ=WEEKLY"];
+          const gRes = await calendar.events.insert({ calendarId: teacher.calendarId, requestBody: eventBody });
+          googleEventId = gRes.data.id || null;
+        } catch (gErr) { console.error("Google write failed:", gErr); }
       }
-      const response = await calendar.events.insert({
-        calendarId: teacher.calendarId,
-        requestBody: eventBody,
+
+      const dbEvent = await storage.createClassEvent({
+        teacherId, calendarId: teacher.calendarId || null, googleEventId,
+        title, description: null,
+        startDateTime: start, endDateTime: end,
+        colorId: colorId ? String(colorId) : null, backgroundColor: bgColor,
+        isAvailabilityBlock: false, isRecurring: recurrence === "weekly",
+        recurrenceRule: recurrence === "weekly" ? "RRULE:FREQ=WEEKLY" : null,
       });
-      res.json({
-        id: response.data.id,
-        title: response.data.summary,
-        start: response.data.start?.dateTime,
-        end: response.data.end?.dateTime,
-        colorId: response.data.colorId,
-      });
+
+      res.json({ id: dbEvent.id, title: dbEvent.title, start: dbEvent.startDateTime.toISOString(), end: dbEvent.endDateTime.toISOString(), colorId: dbEvent.colorId });
     } catch (error) {
       console.error("Error creating calendar event:", error);
       res.status(500).json({ message: "Failed to create calendar event" });
     }
   });
 
-  // Update a class event in a teacher's Google Calendar (admin only)
+  // Update a class event — updates DB, then syncs to Google if enabled
   app.patch("/api/admin/calendar/events/:eventId", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { eventId } = req.params;
-      const { calendarId, title, startDateTime, durationMinutes, colorId } = req.body;
-      if (!calendarId) {
-        return res.status(400).json({ message: "calendarId required" });
+      const { title, startDateTime, durationMinutes, colorId } = req.body;
+
+      const dbUpdates: Record<string, any> = {};
+      if (title !== undefined) dbUpdates.title = title;
+      if (colorId !== undefined) {
+        dbUpdates.colorId = colorId ? String(colorId) : null;
+        dbUpdates.backgroundColor = colorId ? (GC_COLOR_HEX[String(colorId)] ?? null) : null;
       }
-      const calendar = await getGoogleCalendarClient();
-      // Fetch current event first
-      const existing = await calendar.events.get({ calendarId, eventId });
-      const patch: any = {};
-      if (title !== undefined) patch.summary = title;
-      if (colorId !== undefined) patch.colorId = colorId ? String(colorId) : null;
-      if (startDateTime !== undefined && durationMinutes !== undefined) {
+      if (startDateTime !== undefined) {
         const start = new Date(startDateTime);
-        const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
-        patch.start = { dateTime: start.toISOString() };
-        patch.end = { dateTime: end.toISOString() };
-      } else if (startDateTime !== undefined) {
-        const origStart = new Date(existing.data.start?.dateTime || existing.data.start?.date!);
-        const origEnd = new Date(existing.data.end?.dateTime || existing.data.end?.date!);
-        const origDurationMs = origEnd.getTime() - origStart.getTime();
-        const newStart = new Date(startDateTime);
-        const newEnd = new Date(newStart.getTime() + origDurationMs);
-        patch.start = { dateTime: newStart.toISOString() };
-        patch.end = { dateTime: newEnd.toISOString() };
+        dbUpdates.startDateTime = start;
+        if (durationMinutes !== undefined) {
+          dbUpdates.endDateTime = new Date(start.getTime() + Number(durationMinutes) * 60 * 1000);
+        }
       }
-      const response = await calendar.events.patch({
-        calendarId,
-        eventId,
-        requestBody: patch,
-      });
-      res.json({
-        id: response.data.id,
-        title: response.data.summary,
-        start: response.data.start?.dateTime,
-        end: response.data.end?.dateTime,
-        colorId: response.data.colorId,
-      });
+
+      const updated = await storage.updateClassEvent(eventId, dbUpdates);
+      if (!updated) return res.status(404).json({ message: "Event not found" });
+
+      // Sync to Google if enabled and the event has a googleEventId
+      const syncEnabled = (await storage.getSetting("google-calendar-sync")) !== "false";
+      if (syncEnabled && updated.googleEventId && updated.calendarId && await isGoogleConnected()) {
+        try {
+          const calendar = await getGoogleCalendarClient();
+          const patch: any = {};
+          if (title !== undefined) patch.summary = title;
+          if (colorId !== undefined) patch.colorId = colorId ? String(colorId) : null;
+          if (dbUpdates.startDateTime) patch.start = { dateTime: updated.startDateTime.toISOString() };
+          if (dbUpdates.endDateTime) patch.end = { dateTime: updated.endDateTime.toISOString() };
+          await calendar.events.patch({ calendarId: updated.calendarId, eventId: updated.googleEventId, requestBody: patch });
+        } catch (gErr) { console.error("Google update failed:", gErr); }
+      }
+
+      res.json({ id: updated.id, title: updated.title, start: updated.startDateTime.toISOString(), end: updated.endDateTime.toISOString(), colorId: updated.colorId });
     } catch (error) {
       console.error("Error updating calendar event:", error);
       res.status(500).json({ message: "Failed to update calendar event" });
     }
   });
 
-  // Delete a class event from a teacher's Google Calendar (admin only)
+  // Delete a class event — deletes from DB, then syncs to Google if enabled
   app.delete("/api/admin/calendar/events/:eventId", isAuthenticated, requireAdmin, async (req, res) => {
     try {
       const { eventId } = req.params;
-      const calendarId = req.query.calendarId as string;
-      if (!calendarId) {
-        return res.status(400).json({ message: "calendarId query param required" });
+
+      // Look up the DB event first to get googleEventId + calendarId
+      const allEvents = await storage.getAllClassEventsInRange(new Date(0), new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000));
+      const dbEvent = allEvents.find(e => e.id === eventId);
+
+      const syncEnabled = (await storage.getSetting("google-calendar-sync")) !== "false";
+      if (syncEnabled && dbEvent?.googleEventId && dbEvent?.calendarId && await isGoogleConnected()) {
+        try {
+          const calendar = await getGoogleCalendarClient();
+          await calendar.events.delete({ calendarId: dbEvent.calendarId!, eventId: dbEvent.googleEventId });
+        } catch (gErr) { console.error("Google delete failed:", gErr); }
       }
-      const calendar = await getGoogleCalendarClient();
-      await calendar.events.delete({ calendarId, eventId });
+
+      await storage.deleteClassEvent(eventId);
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting calendar event:", error);
@@ -1074,86 +1119,7 @@ export async function registerRoutes(
       
       const bonuses = await fetchBonusesFromSheet(teacher.name, year, monthNum);
       
-      let totalMinutes = 0;
-      const countedEvents: { title: string; duration: number; date: string; time: string }[] = [];
-      const skippedEvents: { title: string; reason: string }[] = [];
-      
-      if (teacher.calendarId) {
-        try {
-          const calendar = await getGoogleCalendarClient();
-          const timeMin = new Date(year, monthNum - 1, 1);
-          const timeMax = new Date(year, monthNum, 0, 23, 59, 59);
-          
-          const response = await calendar.events.list({
-            calendarId: teacher.calendarId,
-            timeMin: timeMin.toISOString(),
-            timeMax: timeMax.toISOString(),
-            singleEvents: true,
-            orderBy: "startTime",
-          });
-          
-          for (const event of response.data.items || []) {
-            const title = event.summary || "";
-            const titleLower = title.toLowerCase();
-            
-            if (event.colorId === "8") {
-              skippedEvents.push({ title, reason: "grey event" });
-              continue;
-            }
-
-            const isAvailabilityBlock = titleLower.includes("blocked") || 
-                                       titleLower.includes("unavailable") ||
-                                       event.extendedProperties?.private?.type === "availability_block";
-            const isDemo = titleLower.includes("demo");
-            const isLeave = titleLower.includes("leave");
-            
-            if (!event.start?.dateTime || !event.end?.dateTime) {
-              skippedEvents.push({ title, reason: "all-day event" });
-              continue;
-            }
-            
-            if (isAvailabilityBlock) {
-              skippedEvents.push({ title, reason: "availability block" });
-              continue;
-            }
-            
-            if (isDemo) {
-              skippedEvents.push({ title, reason: "DEMO class" });
-              continue;
-            }
-            
-            if (isLeave) {
-              skippedEvents.push({ title, reason: "LEAVE" });
-              continue;
-            }
-            
-            const start = new Date(event.start.dateTime);
-            const end = new Date(event.end.dateTime);
-            
-            if (end.getTime() <= now.getTime()) {
-              const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
-              totalMinutes += durationMinutes;
-              countedEvents.push({ 
-                title, 
-                duration: durationMinutes, 
-                date: start.toLocaleDateString('en-ZA', { timeZone: 'Africa/Johannesburg' }),
-                time: `${start.toLocaleTimeString('en-ZA', { timeZone: 'Africa/Johannesburg', hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('en-ZA', { timeZone: 'Africa/Johannesburg', hour: '2-digit', minute: '2-digit' })}`,
-              });
-            } else {
-              skippedEvents.push({ title, reason: "not ended yet" });
-            }
-          }
-          
-          console.log(`Pay calculation for ${teacher.name} (${month}):`, {
-            totalMinutes,
-            eventsCounted: countedEvents.length,
-            eventsSkipped: skippedEvents.length
-          });
-        } catch (calendarError) {
-          console.error("Error fetching calendar for pay calculation:", calendarError);
-        }
-      }
-      
+      const { totalMinutes, countedEvents, skippedEvents } = await calculatePayFromDB(teacher.id, year, monthNum);
       const hourlyRate = teacher.hourlyRate ? parseFloat(teacher.hourlyRate) : 0;
       const hoursWorked = totalMinutes / 60;
       const basePay = hoursWorked * hourlyRate;
@@ -1228,70 +1194,7 @@ export async function registerRoutes(
       
       const bonuses = await fetchBonusesFromSheet(teacher.name, year, monthNum);
       
-      let totalMinutes = 0;
-      const countedEvents: { title: string; duration: number; date: string; time: string }[] = [];
-      const skippedEvents: { title: string; reason: string }[] = [];
-      
-      if (teacher.calendarId) {
-        try {
-          const calendar = await getGoogleCalendarClient();
-          const timeMin = new Date(year, monthNum - 1, 1);
-          const timeMax = new Date(year, monthNum, 0, 23, 59, 59);
-          
-          const response = await calendar.events.list({
-            calendarId: teacher.calendarId,
-            timeMin: timeMin.toISOString(),
-            timeMax: timeMax.toISOString(),
-            singleEvents: true,
-            orderBy: "startTime",
-          });
-          
-          for (const event of response.data.items || []) {
-            const title = event.summary || "";
-            const titleLower = title.toLowerCase();
-            
-            if (event.colorId === "8") {
-              skippedEvents.push({ title, reason: "grey event" });
-              continue;
-            }
-
-            const isAvailabilityBlock = titleLower.includes("blocked") || 
-                                       titleLower.includes("unavailable") ||
-                                       event.extendedProperties?.private?.type === "availability_block";
-            const isDemo = titleLower.includes("demo");
-            const isLeave = titleLower.includes("leave");
-            
-            if (!event.start?.dateTime || !event.end?.dateTime) {
-              skippedEvents.push({ title, reason: "all-day event" });
-              continue;
-            }
-            
-            if (isAvailabilityBlock || isDemo || isLeave) {
-              skippedEvents.push({ title, reason: isAvailabilityBlock ? "availability block" : isDemo ? "DEMO class" : "LEAVE" });
-              continue;
-            }
-            
-            const start = new Date(event.start.dateTime);
-            const end = new Date(event.end.dateTime);
-            
-            if (end.getTime() <= now.getTime()) {
-              const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
-              totalMinutes += durationMinutes;
-              countedEvents.push({ 
-                title, 
-                duration: durationMinutes, 
-                date: start.toLocaleDateString('en-ZA', { timeZone: 'Africa/Johannesburg' }),
-                time: `${start.toLocaleTimeString('en-ZA', { timeZone: 'Africa/Johannesburg', hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('en-ZA', { timeZone: 'Africa/Johannesburg', hour: '2-digit', minute: '2-digit' })}`,
-              });
-            } else {
-              skippedEvents.push({ title, reason: "not ended yet" });
-            }
-          }
-        } catch (calendarError) {
-          console.error("Error fetching calendar for pay calculation:", calendarError);
-        }
-      }
-      
+      const { totalMinutes, countedEvents, skippedEvents } = await calculatePayFromDB(teacher.id, year, monthNum);
       const hourlyRate = teacher.hourlyRate ? parseFloat(teacher.hourlyRate) : 0;
       const hoursWorked = totalMinutes / 60;
       const basePay = hoursWorked * hourlyRate;
@@ -1362,74 +1265,11 @@ export async function registerRoutes(
       const allTeachers = await storage.getAllTeachers();
       const activeTeachers = allTeachers.filter(t => t.isActive && t.email.toLowerCase() !== MASTER_ADMIN_EMAIL);
       
-      const calendar = await getGoogleCalendarClient();
-      const timeMin = new Date(year, monthNum - 1, 1);
-      const timeMax = new Date(year, monthNum, 0, 23, 59, 59);
-      
       const results = await Promise.all(activeTeachers.map(async (teacher) => {
         try {
           const bonuses = await fetchBonusesFromSheet(teacher.name, year, monthNum);
           
-          let totalMinutes = 0;
-          const countedEvents: { title: string; duration: number; date: string; time: string }[] = [];
-          const skippedEvents: { title: string; reason: string }[] = [];
-          
-          if (teacher.calendarId) {
-            try {
-              const response = await calendar.events.list({
-                calendarId: teacher.calendarId,
-                timeMin: timeMin.toISOString(),
-                timeMax: timeMax.toISOString(),
-                singleEvents: true,
-                orderBy: "startTime",
-              });
-              
-              for (const event of response.data.items || []) {
-                const title = event.summary || "";
-                const titleLower = title.toLowerCase();
-                
-                if (event.colorId === "8") {
-                  skippedEvents.push({ title, reason: "grey event" });
-                  continue;
-                }
-
-                const isAvailabilityBlock = titleLower.includes("blocked") || 
-                                           titleLower.includes("unavailable") ||
-                                           event.extendedProperties?.private?.type === "availability_block";
-                const isDemo = titleLower.includes("demo");
-                const isLeave = titleLower.includes("leave");
-                
-                if (!event.start?.dateTime || !event.end?.dateTime) {
-                  skippedEvents.push({ title, reason: "all-day event" });
-                  continue;
-                }
-                
-                if (isAvailabilityBlock || isDemo || isLeave) {
-                  skippedEvents.push({ title, reason: isAvailabilityBlock ? "availability block" : isDemo ? "DEMO class" : "LEAVE" });
-                  continue;
-                }
-                
-                const start = new Date(event.start.dateTime);
-                const end = new Date(event.end.dateTime);
-                
-                if (end.getTime() <= now.getTime()) {
-                  const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
-                  totalMinutes += durationMinutes;
-                  countedEvents.push({ 
-                    title, 
-                    duration: durationMinutes, 
-                    date: start.toLocaleDateString('en-ZA', { timeZone: 'Africa/Johannesburg' }),
-                    time: `${start.toLocaleTimeString('en-ZA', { timeZone: 'Africa/Johannesburg', hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('en-ZA', { timeZone: 'Africa/Johannesburg', hour: '2-digit', minute: '2-digit' })}`,
-                  });
-                } else {
-                  skippedEvents.push({ title, reason: "not ended yet" });
-                }
-              }
-            } catch (calendarError) {
-              console.error(`Error fetching calendar for ${teacher.name}:`, calendarError);
-            }
-          }
-          
+          const { totalMinutes, countedEvents, skippedEvents } = await calculatePayFromDB(teacher.id, year, monthNum);
           const hourlyRate = teacher.hourlyRate ? parseFloat(teacher.hourlyRate) : 0;
           const hoursWorked = totalMinutes / 60;
           const basePay = hoursWorked * hourlyRate;
