@@ -42,9 +42,11 @@ async function syncTeacherEventsFromGoogle(
   const eventColors = colorsResponse.data.event || {};
   const calendarDefaultColor = (calListEntry as any).data?.backgroundColor || "#039be5";
 
-  // Paginate through all events — default page size is 250, max is 2500
   let pageToken: string | undefined = undefined;
+  let totalFetched = 0;
+  let pageNum = 0;
   do {
+    pageNum++;
     const eventsResponse = await calendar.events.list({
       calendarId,
       timeMin: timeMin.toISOString(),
@@ -54,9 +56,12 @@ async function syncTeacherEventsFromGoogle(
       maxResults: 2500,
       pageToken,
     });
+    const items = eventsResponse.data.items || [];
+    totalFetched += items.length;
     pageToken = eventsResponse.data.nextPageToken ?? undefined;
+    console.log(`[sync] teacherId=${teacherId} page=${pageNum} items=${items.length} total=${totalFetched} hasMore=${!!pageToken}`);
 
-    for (const event of eventsResponse.data.items || []) {
+    for (const event of items) {
       if (!event.id) continue;
       const start = event.start?.dateTime || event.start?.date;
       const end = event.end?.dateTime || event.end?.date;
@@ -759,13 +764,17 @@ export async function registerRoutes(
       const allTeachers = await storage.getAllTeachers();
       const active = allTeachers.filter(t => t.isActive && t.calendarId);
 
+      console.log(`[sync] Starting calendar sync for ${active.length} teachers, range: ${timeMin.toISOString()} to ${timeMax.toISOString()}`);
       let synced = 0;
       const errors: string[] = [];
       for (const teacher of active) {
         try {
+          console.log(`[sync] Syncing ${teacher.name} (${teacher.id}) calendar=${teacher.calendarId}`);
           await syncTeacherEventsFromGoogle(teacher.id, teacher.calendarId!, timeMin, timeMax);
           synced++;
+          console.log(`[sync] Completed ${teacher.name}`);
         } catch (e: any) {
+          console.error(`[sync] ERROR for ${teacher.name}:`, e?.message);
           errors.push(`${teacher.name}: ${e?.message}`);
         }
       }
