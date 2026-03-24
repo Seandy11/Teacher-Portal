@@ -35,43 +35,57 @@ async function syncTeacherEventsFromGoogle(
   timeMin: Date, timeMax: Date,
 ): Promise<void> {
   const calendar = await getGoogleCalendarClient();
-  const [eventsResponse, colorsResponse, calListEntry] = await Promise.all([
-    calendar.events.list({ calendarId, timeMin: timeMin.toISOString(), timeMax: timeMax.toISOString(), singleEvents: true, orderBy: "startTime" }),
+  const [colorsResponse, calListEntry] = await Promise.all([
     calendar.colors.get(),
     calendar.calendarList.get({ calendarId }).catch(() => ({ data: { backgroundColor: "#039be5" } })),
   ]);
   const eventColors = colorsResponse.data.event || {};
   const calendarDefaultColor = (calListEntry as any).data?.backgroundColor || "#039be5";
 
-  for (const event of eventsResponse.data.items || []) {
-    if (!event.id) continue;
-    const start = event.start?.dateTime || event.start?.date;
-    const end = event.end?.dateTime || event.end?.date;
-    if (!start || !end) continue;
-
-    let bgColor = calendarDefaultColor;
-    if (event.colorId && eventColors[event.colorId]?.background) {
-      bgColor = eventColors[event.colorId].background!;
-    }
-    const isAvailabilityBlock = !!(
-      event.summary?.toLowerCase().includes("blocked") ||
-      event.summary?.toLowerCase().includes("unavailable") ||
-      event.extendedProperties?.private?.type === "availability_block"
-    );
-    await storage.upsertClassEventByGoogleId(event.id, {
-      teacherId,
+  // Paginate through all events — default page size is 250, max is 2500
+  let pageToken: string | undefined = undefined;
+  do {
+    const eventsResponse = await calendar.events.list({
       calendarId,
-      title: event.summary || "Untitled",
-      description: event.description || null,
-      startDateTime: new Date(start),
-      endDateTime: new Date(end),
-      colorId: event.colorId || null,
-      backgroundColor: bgColor,
-      isAvailabilityBlock,
-      isRecurring: !!(event.recurrence || event.recurringEventId),
-      recurrenceRule: event.recurrence?.[0] || null,
+      timeMin: timeMin.toISOString(),
+      timeMax: timeMax.toISOString(),
+      singleEvents: true,
+      orderBy: "startTime",
+      maxResults: 2500,
+      pageToken,
     });
-  }
+    pageToken = eventsResponse.data.nextPageToken ?? undefined;
+
+    for (const event of eventsResponse.data.items || []) {
+      if (!event.id) continue;
+      const start = event.start?.dateTime || event.start?.date;
+      const end = event.end?.dateTime || event.end?.date;
+      if (!start || !end) continue;
+
+      let bgColor = calendarDefaultColor;
+      if (event.colorId && eventColors[event.colorId]?.background) {
+        bgColor = eventColors[event.colorId].background!;
+      }
+      const isAvailabilityBlock = !!(
+        event.summary?.toLowerCase().includes("blocked") ||
+        event.summary?.toLowerCase().includes("unavailable") ||
+        event.extendedProperties?.private?.type === "availability_block"
+      );
+      await storage.upsertClassEventByGoogleId(event.id, {
+        teacherId,
+        calendarId,
+        title: event.summary || "Untitled",
+        description: event.description || null,
+        startDateTime: new Date(start),
+        endDateTime: new Date(end),
+        colorId: event.colorId || null,
+        backgroundColor: bgColor,
+        isAvailabilityBlock,
+        isRecurring: !!(event.recurrence || event.recurringEventId),
+        recurrenceRule: event.recurrence?.[0] || null,
+      });
+    }
+  } while (pageToken);
 }
 
 // Calculate pay from DB class_events (replaces Google Calendar reads in pay routes)
