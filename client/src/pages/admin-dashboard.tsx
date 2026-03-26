@@ -10,6 +10,7 @@ import { PayrollOverview } from "@/components/admin/payroll-overview";
 import { BonusManagement } from "@/components/admin/bonus-management";
 import { DropdownOptionsManagement } from "@/components/admin/dropdown-options-management";
 import { StudentBalances } from "@/components/admin/student-balances";
+import { ArcBilling } from "@/components/admin/arc-billing";
 import { FullPageLoader } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
 import { useAuth } from "@/hooks/use-auth";
@@ -17,10 +18,10 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/auth-utils";
 import { Button } from "@/components/ui/button";
-import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Wallet, Link2, Link2Off, RefreshCw, Gift, ListChecks, GraduationCap } from "lucide-react";
+import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Wallet, Link2, Link2Off, RefreshCw, Gift, ListChecks, GraduationCap, Building } from "lucide-react";
 import type { Teacher, LeaveRequest } from "@shared/schema";
 
-type AdminView = "dashboard" | "calendar" | "teachers" | "leave" | "payroll" | "bonuses" | "dropdown-options" | "student-balances";
+type AdminView = "dashboard" | "calendar" | "teachers" | "leave" | "payroll" | "bonuses" | "dropdown-options" | "student-balances" | "arc-billing";
 
 const navItems = [
   { id: "dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
@@ -31,6 +32,7 @@ const navItems = [
   { id: "bonuses" as const, label: "Bonuses", icon: Gift },
   { id: "dropdown-options" as const, label: "Dropdown Options", icon: ListChecks },
   { id: "student-balances" as const, label: "Student Balances", icon: GraduationCap },
+  { id: "arc-billing" as const, label: "ARC Billing", icon: Building },
 ];
 
 export default function AdminDashboard() {
@@ -447,6 +449,10 @@ export default function AdminDashboard() {
 
             {activeView === "student-balances" && (
               <StudentBalances />
+            )}
+
+            {activeView === "arc-billing" && (
+              <ArcBilling />
             )}
           </main>
         </SidebarInset>

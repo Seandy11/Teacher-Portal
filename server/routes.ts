@@ -1564,7 +1564,8 @@ export async function registerRoutes(
             fields: "sheets.properties",
           });
 
-          const tabs = (spreadsheet.data.sheets || []).map((s: any) => s.properties.title as string);
+          const allTabs = (spreadsheet.data.sheets || []).map((s: any) => s.properties.title as string);
+          const tabs = allTabs.filter((name: string) => !name.toUpperCase().startsWith("ARC"));
 
           await Promise.all(tabs.map(async (tabName: string) => {
             try {
@@ -1629,6 +1630,140 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching student balances:", error);
       res.status(500).json({ message: "Failed to fetch student balances" });
+    }
+  });
+
+  // ============ ARC BILLING ============
+
+  // Get ARC billing data for a given month
+  app.get("/api/admin/arc-billing", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const monthParam = req.query.month as string; // YYYY-MM
+      const now = new Date();
+      let year: number, monthNum: number;
+      if (monthParam && /^\d{4}-\d{2}$/.test(monthParam)) {
+        [year, monthNum] = monthParam.split("-").map(Number);
+      } else {
+        year = now.getFullYear();
+        monthNum = now.getMonth() + 1;
+      }
+      const timeMin = new Date(year, monthNum - 1, 1);
+      const timeMax = new Date(year, monthNum, 0, 23, 59, 59);
+
+      // Get all class events in date range
+      const events = await storage.getAllClassEventsInRange(timeMin, timeMax);
+
+      // Filter to ARC events only (title starts with "ARC_" or "ARC ")
+      const arcEvents = events.filter(e =>
+        e.title.toUpperCase().startsWith("ARC_") || e.title.toUpperCase().startsWith("ARC ")
+      );
+
+      // Group by student name (extracted from title after "ARC_" or "ARC ")
+      const studentMap = new Map<string, { teacherName: string; teacherId: string; lessons: { date: string; duration: number; title: string }[] }>();
+      for (const ev of arcEvents) {
+        // Skip grey events and availability blocks
+        if (ev.colorId === "8" || ev.isAvailabilityBlock) continue;
+
+        const studentName = ev.title.replace(/^ARC[_ ]/i, "").trim();
+        if (!studentName) continue;
+
+        if (!studentMap.has(studentName)) {
+          studentMap.set(studentName, { teacherName: ev.teacherName, teacherId: ev.teacherId, lessons: [] });
+        }
+        const entry = studentMap.get(studentName)!;
+        const durationMin = (ev.endDateTime.getTime() - ev.startDateTime.getTime()) / (1000 * 60);
+        entry.lessons.push({
+          date: ev.startDateTime.toLocaleDateString("en-ZA", { timeZone: "Africa/Johannesburg" }),
+          startMs: ev.startDateTime.getTime(),
+          duration: durationMin,
+          title: ev.title,
+        });
+      }
+
+      // Get all-time ARC lesson counts per student (for trial detection across months)
+      const allArcEvents = await storage.getAllClassEventsInRange(
+        new Date(2020, 0, 1), // far back
+        timeMax
+      );
+      const allTimeCountMap = new Map<string, number>();
+      for (const ev of allArcEvents) {
+        if (ev.colorId === "8" || ev.isAvailabilityBlock) continue;
+        if (!ev.title.toUpperCase().startsWith("ARC_") && !ev.title.toUpperCase().startsWith("ARC ")) continue;
+        const studentName = ev.title.replace(/^ARC[_ ]/i, "").trim();
+        if (!studentName) continue;
+        // Count events that ended before this month's start
+        if (ev.endDateTime < timeMin) {
+          allTimeCountMap.set(studentName, (allTimeCountMap.get(studentName) || 0) + 1);
+        }
+      }
+
+      // Build result
+      const normalRate = parseFloat((await storage.getSetting("arc-normal-rate")) || "0");
+      const trialRate = parseFloat((await storage.getSetting("arc-trial-rate")) || "0");
+
+      const result = Array.from(studentMap.entries()).map(([studentName, data]) => {
+        const priorLessons = allTimeCountMap.get(studentName) || 0;
+        let trialCount = 0;
+        let normalCount = 0;
+
+        data.lessons.sort((a, b) => a.startMs - b.startMs);
+
+        for (let i = 0; i < data.lessons.length; i++) {
+          const totalSoFar = priorLessons + i + 1;
+          if (totalSoFar <= 3) {
+            trialCount++;
+          } else {
+            normalCount++;
+          }
+        }
+
+        return {
+          studentName,
+          teacherName: data.teacherName,
+          totalLessons: data.lessons.length,
+          trialLessons: trialCount,
+          normalLessons: normalCount,
+          trialAmount: trialCount * trialRate,
+          normalAmount: normalCount * normalRate,
+          totalAmount: trialCount * trialRate + normalCount * normalRate,
+        };
+      });
+
+      result.sort((a, b) => b.totalLessons - a.totalLessons);
+
+      res.json({
+        students: result,
+        rates: { normal: normalRate, trial: trialRate },
+        month: `${year}-${String(monthNum).padStart(2, "0")}`,
+      });
+    } catch (error) {
+      console.error("Error fetching ARC billing:", error);
+      res.status(500).json({ message: "Failed to fetch ARC billing data" });
+    }
+  });
+
+  app.patch("/api/admin/arc-rates", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { normalRate, trialRate } = req.body;
+      const parseRate = (v: any): number | null => {
+        const n = parseFloat(v);
+        if (!isFinite(n) || n < 0 || n > 100000) return null;
+        return n;
+      };
+      if (normalRate !== undefined) {
+        const val = parseRate(normalRate);
+        if (val === null) return res.status(400).json({ message: "Invalid normal rate" });
+        await storage.setSetting("arc-normal-rate", String(val));
+      }
+      if (trialRate !== undefined) {
+        const val = parseRate(trialRate);
+        if (val === null) return res.status(400).json({ message: "Invalid trial rate" });
+        await storage.setSetting("arc-trial-rate", String(val));
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating ARC rates:", error);
+      res.status(500).json({ message: "Failed to update rates" });
     }
   });
 

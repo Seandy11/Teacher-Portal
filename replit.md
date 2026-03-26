@@ -24,6 +24,8 @@ This is an internal teacher portal with the following core features:
 - **Teacher Management**: Add/remove teachers (delete only for inactive), assign calendar & sheet mappings, set hourly rates, toggle active status
 - **Leave Management**: View and approve/reject teacher leave requests
 - **Calendar Overview**: View all teachers' schedules with filtering, overlapping events side-by-side display
+- **Student Balances**: View remaining lesson time for all students (excludes ARC students)
+- **ARC Billing**: Track ARC student lessons per month with configurable trial rate (first 3 classes) and normal rate; calculates billing totals
 - **View as Teacher**: Impersonate any teacher to see the app from their perspective
 
 ### Calendar Display Features:
@@ -134,6 +136,10 @@ shared/
 - `GET /api/admin/impersonate/status` - Get current impersonation status
 - `GET /api/admin/payroll` - Get pay summaries for all active teachers (accepts ?month=YYYY-MM)
 - `POST /api/admin/sync-calendar` - Sync Google Calendar events into the portal DB (requires sync enabled + Google connected)
+
+### ARC Billing Endpoints
+- `GET /api/admin/arc-billing?month=YYYY-MM` - Get ARC student lessons and billing for a month
+- `PATCH /api/admin/arc-rates` - Update ARC billing rates (normalRate, trialRate)
 
 ### Pay Endpoints
 - `GET /api/pay/summary` - Get pay summary (hours worked, base pay, bonuses, total)
