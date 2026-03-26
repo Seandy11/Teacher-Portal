@@ -1635,10 +1635,16 @@ export async function registerRoutes(
 
   // ============ ARC BILLING ============
 
-  // Get ARC billing data for a given month
+  const isArcEvent = (title: string) => {
+    const upper = title.toUpperCase();
+    return upper.startsWith("ARC_") || upper.startsWith("ARC ");
+  };
+  const isDemoEvent = (title: string) => title.toUpperCase().includes("DEMO");
+  const extractArcStudent = (title: string) => title.replace(/^ARC[_ ]/i, "").trim();
+
   app.get("/api/admin/arc-billing", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const monthParam = req.query.month as string; // YYYY-MM
+      const monthParam = req.query.month as string;
       const now = new Date();
       let year: number, monthNum: number;
       if (monthParam && /^\d{4}-\d{2}$/.test(monthParam)) {
@@ -1650,23 +1656,16 @@ export async function registerRoutes(
       const timeMin = new Date(year, monthNum - 1, 1);
       const timeMax = new Date(year, monthNum, 0, 23, 59, 59);
 
-      // Get all class events in date range
       const events = await storage.getAllClassEventsInRange(timeMin, timeMax);
-
-      // Filter to ARC events only (title starts with "ARC_" or "ARC ")
       const arcEvents = events.filter(e =>
-        e.title.toUpperCase().startsWith("ARC_") || e.title.toUpperCase().startsWith("ARC ")
+        isArcEvent(e.title) && !isDemoEvent(e.title)
       );
 
-      // Group by student name (extracted from title after "ARC_" or "ARC ")
-      const studentMap = new Map<string, { teacherName: string; teacherId: string; lessons: { date: string; duration: number; title: string }[] }>();
+      const studentMap = new Map<string, { teacherName: string; teacherId: string; lessons: { date: string; startMs: number; duration: number; title: string }[] }>();
       for (const ev of arcEvents) {
-        // Skip grey events and availability blocks
         if (ev.colorId === "8" || ev.isAvailabilityBlock) continue;
-
-        const studentName = ev.title.replace(/^ARC[_ ]/i, "").trim();
+        const studentName = extractArcStudent(ev.title);
         if (!studentName) continue;
-
         if (!studentMap.has(studentName)) {
           studentMap.set(studentName, { teacherName: ev.teacherName, teacherId: ev.teacherId, lessons: [] });
         }
@@ -1680,40 +1679,41 @@ export async function registerRoutes(
         });
       }
 
-      // Get all-time ARC lesson counts per student (for trial detection across months)
-      const allArcEvents = await storage.getAllClassEventsInRange(
-        new Date(2020, 0, 1), // far back
-        timeMax
-      );
+      const allArcEvents = await storage.getAllClassEventsInRange(new Date(2020, 0, 1), timeMax);
       const allTimeCountMap = new Map<string, number>();
       for (const ev of allArcEvents) {
         if (ev.colorId === "8" || ev.isAvailabilityBlock) continue;
-        if (!ev.title.toUpperCase().startsWith("ARC_") && !ev.title.toUpperCase().startsWith("ARC ")) continue;
-        const studentName = ev.title.replace(/^ARC[_ ]/i, "").trim();
+        if (!isArcEvent(ev.title) || isDemoEvent(ev.title)) continue;
+        const studentName = extractArcStudent(ev.title);
         if (!studentName) continue;
-        // Count events that ended before this month's start
         if (ev.endDateTime < timeMin) {
           allTimeCountMap.set(studentName, (allTimeCountMap.get(studentName) || 0) + 1);
         }
       }
 
-      // Build result
       const normalRate = parseFloat((await storage.getSetting("arc-normal-rate")) || "0");
       const trialRate = parseFloat((await storage.getSetting("arc-trial-rate")) || "0");
+      const defaultTrialCount = parseInt((await storage.getSetting("arc-trial-count")) || "3", 10);
+      const currency = (await storage.getSetting("arc-currency")) || "ZAR";
+      const overridesRaw = await storage.getSetting("arc-student-overrides");
+      const overrides: Record<string, { normalRate?: number; trialRate?: number; trialCount?: number }> = overridesRaw ? JSON.parse(overridesRaw) : {};
 
       const result = Array.from(studentMap.entries()).map(([studentName, data]) => {
         const priorLessons = allTimeCountMap.get(studentName) || 0;
-        let trialCount = 0;
-        let normalCount = 0;
+        const ov = overrides[studentName] || {};
+        const stuNormalRate = ov.normalRate !== undefined ? ov.normalRate : normalRate;
+        const stuTrialRate = ov.trialRate !== undefined ? ov.trialRate : trialRate;
+        const stuTrialCount = ov.trialCount !== undefined ? ov.trialCount : defaultTrialCount;
+        let trialLessons = 0;
+        let normalLessons = 0;
 
         data.lessons.sort((a, b) => a.startMs - b.startMs);
-
         for (let i = 0; i < data.lessons.length; i++) {
           const totalSoFar = priorLessons + i + 1;
-          if (totalSoFar <= 3) {
-            trialCount++;
+          if (totalSoFar <= stuTrialCount) {
+            trialLessons++;
           } else {
-            normalCount++;
+            normalLessons++;
           }
         }
 
@@ -1721,11 +1721,15 @@ export async function registerRoutes(
           studentName,
           teacherName: data.teacherName,
           totalLessons: data.lessons.length,
-          trialLessons: trialCount,
-          normalLessons: normalCount,
-          trialAmount: trialCount * trialRate,
-          normalAmount: normalCount * normalRate,
-          totalAmount: trialCount * trialRate + normalCount * normalRate,
+          trialLessons,
+          normalLessons,
+          trialAmount: trialLessons * stuTrialRate,
+          normalAmount: normalLessons * stuNormalRate,
+          totalAmount: trialLessons * stuTrialRate + normalLessons * stuNormalRate,
+          effectiveNormalRate: stuNormalRate,
+          effectiveTrialRate: stuTrialRate,
+          effectiveTrialCount: stuTrialCount,
+          hasOverride: !!overrides[studentName],
         };
       });
 
@@ -1734,6 +1738,9 @@ export async function registerRoutes(
       res.json({
         students: result,
         rates: { normal: normalRate, trial: trialRate },
+        defaultTrialCount,
+        currency,
+        overrides,
         month: `${year}-${String(monthNum).padStart(2, "0")}`,
       });
     } catch (error) {
@@ -1742,9 +1749,9 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/admin/arc-rates", isAuthenticated, requireAdmin, async (req, res) => {
+  app.patch("/api/admin/arc-settings", isAuthenticated, requireAdmin, async (req, res) => {
     try {
-      const { normalRate, trialRate } = req.body;
+      const { normalRate, trialRate, trialCount, currency } = req.body;
       const parseRate = (v: any): number | null => {
         const n = parseFloat(v);
         if (!isFinite(n) || n < 0 || n > 100000) return null;
@@ -1760,10 +1767,63 @@ export async function registerRoutes(
         if (val === null) return res.status(400).json({ message: "Invalid trial rate" });
         await storage.setSetting("arc-trial-rate", String(val));
       }
+      if (trialCount !== undefined) {
+        const tc = parseInt(trialCount, 10);
+        if (!isFinite(tc) || tc < 0 || tc > 100) return res.status(400).json({ message: "Invalid trial count" });
+        await storage.setSetting("arc-trial-count", String(tc));
+      }
+      if (currency !== undefined) {
+        const allowed = ["ZAR", "CNY", "HKD", "USD", "EUR", "GBP"];
+        if (!allowed.includes(currency)) return res.status(400).json({ message: "Invalid currency" });
+        await storage.setSetting("arc-currency", currency);
+      }
       res.json({ success: true });
     } catch (error) {
-      console.error("Error updating ARC rates:", error);
-      res.status(500).json({ message: "Failed to update rates" });
+      console.error("Error updating ARC settings:", error);
+      res.status(500).json({ message: "Failed to update settings" });
+    }
+  });
+
+  app.patch("/api/admin/arc-student-override", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { studentName, normalRate, trialRate, trialCount, remove } = req.body;
+      if (!studentName || typeof studentName !== "string") {
+        return res.status(400).json({ message: "Student name required" });
+      }
+      const overridesRaw = await storage.getSetting("arc-student-overrides");
+      const overrides: Record<string, any> = overridesRaw ? JSON.parse(overridesRaw) : {};
+
+      if (remove) {
+        delete overrides[studentName];
+      } else {
+        const ov: any = {};
+        if (normalRate !== undefined && normalRate !== null && normalRate !== "") {
+          const n = parseFloat(normalRate);
+          if (!isFinite(n) || n < 0) return res.status(400).json({ message: "Invalid rate" });
+          ov.normalRate = n;
+        }
+        if (trialRate !== undefined && trialRate !== null && trialRate !== "") {
+          const n = parseFloat(trialRate);
+          if (!isFinite(n) || n < 0) return res.status(400).json({ message: "Invalid rate" });
+          ov.trialRate = n;
+        }
+        if (trialCount !== undefined && trialCount !== null && trialCount !== "") {
+          const n = parseInt(trialCount, 10);
+          if (!isFinite(n) || n < 0) return res.status(400).json({ message: "Invalid trial count" });
+          ov.trialCount = n;
+        }
+        if (Object.keys(ov).length === 0) {
+          delete overrides[studentName];
+        } else {
+          overrides[studentName] = ov;
+        }
+      }
+
+      await storage.setSetting("arc-student-overrides", JSON.stringify(overrides));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating student override:", error);
+      res.status(500).json({ message: "Failed to update student override" });
     }
   });
 

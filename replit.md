@@ -25,7 +25,7 @@ This is an internal teacher portal with the following core features:
 - **Leave Management**: View and approve/reject teacher leave requests
 - **Calendar Overview**: View all teachers' schedules with filtering, overlapping events side-by-side display
 - **Student Balances**: View remaining lesson time for all students (excludes ARC students)
-- **ARC Billing**: Track ARC student lessons per month with configurable trial rate (first 3 classes) and normal rate; calculates billing totals
+- **ARC Billing**: Track ARC student lessons per month; configurable trial rate & normal rate (defaults + per-student overrides); configurable trial class count; DEMO events excluded; multi-currency support (ZAR, RMB, HKD, USD, EUR, GBP)
 - **View as Teacher**: Impersonate any teacher to see the app from their perspective
 
 ### Calendar Display Features:
@@ -139,7 +139,8 @@ shared/
 
 ### ARC Billing Endpoints
 - `GET /api/admin/arc-billing?month=YYYY-MM` - Get ARC student lessons and billing for a month
-- `PATCH /api/admin/arc-rates` - Update ARC billing rates (normalRate, trialRate)
+- `PATCH /api/admin/arc-settings` - Update ARC settings (normalRate, trialRate, trialCount, currency)
+- `PATCH /api/admin/arc-student-override` - Set per-student rate/trial overrides (studentName, normalRate, trialRate, trialCount, remove)
 
 ### Pay Endpoints
 - `GET /api/pay/summary` - Get pay summary (hours worked, base pay, bonuses, total)
