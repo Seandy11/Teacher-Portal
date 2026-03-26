@@ -1,6 +1,6 @@
-import { teachers, leaveRequests, bonuses, appSettings, classEvents, type Teacher, type InsertTeacher, type LeaveRequest, type InsertLeaveRequest, type UpdateLeaveRequest, type Bonus, type InsertBonus, type AppSetting, type ClassEvent, type InsertClassEvent } from "@shared/schema";
+import { teachers, leaveRequests, bonuses, appSettings, classEvents, dropdownOptions, type Teacher, type InsertTeacher, type LeaveRequest, type InsertLeaveRequest, type UpdateLeaveRequest, type Bonus, type InsertBonus, type AppSetting, type ClassEvent, type InsertClassEvent, type DropdownOption, type InsertDropdownOption } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
+import { eq, and, gte, lte, or, isNull, asc } from "drizzle-orm";
 
 export interface IStorage {
   // Teachers
@@ -24,6 +24,13 @@ export interface IStorage {
   getBonusesByTeacher(teacherId: string): Promise<Bonus[]>;
   createBonus(bonus: InsertBonus): Promise<Bonus>;
   deleteBonus(id: string): Promise<boolean>;
+
+  // Dropdown Options
+  getDropdownOptions(): Promise<DropdownOption[]>;
+  createDropdownOption(option: InsertDropdownOption): Promise<DropdownOption>;
+  updateDropdownOption(id: string, updates: Partial<InsertDropdownOption>): Promise<DropdownOption | undefined>;
+  deleteDropdownOption(id: string): Promise<boolean>;
+  reorderDropdownOptions(ids: string[]): Promise<void>;
 
   // App Settings
   getSetting(key: string): Promise<string | null>;
@@ -131,6 +138,32 @@ export class DatabaseStorage implements IStorage {
   async deleteBonus(id: string): Promise<boolean> {
     const result = await db.delete(bonuses).where(eq(bonuses.id, id)).returning();
     return result.length > 0;
+  }
+
+  // Dropdown Options
+  async getDropdownOptions(): Promise<DropdownOption[]> {
+    return db.select().from(dropdownOptions).orderBy(asc(dropdownOptions.sortOrder), asc(dropdownOptions.createdAt));
+  }
+
+  async createDropdownOption(option: InsertDropdownOption): Promise<DropdownOption> {
+    const [created] = await db.insert(dropdownOptions).values(option).returning();
+    return created;
+  }
+
+  async updateDropdownOption(id: string, updates: Partial<InsertDropdownOption>): Promise<DropdownOption | undefined> {
+    const [updated] = await db.update(dropdownOptions).set(updates).where(eq(dropdownOptions.id, id)).returning();
+    return updated;
+  }
+
+  async deleteDropdownOption(id: string): Promise<boolean> {
+    const result = await db.delete(dropdownOptions).where(eq(dropdownOptions.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async reorderDropdownOptions(ids: string[]): Promise<void> {
+    for (let i = 0; i < ids.length; i++) {
+      await db.update(dropdownOptions).set({ sortOrder: i }).where(eq(dropdownOptions.id, ids[i]));
+    }
   }
 
   // App Settings

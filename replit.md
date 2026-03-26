@@ -87,6 +87,7 @@ shared/
 - **bonuses** - Teacher bonus records (amount, month, description)
 - **google_tokens** - Singleton table storing Google OAuth2 tokens (access_token, refresh_token, expires_at)
 - **class_events** - `recurrenceGroupId` column links all events in a recurring series
+- **dropdown_options** - Lesson detail dropdown options for attendance (value, sort_order)
 
 ### Key Relations
 - teachers.userId → users.id
@@ -107,8 +108,10 @@ shared/
 - `GET /api/calendar/events` - Get calendar events
 - `POST /api/calendar/availability` - Create availability block
 - `DELETE /api/calendar/availability/:eventId` - Remove availability block
-- `GET /api/attendance` - Get attendance rows
-- `PATCH /api/attendance/:rowIndex` - Update attendance cell
+- `GET /api/attendance` - Get attendance rows (dropdown options now served from DB)
+- `PATCH /api/attendance/:rowIndex` - Update single attendance cell
+- `PATCH /api/attendance/batch` - Batch update multiple attendance cells
+- `GET /api/dropdown-options` - Get lesson detail dropdown options (any authenticated user)
 - `GET /api/leave-requests/me` - Get own leave requests
 - `POST /api/leave-requests` - Submit leave request
 
@@ -122,6 +125,9 @@ shared/
 - `GET /api/admin/bonuses` - List bonuses (filtered by teacher/month)
 - `POST /api/admin/bonuses` - Add bonus
 - `DELETE /api/admin/bonuses/:id` - Delete bonus
+- `POST /api/admin/dropdown-options` - Add a lesson detail dropdown option
+- `DELETE /api/admin/dropdown-options/:id` - Delete a dropdown option
+- `PATCH /api/admin/dropdown-options/reorder` - Reorder dropdown options (send ordered array of IDs)
 - `POST /api/admin/teachers/:id/reset-password` - Reset teacher's password (admin only)
 - `POST /api/admin/impersonate/:teacherId` - Start impersonating a teacher
 - `POST /api/admin/impersonate/exit` - Stop impersonating

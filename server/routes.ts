@@ -6,7 +6,7 @@ import { authStorage } from "./replit_integrations/auth/storage";
 import crypto from "crypto";
 import { getGoogleCalendarClient, getAuthUrl, exchangeCodeForTokens, isGoogleConnected } from "./integrations/googleCalendar";
 import { getGoogleSheetsClient } from "./integrations/googleSheets";
-import { insertLeaveRequestSchema, updateLeaveRequestSchema, insertTeacherSchema, insertBonusSchema } from "@shared/schema";
+import { insertLeaveRequestSchema, updateLeaveRequestSchema, insertTeacherSchema, insertBonusSchema, insertDropdownOptionSchema } from "@shared/schema";
 import type { CalendarEvent, AttendanceRow } from "@shared/schema";
 
 const MASTER_ADMIN_EMAIL = "admin@brighthorizononline.com";
@@ -463,29 +463,9 @@ export async function registerRoutes(
 
       const rows = response.data.values || [];
       
-      // Get data validation for column C to find dropdown options
-      let dropdownOptionsMap: Map<number, string[]> = new Map();
-      try {
-        const validationResponse = await sheets.spreadsheets.get({
-          spreadsheetId: teacher.sheetId,
-          ranges: [`'${tabName}'!C3:C1000`],
-          fields: "sheets.data.rowData.values.dataValidation",
-        });
-        
-        const rowData = validationResponse.data.sheets?.[0]?.data?.[0]?.rowData || [];
-        rowData.forEach((row: any, index: number) => {
-          const validation = row?.values?.[0]?.dataValidation;
-          if (validation?.condition?.type === "ONE_OF_LIST" && validation?.condition?.values) {
-            const options = validation.condition.values.map((v: any) => v.userEnteredValue || "").filter((v: string) => v);
-            if (options.length > 0) {
-              dropdownOptionsMap.set(index + 3, options); // +3 because data starts at row 3
-            }
-          }
-        });
-      } catch (validationError) {
-        console.error("Error fetching data validation:", validationError);
-        // Continue without dropdown options
-      }
+      // Get dropdown options from the database
+      const dbDropdownOptions = await storage.getDropdownOptions();
+      const dropdownValues = dbDropdownOptions.map(o => o.value);
 
       const attendance: AttendanceRow[] = rows.map((row: any[], index: number) => {
         const rowNum = index + 3; // +3 because data starts at row 3
@@ -500,7 +480,7 @@ export async function registerRoutes(
           remainingTime: row[6] || "",
           referralCredits: row[7] || "",
           notes: row[8] || "",
-          dropdownOptions: dropdownOptionsMap.get(rowNum),
+          dropdownOptions: dropdownValues.length > 0 ? dropdownValues : undefined,
         };
       }).filter((row: AttendanceRow) => row.date || row.lessonNo); // Filter out empty rows
 
@@ -511,7 +491,54 @@ export async function registerRoutes(
     }
   });
 
-  // Update lesson details (Column C only)
+  // Batch update lesson details (Column C) for multiple rows — MUST be declared before /:rowIndex
+  app.patch("/api/attendance/batch", isAuthenticated, requireTeacher, async (req: any, res) => {
+    try {
+      const teacher = req.teacher;
+      if (!teacher.sheetId) {
+        return res.status(400).json({ message: "No sheet assigned" });
+      }
+
+      const { tabName, updates } = req.body;
+      if (!tabName || !Array.isArray(updates) || updates.length === 0) {
+        return res.status(400).json({ message: "Tab name and updates array are required" });
+      }
+
+      // Validate each update entry
+      for (const update of updates) {
+        const idx = parseInt(update.rowIndex, 10);
+        if (isNaN(idx) || idx < 3) {
+          return res.status(400).json({ message: `Invalid row index: ${update.rowIndex}. All rows must be >= 3.` });
+        }
+        if (typeof update.value !== "string") {
+          return res.status(400).json({ message: "Each update must have a string value." });
+        }
+      }
+
+      const sheets = await getGoogleSheetsClient();
+
+      // Build batch data array for all validated rows
+      const data = updates.map(({ rowIndex, value }: { rowIndex: number; value: string }) => ({
+        range: `'${tabName}'!C${rowIndex}`,
+        values: [[value]],
+      }));
+
+      await sheets.spreadsheets.values.batchUpdate({
+        spreadsheetId: teacher.sheetId,
+        requestBody: {
+          valueInputOption: "USER_ENTERED",
+          data,
+        },
+      });
+
+      res.json({ success: true, updated: updates.length });
+    } catch (error) {
+      console.error("Error batch updating lesson details:", error);
+      res.status(500).json({ message: "Failed to batch update lesson details" });
+    }
+  });
+
+  // Update lesson details (Column C only) — single row
   app.patch("/api/attendance/:rowIndex", isAuthenticated, requireTeacher, async (req: any, res) => {
     try {
       const teacher = req.teacher;
@@ -1124,6 +1151,64 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error saving setting:", error);
       res.status(500).json({ message: "Failed to save setting" });
+    }
+  });
+
+  // ============ DROPDOWN OPTIONS ROUTES ============
+
+  // Get all dropdown options (accessible by all authenticated users)
+  app.get("/api/dropdown-options", isAuthenticated, async (req, res) => {
+    try {
+      const options = await storage.getDropdownOptions();
+      res.json(options);
+    } catch (error) {
+      console.error("Error fetching dropdown options:", error);
+      res.status(500).json({ message: "Failed to fetch dropdown options" });
+    }
+  });
+
+  // Create dropdown option (admin only)
+  app.post("/api/admin/dropdown-options", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const validatedData = insertDropdownOptionSchema.parse(req.body);
+      const option = await storage.createDropdownOption(validatedData);
+      res.status(201).json(option);
+    } catch (error: any) {
+      console.error("Error creating dropdown option:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create dropdown option" });
+    }
+  });
+
+  // Delete dropdown option (admin only)
+  app.delete("/api/admin/dropdown-options/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const id = req.params.id as string;
+      const deleted = await storage.deleteDropdownOption(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Dropdown option not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting dropdown option:", error);
+      res.status(500).json({ message: "Failed to delete dropdown option" });
+    }
+  });
+
+  // Reorder dropdown options (admin only) - send ordered array of IDs
+  app.patch("/api/admin/dropdown-options/reorder", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids)) {
+        return res.status(400).json({ message: "ids must be an array" });
+      }
+      await storage.reorderDropdownOptions(ids);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error reordering dropdown options:", error);
+      res.status(500).json({ message: "Failed to reorder dropdown options" });
     }
   });
 

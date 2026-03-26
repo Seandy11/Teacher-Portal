@@ -93,6 +93,27 @@ export default function TeacherDashboard() {
     },
   });
 
+  const batchUpdateLessonMutation = useMutation({
+    mutationFn: async (updates: { rowIndex: number; value: string }[]) => {
+      if (!selectedStudentTab) {
+        throw new Error("No student tab selected");
+      }
+      return apiRequest("PATCH", "/api/attendance/batch", { tabName: selectedStudentTab, updates });
+    },
+    onSuccess: (_data, updates) => {
+      toast({ title: "Lessons updated", description: `${updates.length} row${updates.length !== 1 ? "s" : ""} updated successfully.` });
+      queryClient.invalidateQueries({ queryKey: [`/api/attendance?tab=${encodeURIComponent(selectedStudentTab)}`] });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({ title: "Session expired", description: "Redirecting to login...", variant: "destructive" });
+        setTimeout(() => { window.location.href = "/"; }, 500);
+        return;
+      }
+      toast({ title: "Error", description: "Failed to batch update lesson details.", variant: "destructive" });
+    },
+  });
+
   const createLeaveMutation = useMutation({
     mutationFn: async (data: { startDate: string; endDate: string; leaveType: string; reason?: string }) => {
       return apiRequest("POST", "/api/leave-requests", data);
@@ -173,6 +194,9 @@ export default function TeacherDashboard() {
                 onSelectTab={setSelectedStudentTab}
                 onUpdate={async (rowIndex, value) => {
                   await updateLessonMutation.mutateAsync({ rowIndex, value });
+                }}
+                onBatchUpdate={async (updates) => {
+                  await batchUpdateLessonMutation.mutateAsync(updates);
                 }}
                 onRefresh={() => { refetchTabs(); refetchAttendance(); }}
               />

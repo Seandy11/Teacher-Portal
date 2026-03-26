@@ -8,6 +8,7 @@ import { LeaveManagement } from "@/components/admin/leave-management";
 import { CalendarOverview } from "@/components/admin/calendar-overview";
 import { PayrollOverview } from "@/components/admin/payroll-overview";
 import { BonusManagement } from "@/components/admin/bonus-management";
+import { DropdownOptionsManagement } from "@/components/admin/dropdown-options-management";
 import { FullPageLoader } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,10 +16,10 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/auth-utils";
 import { Button } from "@/components/ui/button";
-import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Wallet, Link2, Link2Off, RefreshCw, Gift } from "lucide-react";
+import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Wallet, Link2, Link2Off, RefreshCw, Gift, ListChecks } from "lucide-react";
 import type { Teacher, LeaveRequest } from "@shared/schema";
 
-type AdminView = "dashboard" | "calendar" | "teachers" | "leave" | "payroll" | "bonuses";
+type AdminView = "dashboard" | "calendar" | "teachers" | "leave" | "payroll" | "bonuses" | "dropdown-options";
 
 const navItems = [
   { id: "dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
@@ -27,6 +28,7 @@ const navItems = [
   { id: "leave" as const, label: "Leave Requests", icon: FileText },
   { id: "payroll" as const, label: "Payroll", icon: Wallet },
   { id: "bonuses" as const, label: "Bonuses", icon: Gift },
+  { id: "dropdown-options" as const, label: "Dropdown Options", icon: ListChecks },
 ];
 
 export default function AdminDashboard() {
@@ -428,6 +430,16 @@ export default function AdminDashboard() {
                   <p className="text-muted-foreground">Add and manage teacher bonuses</p>
                 </div>
                 <BonusManagement teachers={teachers.filter(t => t.role !== "admin")} />
+              </div>
+            )}
+
+            {activeView === "dropdown-options" && (
+              <div className="space-y-6">
+                <div>
+                  <h1 className="text-2xl font-medium">Dropdown Options</h1>
+                  <p className="text-muted-foreground">Manage the lesson detail options that appear in attendance dropdowns</p>
+                </div>
+                <DropdownOptionsManagement />
               </div>
             )}
           </main>

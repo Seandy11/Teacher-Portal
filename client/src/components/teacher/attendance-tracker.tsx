@@ -1,15 +1,17 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { EmptyState } from "@/components/empty-state";
 import { LoadingSpinner } from "@/components/loading-spinner";
-import { FileSpreadsheet, Lock, Edit2, Save, X, RefreshCw, Search, Users, MessageCircle } from "lucide-react";
-import type { AttendanceRow, SheetTab } from "@shared/schema";
+import { FileSpreadsheet, Lock, Edit2, Save, X, RefreshCw, Search, Users, MessageCircle, CheckSquare } from "lucide-react";
+import type { AttendanceRow, SheetTab, DropdownOption } from "@shared/schema";
 
 const READ_NOTES_KEY = "teacher-portal-read-notes";
 
@@ -44,6 +46,7 @@ interface AttendanceTrackerProps {
   selectedTab: string;
   onSelectTab: (tab: string) => void;
   onUpdate: (rowIndex: number, value: string) => Promise<void>;
+  onBatchUpdate: (updates: { rowIndex: number; value: string }[]) => Promise<void>;
   onRefresh: () => void;
 }
 
@@ -54,7 +57,8 @@ export function AttendanceTracker({
   isLoadingRows, 
   selectedTab, 
   onSelectTab, 
-  onUpdate, 
+  onUpdate,
+  onBatchUpdate,
   onRefresh 
 }: AttendanceTrackerProps) {
   const [editingRow, setEditingRow] = useState<number | null>(null);
@@ -62,6 +66,21 @@ export function AttendanceTracker({
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [readNotes, setReadNotes] = useState<Record<string, boolean>>(getReadNotes);
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const [bulkValue, setBulkValue] = useState<string>("");
+  const [isBulkSaving, setIsBulkSaving] = useState(false);
+
+  const { data: dropdownOptions = [] } = useQuery<DropdownOption[]>({
+    queryKey: ["/api/dropdown-options"],
+  });
+
+  const dropdownValues = dropdownOptions.map(o => o.value);
+
+  // Clear multi-select state when the selected tab or rows change
+  useEffect(() => {
+    setSelectedRows(new Set());
+    setBulkValue("");
+  }, [selectedTab, rows]);
 
   const filteredRows = rows.filter(row => 
     row.date.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -94,8 +113,41 @@ export function AttendanceTracker({
     setReadNotes(prev => ({ ...prev, [getNoteKey(tab, rowIndex, note)]: true }));
   }, []);
 
-  const currentRow = rows.find(r => r.rowIndex === editingRow);
-  const hasDropdown = currentRow?.dropdownOptions && currentRow.dropdownOptions.length > 0;
+  const toggleRowSelection = (rowIndex: number) => {
+    setSelectedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(rowIndex)) {
+        next.delete(rowIndex);
+      } else {
+        next.add(rowIndex);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedRows.size === filteredRows.length) {
+      setSelectedRows(new Set());
+    } else {
+      setSelectedRows(new Set(filteredRows.map(r => r.rowIndex)));
+    }
+  };
+
+  const handleBulkApply = async () => {
+    if (!bulkValue || selectedRows.size === 0) return;
+    setIsBulkSaving(true);
+    try {
+      const updates = Array.from(selectedRows).map(rowIndex => ({ rowIndex, value: bulkValue }));
+      await onBatchUpdate(updates);
+      setSelectedRows(new Set());
+      setBulkValue("");
+    } finally {
+      setIsBulkSaving(false);
+    }
+  };
+
+  const allSelected = filteredRows.length > 0 && selectedRows.size === filteredRows.length;
+  const someSelected = selectedRows.size > 0 && selectedRows.size < filteredRows.length;
 
   return (
     <div className="space-y-6">
@@ -164,6 +216,57 @@ export function AttendanceTracker({
         </Badge>
       </div>
 
+      {/* Bulk apply toolbar */}
+      {selectedRows.size > 0 && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 rounded-lg border bg-muted/40" data-testid="toolbar-bulk-apply">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <CheckSquare className="h-4 w-4 text-primary" />
+            <span data-testid="text-selected-count">{selectedRows.size} row{selectedRows.size !== 1 ? "s" : ""} selected</span>
+          </div>
+          <div className="flex flex-1 gap-2 w-full sm:w-auto">
+            {dropdownValues.length > 0 ? (
+              <Select value={bulkValue} onValueChange={setBulkValue}>
+                <SelectTrigger className="flex-1 min-w-[180px]" data-testid="select-bulk-value">
+                  <SelectValue placeholder="Choose value to apply..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {dropdownValues.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                placeholder="Enter value to apply..."
+                value={bulkValue}
+                onChange={(e) => setBulkValue(e.target.value)}
+                className="flex-1"
+                data-testid="input-bulk-value"
+              />
+            )}
+            <Button
+              onClick={handleBulkApply}
+              disabled={!bulkValue || isBulkSaving}
+              data-testid="button-apply-to-selected"
+              size="sm"
+            >
+              {isBulkSaving ? <LoadingSpinner size="sm" /> : null}
+              Apply to selected
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setSelectedRows(new Set()); setBulkValue(""); }}
+              data-testid="button-clear-selection"
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       {!selectedTab ? (
         <EmptyState
           icon={Users}
@@ -187,6 +290,14 @@ export function AttendanceTracker({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                        onCheckedChange={toggleSelectAll}
+                        data-testid="checkbox-select-all"
+                        aria-label="Select all rows"
+                      />
+                    </TableHead>
                     <TableHead className="min-w-[60px]">No.</TableHead>
                     <TableHead className="min-w-[100px]">Date</TableHead>
                     <TableHead className="min-w-[200px]">
@@ -236,14 +347,27 @@ export function AttendanceTracker({
                     const noteKey = getNoteKey(selectedTab, row.rowIndex, row.notes);
                     const noteIsRead = hasNote && (isNoteRead(selectedTab, row.rowIndex, row.notes) || readNotes[noteKey]);
                     const isUnread = hasNote && !noteIsRead;
+                    const isSelected = selectedRows.has(row.rowIndex);
 
                     return (
-                      <TableRow key={row.rowIndex} data-testid={`row-attendance-${row.rowIndex}`}>
+                      <TableRow
+                        key={row.rowIndex}
+                        data-testid={`row-attendance-${row.rowIndex}`}
+                        className={isSelected ? "bg-primary/5" : ""}
+                      >
+                        <TableCell>
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleRowSelection(row.rowIndex)}
+                            data-testid={`checkbox-row-${row.rowIndex}`}
+                            aria-label={`Select row ${row.rowIndex}`}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">{row.lessonNo}</TableCell>
                         <TableCell>{row.date}</TableCell>
                         <TableCell>
                           {editingRow === row.rowIndex ? (
-                            row.dropdownOptions && row.dropdownOptions.length > 0 ? (
+                            dropdownValues.length > 0 ? (
                               <Select
                                 value={editValue}
                                 onValueChange={setEditValue}
@@ -252,7 +376,7 @@ export function AttendanceTracker({
                                   <SelectValue placeholder="Select..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {row.dropdownOptions.map((option) => (
+                                  {dropdownValues.map((option) => (
                                     <SelectItem key={option} value={option}>
                                       {option}
                                     </SelectItem>

@@ -61,6 +61,22 @@ export const leaveRequests = pgTable("leave_requests", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Dropdown options table - stores lesson detail dropdown options for attendance
+export const dropdownOptions = pgTable("dropdown_options", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  value: text("value").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertDropdownOptionSchema = createInsertSchema(dropdownOptions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type DropdownOption = typeof dropdownOptions.$inferSelect;
+export type InsertDropdownOption = z.infer<typeof insertDropdownOptionSchema>;
+
 // Google OAuth tokens table - stores admin's Google OAuth refresh token
 export const googleTokens = pgTable("google_tokens", {
   id: varchar("id").primaryKey().default("singleton"),
