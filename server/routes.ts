@@ -1537,6 +1537,101 @@ export async function registerRoutes(
     }
   });
 
+  // ============ STUDENT BALANCES ROUTE ============
+
+  app.get("/api/admin/student-balances", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const connected = await isGoogleConnected();
+      if (!connected) {
+        return res.status(400).json({ message: "Google account not connected. An admin must connect Google first." });
+      }
+
+      const allTeachers = await storage.getAllTeachers();
+      const teachersWithSheets = allTeachers.filter(t => t.isActive && t.sheetId);
+
+      if (teachersWithSheets.length === 0) {
+        return res.json([]);
+      }
+
+      const sheets = await getGoogleSheetsClient();
+
+      const results: { studentName: string; teacherName: string; remainingTime: string; timePurchased: string }[] = [];
+
+      await Promise.all(teachersWithSheets.map(async (teacher) => {
+        try {
+          const spreadsheet = await sheets.spreadsheets.get({
+            spreadsheetId: teacher.sheetId!,
+            fields: "sheets.properties",
+          });
+
+          const tabs = (spreadsheet.data.sheets || []).map((s: any) => s.properties.title as string);
+
+          await Promise.all(tabs.map(async (tabName: string) => {
+            try {
+              const escapedTab = tabName.replace(/'/g, "''");
+              const response = await sheets.spreadsheets.values.get({
+                spreadsheetId: teacher.sheetId!,
+                range: `'${escapedTab}'!E3:G1000`,
+              });
+
+              const rows = response.data.values || [];
+              let lastRemainingTime = "";
+              let lastTimePurchased = "";
+
+              for (let i = rows.length - 1; i >= 0; i--) {
+                const colG = (rows[i]?.[2] || "").toString().trim();
+                if (colG && !lastRemainingTime) {
+                  lastRemainingTime = colG;
+                }
+                const colE = (rows[i]?.[0] || "").toString().trim();
+                if (colE && !lastTimePurchased) {
+                  lastTimePurchased = colE;
+                }
+                if (lastRemainingTime && lastTimePurchased) break;
+              }
+
+              if (lastRemainingTime || lastTimePurchased) {
+                results.push({
+                  studentName: tabName,
+                  teacherName: teacher.name,
+                  remainingTime: lastRemainingTime || "N/A",
+                  timePurchased: lastTimePurchased || "N/A",
+                });
+              }
+            } catch (tabError) {
+              console.error(`Error reading tab "${tabName}" for teacher ${teacher.name}:`, tabError);
+            }
+          }));
+        } catch (sheetError) {
+          console.error(`Error reading sheet for teacher ${teacher.name}:`, sheetError);
+        }
+      }));
+
+      const parseTimeToMinutes = (timeStr: string): number => {
+        if (!timeStr || timeStr === "N/A") return Infinity;
+        const isNegative = /^\s*[-(]/.test(timeStr);
+        const cleaned = timeStr.replace(/[^0-9:.]/g, "");
+        if (cleaned.includes(":")) {
+          const parts = cleaned.split(":");
+          const hours = parseInt(parts[0] || "0", 10);
+          const minutes = parseInt(parts[1] || "0", 10);
+          const total = hours * 60 + minutes;
+          return isNegative ? -total : total;
+        }
+        const num = parseFloat(cleaned);
+        if (isNaN(num)) return Infinity;
+        return isNegative ? -num : num;
+      };
+
+      results.sort((a, b) => parseTimeToMinutes(a.remainingTime) - parseTimeToMinutes(b.remainingTime));
+
+      res.json(results);
+    } catch (error) {
+      console.error("Error fetching student balances:", error);
+      res.status(500).json({ message: "Failed to fetch student balances" });
+    }
+  });
+
   // ============ IMPERSONATION ROUTES ============
   // NOTE: Specific routes (/exit, /status) MUST be defined before parameterized routes (/:teacherId)
 

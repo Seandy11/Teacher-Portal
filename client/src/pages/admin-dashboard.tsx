@@ -9,6 +9,7 @@ import { CalendarOverview } from "@/components/admin/calendar-overview";
 import { PayrollOverview } from "@/components/admin/payroll-overview";
 import { BonusManagement } from "@/components/admin/bonus-management";
 import { DropdownOptionsManagement } from "@/components/admin/dropdown-options-management";
+import { StudentBalances } from "@/components/admin/student-balances";
 import { FullPageLoader } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
 import { useAuth } from "@/hooks/use-auth";
@@ -16,10 +17,10 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/auth-utils";
 import { Button } from "@/components/ui/button";
-import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Wallet, Link2, Link2Off, RefreshCw, Gift, ListChecks } from "lucide-react";
+import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Wallet, Link2, Link2Off, RefreshCw, Gift, ListChecks, GraduationCap } from "lucide-react";
 import type { Teacher, LeaveRequest } from "@shared/schema";
 
-type AdminView = "dashboard" | "calendar" | "teachers" | "leave" | "payroll" | "bonuses" | "dropdown-options";
+type AdminView = "dashboard" | "calendar" | "teachers" | "leave" | "payroll" | "bonuses" | "dropdown-options" | "student-balances";
 
 const navItems = [
   { id: "dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
@@ -29,6 +30,7 @@ const navItems = [
   { id: "payroll" as const, label: "Payroll", icon: Wallet },
   { id: "bonuses" as const, label: "Bonuses", icon: Gift },
   { id: "dropdown-options" as const, label: "Dropdown Options", icon: ListChecks },
+  { id: "student-balances" as const, label: "Student Balances", icon: GraduationCap },
 ];
 
 export default function AdminDashboard() {
@@ -441,6 +443,10 @@ export default function AdminDashboard() {
                 </div>
                 <DropdownOptionsManagement />
               </div>
+            )}
+
+            {activeView === "student-balances" && (
+              <StudentBalances />
             )}
           </main>
         </SidebarInset>
