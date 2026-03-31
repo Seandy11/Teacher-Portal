@@ -7,6 +7,7 @@ import { TeacherManagement } from "@/components/admin/teacher-management";
 import { LeaveManagement } from "@/components/admin/leave-management";
 import { CalendarOverview } from "@/components/admin/calendar-overview";
 import { PayrollOverview } from "@/components/admin/payroll-overview";
+import { BonusManagement } from "@/components/admin/bonus-management";
 import { FullPageLoader } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
 import { useAuth } from "@/hooks/use-auth";
@@ -14,10 +15,10 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/auth-utils";
 import { Button } from "@/components/ui/button";
-import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Wallet, Link2, Link2Off, RefreshCw } from "lucide-react";
+import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Wallet, Link2, Link2Off, RefreshCw, Gift } from "lucide-react";
 import type { Teacher, LeaveRequest } from "@shared/schema";
 
-type AdminView = "dashboard" | "calendar" | "teachers" | "leave" | "payroll";
+type AdminView = "dashboard" | "calendar" | "teachers" | "leave" | "payroll" | "bonuses";
 
 const navItems = [
   { id: "dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
@@ -25,6 +26,7 @@ const navItems = [
   { id: "teachers" as const, label: "Teachers", icon: Users },
   { id: "leave" as const, label: "Leave Requests", icon: FileText },
   { id: "payroll" as const, label: "Payroll", icon: Wallet },
+  { id: "bonuses" as const, label: "Bonuses", icon: Gift },
 ];
 
 export default function AdminDashboard() {
@@ -417,6 +419,16 @@ export default function AdminDashboard() {
 
             {activeView === "payroll" && (
               <PayrollOverview />
+            )}
+
+            {activeView === "bonuses" && (
+              <div className="space-y-6">
+                <div>
+                  <h1 className="text-2xl font-medium">Bonuses</h1>
+                  <p className="text-muted-foreground">Manage teacher bonuses by month</p>
+                </div>
+                <BonusManagement teachers={teachers} />
+              </div>
             )}
           </main>
         </SidebarInset>
