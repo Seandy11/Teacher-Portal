@@ -20,6 +20,7 @@ export interface IStorage {
   updateLeaveRequest(id: string, updates: UpdateLeaveRequest): Promise<LeaveRequest | undefined>;
   
   // Bonuses
+  getAllBonuses(): Promise<Bonus[]>;
   getBonusesByTeacherAndMonth(teacherId: string, month: string): Promise<Bonus[]>;
   getBonusesByTeacher(teacherId: string): Promise<Bonus[]>;
   createBonus(bonus: InsertBonus): Promise<Bonus>;
@@ -95,6 +96,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Bonuses
+  async getAllBonuses(): Promise<Bonus[]> {
+    return db.select().from(bonuses);
+  }
+
   async getBonusesByTeacherAndMonth(teacherId: string, month: string): Promise<Bonus[]> {
     return db.select().from(bonuses).where(
       and(eq(bonuses.teacherId, teacherId), eq(bonuses.month, month))

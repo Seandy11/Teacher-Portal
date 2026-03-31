@@ -840,6 +840,85 @@ export async function registerRoutes(
     }
   });
 
+  // One-time import: migrate historical bonuses from Google Sheets into the database
+  app.post("/api/admin/bonuses/import-from-sheets", isAuthenticated, requireAdmin, async (req, res) => {
+    const payrollSheetId = process.env.PAYROLL_SHEET_ID;
+    if (!payrollSheetId) {
+      return res.status(400).json({ message: "PAYROLL_SHEET_ID is not set in environment variables" });
+    }
+
+    try {
+      const sheets = await getGoogleSheetsClient();
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: payrollSheetId,
+        range: "'Adjustments'!A2:I5000",
+      });
+
+      const rows = response.data.values || [];
+      const allTeachers = await storage.getAllTeachers();
+      const existingBonuses = await storage.getAllBonuses();
+      const existingSet = new Set(existingBonuses.map(b => `${b.teacherId}|${b.month}|${b.reason}`));
+
+      const parseCurrency = (val: string | undefined): number => {
+        if (!val || typeof val !== "string") return 0;
+        const negative = val.includes("-") || val.includes("(");
+        const num = parseFloat(val.replace(/[^0-9.]/g, ""));
+        if (isNaN(num)) return 0;
+        return negative ? -num : num;
+      };
+
+      const findTeacher = (sheetName: string) => {
+        const lower = sheetName.toLowerCase().trim();
+        return allTeachers.find(t => {
+          const tLower = t.name.toLowerCase().trim();
+          return lower === tLower || lower === tLower.split(" ")[0];
+        });
+      };
+
+      const bonusTypes = [
+        { col: 3, reason: "Assessment" },
+        { col: 4, reason: "Training" },
+        { col: 5, reason: "Referral" },
+        { col: 6, reason: "Retention" },
+        { col: 7, reason: "Demo" },
+      ];
+
+      let imported = 0;
+      let skipped = 0;
+      const unmatched = new Set<string>();
+
+      for (const row of rows) {
+        const sheetName = (row[0] || "").toString().trim();
+        const year = parseInt(row[1] || "0", 10);
+        const monthNum = parseInt(row[2] || "0", 10);
+        if (!sheetName || !year || !monthNum) continue;
+
+        const teacher = findTeacher(sheetName);
+        if (!teacher) {
+          unmatched.add(sheetName);
+          continue;
+        }
+
+        const month = `${year}-${String(monthNum).padStart(2, "0")}`;
+
+        for (const { col, reason } of bonusTypes) {
+          const amount = parseCurrency(row[col]);
+          if (amount === 0) continue;
+          const key = `${teacher.id}|${month}|${reason}`;
+          if (existingSet.has(key)) { skipped++; continue; }
+          await storage.createBonus({ teacherId: teacher.id, amount: amount.toString(), reason, month });
+          existingSet.add(key);
+          imported++;
+        }
+      }
+
+      res.json({ imported, skipped, unmatched: Array.from(unmatched) });
+    } catch (error) {
+      console.error("Bonus import error:", error);
+      res.status(500).json({ message: "Failed to import bonuses from Google Sheets" });
+    }
+  });
+
   // ============ PAY CALCULATION ROUTES ============
 
   // Helper function to fetch bonuses from database

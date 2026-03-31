@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { LoadingSpinner } from "@/components/loading-spinner";
-import { Plus, Trash2, Wallet, Gift } from "lucide-react";
+import { Plus, Trash2, Wallet, Gift, Download } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -34,11 +34,18 @@ interface BonusManagementProps {
   teachers: Teacher[];
 }
 
+interface ImportResult {
+  imported: number;
+  skipped: number;
+  unmatched: string[];
+}
+
 export function BonusManagement({ teachers }: BonusManagementProps) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Bonus | null>(null);
   const [selectedTeacher, setSelectedTeacher] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthLocal());
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const { toast } = useToast();
 
   const form = useForm<BonusFormValues>({
@@ -111,6 +118,20 @@ export function BonusManagement({ teachers }: BonusManagementProps) {
     }
   };
 
+  const importMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/admin/bonuses/import-from-sheets", {});
+    },
+    onSuccess: async (res: any) => {
+      const data: ImportResult = await res.json();
+      setImportResult(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bonuses"] });
+    },
+    onError: () => {
+      toast({ title: "Import failed", description: "Check that PAYROLL_SHEET_ID is set and Google is connected.", variant: "destructive" });
+    },
+  });
+
   const activeTeachers = teachers.filter(t => t.isActive);
   const teacherMap = new Map(teachers.map(t => [t.id, t.name]));
 
@@ -137,13 +158,25 @@ export function BonusManagement({ teachers }: BonusManagementProps) {
           <p className="text-sm text-muted-foreground">Add and manage teacher bonuses</p>
         </div>
         
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2" data-testid="button-add-bonus">
-              <Plus className="h-4 w-4" />
-              Add Bonus
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => importMutation.mutate()}
+            disabled={importMutation.isPending}
+            data-testid="button-import-bonuses"
+          >
+            {importMutation.isPending ? <LoadingSpinner size="sm" /> : <Download className="h-4 w-4" />}
+            Import from Sheets
+          </Button>
+
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2" data-testid="button-add-bonus">
+                <Plus className="h-4 w-4" />
+                Add Bonus
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add Bonus</DialogTitle>
@@ -244,8 +277,45 @@ export function BonusManagement({ teachers }: BonusManagementProps) {
               </form>
             </Form>
           </DialogContent>
-        </Dialog>
-      </div>
+          </Dialog>
+        </div>
+
+      {/* Import result dialog */}
+      <Dialog open={!!importResult} onOpenChange={() => setImportResult(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Import Complete</DialogTitle>
+            <DialogDescription>Historical bonuses have been imported from Google Sheets.</DialogDescription>
+          </DialogHeader>
+          {importResult && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 text-center">
+                  <p className="text-2xl font-bold text-green-700 dark:text-green-300">{importResult.imported}</p>
+                  <p className="text-xs text-green-600 dark:text-green-400">Imported</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted text-center">
+                  <p className="text-2xl font-bold">{importResult.skipped}</p>
+                  <p className="text-xs text-muted-foreground">Already existed</p>
+                </div>
+              </div>
+              {importResult.unmatched.length > 0 && (
+                <div className="p-3 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
+                  <p className="text-sm font-medium text-amber-700 dark:text-amber-300 mb-1">
+                    Could not match {importResult.unmatched.length} teacher name{importResult.unmatched.length !== 1 ? "s" : ""} from the sheet:
+                  </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400">{importResult.unmatched.join(", ")}</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Make sure the teacher names in the sheet match those in the app.</p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setImportResult(null)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       <Card>
         <CardHeader>
