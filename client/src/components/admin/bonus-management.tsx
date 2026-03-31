@@ -279,6 +279,7 @@ export function BonusManagement({ teachers }: BonusManagementProps) {
           </DialogContent>
           </Dialog>
         </div>
+      </div>
 
       {/* Import result dialog */}
       <Dialog open={!!importResult} onOpenChange={() => setImportResult(null)}>
