@@ -126,8 +126,8 @@ export function BonusManagement({ teachers }: BonusManagementProps) {
       setImportResult(data);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/bonuses"] });
     },
-    onError: () => {
-      toast({ title: "Import failed", description: "Check that PAYROLL_SHEET_ID is set and Google is connected.", variant: "destructive" });
+    onError: (error: any) => {
+      toast({ title: "Import failed", description: error?.message || "Check that PAYROLL_SHEET_ID is set and Google is connected.", variant: "destructive" });
     },
   });
 
