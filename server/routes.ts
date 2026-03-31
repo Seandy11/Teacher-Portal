@@ -913,9 +913,9 @@ export async function registerRoutes(
       }
 
       res.json({ imported, skipped, unmatched: Array.from(unmatched) });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Bonus import error:", error);
-      res.status(500).json({ message: "Failed to import bonuses from Google Sheets" });
+      res.status(500).json({ message: error?.message || "Failed to import bonuses from Google Sheets" });
     }
   });
 
