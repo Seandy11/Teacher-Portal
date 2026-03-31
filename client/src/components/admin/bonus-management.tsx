@@ -6,7 +6,6 @@ import { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -258,13 +257,20 @@ export function BonusManagement({ teachers }: BonusManagementProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Reason</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Performance bonus, holiday bonus, etc." 
-                          {...field} 
-                          data-testid="input-bonus-reason" 
-                        />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="input-bonus-reason">
+                            <SelectValue placeholder="Select a reason" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Assessment">Assessment</SelectItem>
+                          <SelectItem value="Training">Training</SelectItem>
+                          <SelectItem value="Referral">Referral</SelectItem>
+                          <SelectItem value="Retention">Retention</SelectItem>
+                          <SelectItem value="Demo">Demo</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
