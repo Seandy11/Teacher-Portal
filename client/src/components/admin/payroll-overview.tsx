@@ -8,19 +8,22 @@ import { LoadingSpinner } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
 import {
   Wallet, Clock, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
-  Award, GraduationCap, Users, UserPlus, Presentation, ArrowLeft,
-  TrendingUp, ListChecks, Gift, AlertCircle
+  Users, ArrowLeft, TrendingUp, ListChecks, Gift, AlertCircle
 } from "lucide-react";
 import { format, subMonths, addMonths } from "date-fns";
 import { formatMonthLocal, getCurrentMonthLocal } from "@/lib/date-utils";
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
+interface BonusItem {
+  id: string;
+  amount: string;
+  reason: string;
+  month: string;
+  createdAt: string | null;
+}
+
 interface BonusBreakdown {
-  assessment: number;
-  training: number;
-  referral: number;
-  retention: number;
-  demo: number;
+  items: BonusItem[];
   total: number;
 }
 
@@ -51,17 +54,6 @@ interface PaySummary {
     counted: EventDetail[];
     skipped: SkippedEvent[];
   };
-  bonusRows?: Array<{
-    sheetName: string;
-    year: number;
-    month: number;
-    assessment: number;
-    training: number;
-    referral: number;
-    retention: number;
-    demo: number;
-    notes: string;
-  }>;
   error?: string;
 }
 
@@ -345,13 +337,7 @@ function TeacherPayDetail({
     });
   };
 
-  const bonusItems = [
-    { key: "assessment", label: "Assessment", amount: teacher.bonuses.assessment, icon: Award },
-    { key: "training", label: "Training", amount: teacher.bonuses.training, icon: GraduationCap },
-    { key: "referral", label: "Referral", amount: teacher.bonuses.referral, icon: UserPlus },
-    { key: "retention", label: "Retention", amount: teacher.bonuses.retention, icon: Users },
-    { key: "demo", label: "Demo", amount: teacher.bonuses.demo, icon: Presentation },
-  ].filter(item => item.amount > 0);
+  const bonusItems = teacher.bonuses.items;
 
   const barChartData = chartMonths.map(m => ({
     month: format(new Date(m + "-01"), "MMM"),
@@ -420,14 +406,18 @@ function TeacherPayDetail({
           <CardContent>
             <div className="space-y-2">
               {bonusItems.map(item => (
-                <div key={item.key} className="flex justify-between items-center text-sm">
+                <div key={item.id} className="flex justify-between items-center text-sm">
                   <div className="flex items-center gap-2">
-                    <item.icon className="h-4 w-4 text-muted-foreground" />
-                    <span>{item.label}</span>
+                    <Gift className="h-4 w-4 text-muted-foreground" />
+                    <span>{item.reason}</span>
                   </div>
-                  <span className="font-medium">R{item.amount.toFixed(2)}</span>
+                  <span className="font-medium">R{parseFloat(item.amount).toFixed(2)}</span>
                 </div>
               ))}
+              <div className="pt-2 border-t flex justify-between items-center text-sm font-medium">
+                <span>Total</span>
+                <span>R{teacher.bonuses.total.toFixed(2)}</span>
+              </div>
             </div>
           </CardContent>
         </Card>

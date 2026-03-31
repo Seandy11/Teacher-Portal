@@ -842,91 +842,11 @@ export async function registerRoutes(
 
   // ============ PAY CALCULATION ROUTES ============
 
-  // Helper function to parse currency value (e.g., "R100.00" -> 100.00, "-R50" -> -50)
-  const parseCurrencyValue = (value: string | undefined): number => {
-    if (!value || typeof value !== "string") return 0;
-    // Remove all characters except digits, minus, and decimal point
-    const isNegative = value.includes("-") || value.includes("(");
-    const cleaned = value.replace(/[^0-9.]/g, "");
-    let num = parseFloat(cleaned);
-    if (isNaN(num)) return 0;
-    return isNegative ? -num : num;
-  };
-
-  // Helper function to check if teacher names match
-  const teacherNameMatches = (sheetName: string, teacherName: string): boolean => {
-    const sheetLower = sheetName.toLowerCase().trim();
-    const teacherLower = teacherName.toLowerCase().trim();
-    const teacherFirstName = teacherLower.split(" ")[0];
-    
-    if (sheetLower === teacherFirstName) return true;
-    if (sheetLower === teacherLower) return true;
-    
-    return false;
-  };
-
-  // Helper function to fetch bonuses from payroll sheet
-  const fetchBonusesFromSheet = async (teacherName: string, year: number, monthNum: number) => {
-    const payrollSheetId = process.env.PAYROLL_SHEET_ID;
-    if (!payrollSheetId) {
-      console.log("No PAYROLL_SHEET_ID configured, returning zero bonuses");
-      return { assessment: 0, training: 0, referral: 0, retention: 0, demo: 0, total: 0, matchedRows: [] as { sheetName: string; year: number; month: number; assessment: number; training: number; referral: number; retention: number; demo: number; notes: string }[] };
-    }
-
-    try {
-      const sheets = await getGoogleSheetsClient();
-      const range = "'Adjustments'!A2:I5000";
-      
-      const response = await sheets.spreadsheets.values.get({
-        spreadsheetId: payrollSheetId,
-        range: range,
-      });
-
-      const rows = response.data.values || [];
-      let assessment = 0, training = 0, referral = 0, retention = 0, demo = 0;
-      const matchedRows: { sheetName: string; year: number; month: number; assessment: number; training: number; referral: number; retention: number; demo: number; notes: string }[] = [];
-      
-      for (const row of rows) {
-        const rowTeacher = (row[0] || "").toString();
-        const rowYear = parseInt(row[1] || "0", 10);
-        const rowMonth = parseInt(row[2] || "0", 10);
-        
-        if (teacherNameMatches(rowTeacher, teacherName) && rowYear === year && rowMonth === monthNum) {
-          const rowAssessment = parseCurrencyValue(row[3]);
-          const rowTraining = parseCurrencyValue(row[4]);
-          const rowReferral = parseCurrencyValue(row[5]);
-          const rowRetention = parseCurrencyValue(row[6]);
-          const rowDemo = parseCurrencyValue(row[7]);
-          
-          assessment += rowAssessment;
-          training += rowTraining;
-          referral += rowReferral;
-          retention += rowRetention;
-          demo += rowDemo;
-          
-          matchedRows.push({
-            sheetName: rowTeacher,
-            year: rowYear,
-            month: rowMonth,
-            assessment: rowAssessment,
-            training: rowTraining,
-            referral: rowReferral,
-            retention: rowRetention,
-            demo: rowDemo,
-            notes: (row[8] || "").toString(),
-          });
-        }
-      }
-
-      const total = assessment + training + referral + retention + demo;
-      console.log(`Bonuses for ${teacherName} (${year}-${monthNum}): ${matchedRows.length} rows matched`, 
-        { assessment, training, referral, retention, demo, total });
-      
-      return { assessment, training, referral, retention, demo, total, matchedRows };
-    } catch (error) {
-      console.error("Error fetching bonuses from payroll sheet:", error);
-      return { assessment: 0, training: 0, referral: 0, retention: 0, demo: 0, total: 0, matchedRows: [] as { sheetName: string; year: number; month: number; assessment: number; training: number; referral: number; retention: number; demo: number; notes: string }[] };
-    }
+  // Helper function to fetch bonuses from database
+  const fetchBonusesFromDb = async (teacherId: string, month: string) => {
+    const items = await storage.getBonusesByTeacherAndMonth(teacherId, month);
+    const total = items.reduce((sum, b) => sum + parseFloat(b.amount), 0);
+    return { items, total };
   };
 
   // Get pay summary for a teacher (teacher can view own, admin can view any)
@@ -937,13 +857,13 @@ export async function registerRoutes(
       const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       const month = (req.query.month as string) || defaultMonth;
       const [year, monthNum] = month.split("-").map(Number);
-      
-      const bonuses = await fetchBonusesFromSheet(teacher.name, year, monthNum);
-      
+
+      const bonuses = await fetchBonusesFromDb(teacher.id, month);
+
       let totalMinutes = 0;
       const countedEvents: { title: string; duration: number; date: string; time: string }[] = [];
       const skippedEvents: { title: string; reason: string }[] = [];
-      
+
       if (teacher.calendarId) {
         try {
           const calendar = await getGoogleCalendarClient();
@@ -1036,11 +956,7 @@ export async function registerRoutes(
         hoursWorked: parseFloat(hoursWorked.toFixed(2)),
         basePay: parseFloat(basePay.toFixed(2)),
         bonuses: {
-          assessment: parseFloat(bonuses.assessment.toFixed(2)),
-          training: parseFloat(bonuses.training.toFixed(2)),
-          referral: parseFloat(bonuses.referral.toFixed(2)),
-          retention: parseFloat(bonuses.retention.toFixed(2)),
-          demo: parseFloat(bonuses.demo.toFixed(2)),
+          items: bonuses.items,
           total: parseFloat(bonuses.total.toFixed(2)),
         },
         totalPay: parseFloat(totalPay.toFixed(2)),
@@ -1049,7 +965,6 @@ export async function registerRoutes(
           counted: countedEvents,
           skipped: skippedEvents,
         },
-        bonusRows: bonuses.matchedRows,
       });
     } catch (error) {
       console.error("Error calculating pay summary:", error);
@@ -1071,12 +986,12 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Teacher not found" });
       }
       
-      const bonuses = await fetchBonusesFromSheet(teacher.name, year, monthNum);
-      
+      const bonuses = await fetchBonusesFromDb(teacher.id, month);
+
       let totalMinutes = 0;
       const countedEvents: { title: string; duration: number; date: string; time: string }[] = [];
       const skippedEvents: { title: string; reason: string }[] = [];
-      
+
       if (teacher.calendarId) {
         try {
           const calendar = await getGoogleCalendarClient();
@@ -1153,11 +1068,7 @@ export async function registerRoutes(
         hoursWorked: parseFloat(hoursWorked.toFixed(2)),
         basePay: parseFloat(basePay.toFixed(2)),
         bonuses: {
-          assessment: parseFloat(bonuses.assessment.toFixed(2)),
-          training: parseFloat(bonuses.training.toFixed(2)),
-          referral: parseFloat(bonuses.referral.toFixed(2)),
-          retention: parseFloat(bonuses.retention.toFixed(2)),
-          demo: parseFloat(bonuses.demo.toFixed(2)),
+          items: bonuses.items,
           total: parseFloat(bonuses.total.toFixed(2)),
         },
         totalPay: parseFloat(totalPay.toFixed(2)),
@@ -1166,7 +1077,6 @@ export async function registerRoutes(
           counted: countedEvents,
           skipped: skippedEvents,
         },
-        bonusRows: bonuses.matchedRows,
       });
     } catch (error) {
       console.error("Error calculating pay summary:", error);
@@ -1192,7 +1102,7 @@ export async function registerRoutes(
       
       const results = await Promise.all(activeTeachers.map(async (teacher) => {
         try {
-          const bonuses = await fetchBonusesFromSheet(teacher.name, year, monthNum);
+          const bonuses = await fetchBonusesFromDb(teacher.id, month);
           
           let totalMinutes = 0;
           const countedEvents: { title: string; duration: number; date: string; time: string }[] = [];
@@ -1268,11 +1178,7 @@ export async function registerRoutes(
             hoursWorked: parseFloat(hoursWorked.toFixed(2)),
             basePay: parseFloat(basePay.toFixed(2)),
             bonuses: {
-              assessment: parseFloat(bonuses.assessment.toFixed(2)),
-              training: parseFloat(bonuses.training.toFixed(2)),
-              referral: parseFloat(bonuses.referral.toFixed(2)),
-              retention: parseFloat(bonuses.retention.toFixed(2)),
-              demo: parseFloat(bonuses.demo.toFixed(2)),
+              items: bonuses.items,
               total: parseFloat(bonuses.total.toFixed(2)),
             },
             totalPay: parseFloat(totalPay.toFixed(2)),
@@ -1281,7 +1187,6 @@ export async function registerRoutes(
               counted: countedEvents,
               skipped: skippedEvents,
             },
-            bonusRows: bonuses.matchedRows,
           };
         } catch (teacherError) {
           console.error(`Error calculating pay for ${teacher.name}:`, teacherError);
@@ -1293,11 +1198,10 @@ export async function registerRoutes(
             totalMinutes: 0,
             hoursWorked: 0,
             basePay: 0,
-            bonuses: { assessment: 0, training: 0, referral: 0, retention: 0, demo: 0, total: 0 },
+            bonuses: { items: [], total: 0 },
             totalPay: 0,
             isCurrentMonth,
             eventBreakdown: { counted: [], skipped: [] },
-            bonusRows: [],
             error: "Failed to calculate",
           };
         }
