@@ -1,6 +1,6 @@
-import { teachers, leaveRequests, bonuses, type Teacher, type InsertTeacher, type LeaveRequest, type InsertLeaveRequest, type UpdateLeaveRequest, type Bonus, type InsertBonus } from "@shared/schema";
+import { teachers, leaveRequests, bonuses, teacherRateHistory, type Teacher, type InsertTeacher, type LeaveRequest, type InsertLeaveRequest, type UpdateLeaveRequest, type Bonus, type InsertBonus } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, lte, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Teachers
@@ -25,6 +25,11 @@ export interface IStorage {
   getBonusesByTeacher(teacherId: string): Promise<Bonus[]>;
   createBonus(bonus: InsertBonus): Promise<Bonus>;
   deleteBonus(id: string): Promise<boolean>;
+
+  // Rate history
+  getRateForMonth(teacherId: string, month: string): Promise<number | null>;
+  hasRateHistory(teacherId: string): Promise<boolean>;
+  createRateHistory(teacherId: string, rate: string, effectiveMonth: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -118,6 +123,26 @@ export class DatabaseStorage implements IStorage {
   async deleteBonus(id: string): Promise<boolean> {
     const result = await db.delete(bonuses).where(eq(bonuses.id, id)).returning();
     return result.length > 0;
+  }
+
+  // Rate history
+  async getRateForMonth(teacherId: string, month: string): Promise<number | null> {
+    const [row] = await db
+      .select()
+      .from(teacherRateHistory)
+      .where(and(eq(teacherRateHistory.teacherId, teacherId), lte(teacherRateHistory.effectiveMonth, month)))
+      .orderBy(desc(teacherRateHistory.effectiveMonth))
+      .limit(1);
+    return row ? parseFloat(row.rate) : null;
+  }
+
+  async hasRateHistory(teacherId: string): Promise<boolean> {
+    const [row] = await db.select().from(teacherRateHistory).where(eq(teacherRateHistory.teacherId, teacherId)).limit(1);
+    return !!row;
+  }
+
+  async createRateHistory(teacherId: string, rate: string, effectiveMonth: string): Promise<void> {
+    await db.insert(teacherRateHistory).values({ teacherId, rate, effectiveMonth });
   }
 }
 

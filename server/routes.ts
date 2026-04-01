@@ -575,7 +575,19 @@ export async function registerRoutes(
           sanitizedBody[field] = null;
         }
       }
-      
+
+      // If hourly rate is changing, record the history so past months are unaffected
+      const newRate = sanitizedBody.hourlyRate;
+      if (newRate != null && newRate !== existingTeacher.hourlyRate) {
+        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+        const hasHistory = await storage.hasRateHistory(id);
+        if (!hasHistory && existingTeacher.hourlyRate) {
+          // Seed the old rate as applying from the beginning of time
+          await storage.createRateHistory(id, existingTeacher.hourlyRate, "2020-01");
+        }
+        await storage.createRateHistory(id, newRate.toString(), currentMonth);
+      }
+
       const teacher = await storage.updateTeacher(id, sanitizedBody);
 
       res.json(teacher);
@@ -1018,12 +1030,13 @@ export async function registerRoutes(
           console.error("Error fetching calendar for pay calculation:", calendarError);
         }
       }
-      
-      const hourlyRate = teacher.hourlyRate ? parseFloat(teacher.hourlyRate) : 0;
+
+      const historicalRate = await storage.getRateForMonth(teacher.id, month);
+      const hourlyRate = historicalRate ?? (teacher.hourlyRate ? parseFloat(teacher.hourlyRate) : 0);
       const hoursWorked = totalMinutes / 60;
       const basePay = hoursWorked * hourlyRate;
       const totalPay = basePay + bonuses.total;
-      
+
       const isCurrentMonth = month === defaultMonth;
       
       res.json({
@@ -1130,12 +1143,13 @@ export async function registerRoutes(
           console.error("Error fetching calendar for pay calculation:", calendarError);
         }
       }
-      
-      const hourlyRate = teacher.hourlyRate ? parseFloat(teacher.hourlyRate) : 0;
+
+      const historicalRate = await storage.getRateForMonth(teacher.id, month);
+      const hourlyRate = historicalRate ?? (teacher.hourlyRate ? parseFloat(teacher.hourlyRate) : 0);
       const hoursWorked = totalMinutes / 60;
       const basePay = hoursWorked * hourlyRate;
       const totalPay = basePay + bonuses.total;
-      
+
       const isCurrentMonth = month === defaultMonth;
       
       res.json({
@@ -1243,7 +1257,8 @@ export async function registerRoutes(
             }
           }
           
-          const hourlyRate = teacher.hourlyRate ? parseFloat(teacher.hourlyRate) : 0;
+          const historicalRate = await storage.getRateForMonth(teacher.id, month);
+          const hourlyRate = historicalRate ?? (teacher.hourlyRate ? parseFloat(teacher.hourlyRate) : 0);
           const hoursWorked = totalMinutes / 60;
           const basePay = hoursWorked * hourlyRate;
           const totalPay = basePay + bonuses.total;

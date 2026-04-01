@@ -28,6 +28,15 @@ export const teachers = pgTable("teachers", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Teacher rate history - tracks pay rate changes over time
+export const teacherRateHistory = pgTable("teacher_rate_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teacherId: varchar("teacher_id").notNull().references(() => teachers.id),
+  rate: decimal("rate", { precision: 10, scale: 2 }).notNull(),
+  effectiveMonth: varchar("effective_month").notNull(), // YYYY-MM: rate applies FROM this month onwards
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Bonuses table - admin-added bonuses for teachers
 export const bonuses = pgTable("bonuses", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -66,6 +75,7 @@ export const googleTokens = pgTable("google_tokens", {
 export const teachersRelations = relations(teachers, ({ many }) => ({
   leaveRequests: many(leaveRequests),
   bonuses: many(bonuses),
+  rateHistory: many(teacherRateHistory),
 }));
 
 export const leaveRequestsRelations = relations(leaveRequests, ({ one }) => ({
@@ -116,6 +126,7 @@ export type InsertLeaveRequest = z.infer<typeof insertLeaveRequestSchema>;
 export type UpdateLeaveRequest = z.infer<typeof updateLeaveRequestSchema>;
 export type Bonus = typeof bonuses.$inferSelect;
 export type InsertBonus = z.infer<typeof insertBonusSchema>;
+export type TeacherRateHistory = typeof teacherRateHistory.$inferSelect;
 
 // Calendar event types (not stored in DB, from Google Calendar)
 export interface CalendarEvent {
