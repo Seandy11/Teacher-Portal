@@ -8,9 +8,11 @@ import { LeaveManagement } from "@/components/admin/leave-management";
 import { CalendarOverview } from "@/components/admin/calendar-overview";
 import { PayrollOverview } from "@/components/admin/payroll-overview";
 import { BonusManagement } from "@/components/admin/bonus-management";
-import { DropdownOptionsManagement } from "@/components/admin/dropdown-options-management";
 import { StudentBalances } from "@/components/admin/student-balances";
 import { ArcBilling } from "@/components/admin/arc-billing";
+import { StudentManagement } from "@/components/admin/student-management";
+import { LowBalanceAlerts } from "@/components/admin/low-balance-alerts";
+import { MasterSchedule } from "@/components/admin/master-schedule";
 import { FullPageLoader } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
 import { useAuth } from "@/hooks/use-auth";
@@ -18,10 +20,10 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/auth-utils";
 import { Button } from "@/components/ui/button";
-import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Wallet, Link2, Link2Off, RefreshCw, Gift, ListChecks, GraduationCap, Building } from "lucide-react";
+import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Wallet, Link2, Link2Off, RefreshCw, Gift, GraduationCap, Building, AlertTriangle, CalendarDays } from "lucide-react";
 import type { Teacher, LeaveRequest } from "@shared/schema";
 
-type AdminView = "dashboard" | "calendar" | "teachers" | "leave" | "payroll" | "bonuses" | "dropdown-options" | "student-balances" | "arc-billing";
+type AdminView = "dashboard" | "calendar" | "teachers" | "leave" | "payroll" | "bonuses" | "students" | "low-balance" | "master-schedule" | "student-balances" | "arc-billing";
 
 const navItems = [
   { id: "dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
@@ -30,8 +32,10 @@ const navItems = [
   { id: "leave" as const, label: "Leave Requests", icon: FileText },
   { id: "payroll" as const, label: "Payroll", icon: Wallet },
   { id: "bonuses" as const, label: "Bonuses", icon: Gift },
-  { id: "dropdown-options" as const, label: "Dropdown Options", icon: ListChecks },
-  { id: "student-balances" as const, label: "Student Balances", icon: GraduationCap },
+  { id: "students" as const, label: "Students", icon: GraduationCap },
+  { id: "low-balance" as const, label: "Low Balance Alerts", icon: AlertTriangle },
+  { id: "master-schedule" as const, label: "Master Schedule", icon: CalendarDays },
+  { id: "student-balances" as const, label: "Student Balances (Legacy)", icon: GraduationCap },
   { id: "arc-billing" as const, label: "ARC Billing", icon: Building },
 ];
 
@@ -437,14 +441,16 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {activeView === "dropdown-options" && (
-              <div className="space-y-6">
-                <div>
-                  <h1 className="text-2xl font-medium">Dropdown Options</h1>
-                  <p className="text-muted-foreground">Manage the lesson detail options that appear in attendance dropdowns</p>
-                </div>
-                <DropdownOptionsManagement />
-              </div>
+            {activeView === "students" && (
+              <StudentManagement teachers={teachers} />
+            )}
+
+            {activeView === "low-balance" && (
+              <LowBalanceAlerts />
+            )}
+
+            {activeView === "master-schedule" && (
+              <MasterSchedule teachers={teachers} />
             )}
 
             {activeView === "student-balances" && (
