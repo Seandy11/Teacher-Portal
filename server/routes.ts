@@ -1912,5 +1912,184 @@ export async function registerRoutes(
     }
   });
 
+  // ============ STUDENT MANAGEMENT ============
+
+  // List all students (with teacher name)
+  app.get("/api/admin/students", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const allStudents = await storage.getAllStudents();
+      res.json(allStudents);
+    } catch (error) {
+      console.error("Error fetching students:", error);
+      res.status(500).json({ message: "Failed to fetch students" });
+    }
+  });
+
+  // Get single student with packages and balance
+  app.get("/api/admin/students/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const student = await storage.getStudent(req.params.id);
+      if (!student) return res.status(404).json({ message: "Student not found" });
+      const [packages, balance, contacts, schedules] = await Promise.all([
+        storage.getPackagesByStudent(student.id),
+        storage.getStudentBalance(student.id),
+        storage.getBalanceContactsByStudent(student.id),
+        storage.getMasterSchedulesByStudent(student.id),
+      ]);
+      res.json({ ...student, packages, balance, contacts, schedules });
+    } catch (error) {
+      console.error("Error fetching student:", error);
+      res.status(500).json({ message: "Failed to fetch student" });
+    }
+  });
+
+  // Create student
+  app.post("/api/admin/students", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { name, teacherId, isArc, notes } = req.body;
+      if (!name || !teacherId) return res.status(400).json({ message: "name and teacherId are required" });
+      const student = await storage.createStudent({ name, teacherId, isArc: isArc ?? false, notes });
+      res.status(201).json(student);
+    } catch (error) {
+      console.error("Error creating student:", error);
+      res.status(500).json({ message: "Failed to create student" });
+    }
+  });
+
+  // Update student
+  app.patch("/api/admin/students/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { name, teacherId, isArc, isActive, notes } = req.body;
+      const updated = await storage.updateStudent(req.params.id, { name, teacherId, isArc, isActive, notes });
+      if (!updated) return res.status(404).json({ message: "Student not found" });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating student:", error);
+      res.status(500).json({ message: "Failed to update student" });
+    }
+  });
+
+  // Delete student
+  app.delete("/api/admin/students/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const deleted = await storage.deleteStudent(req.params.id);
+      if (!deleted) return res.status(404).json({ message: "Student not found" });
+      res.json({ message: "Student deleted" });
+    } catch (error) {
+      console.error("Error deleting student:", error);
+      res.status(500).json({ message: "Failed to delete student" });
+    }
+  });
+
+  // ============ STUDENT PACKAGES (TOP-UPS) ============
+
+  app.get("/api/admin/students/:id/packages", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const packages = await storage.getPackagesByStudent(req.params.id);
+      res.json(packages);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch packages" });
+    }
+  });
+
+  app.post("/api/admin/students/:id/packages", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { minutesPurchased, purchaseDate, notes } = req.body;
+      if (!minutesPurchased || !purchaseDate) return res.status(400).json({ message: "minutesPurchased and purchaseDate are required" });
+      const pkg = await storage.createStudentPackage({
+        studentId: req.params.id,
+        minutesPurchased: Number(minutesPurchased),
+        purchaseDate,
+        notes,
+      });
+      res.status(201).json(pkg);
+    } catch (error) {
+      console.error("Error creating package:", error);
+      res.status(500).json({ message: "Failed to create package" });
+    }
+  });
+
+  app.delete("/api/admin/students/packages/:packageId", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const deleted = await storage.deleteStudentPackage(req.params.packageId);
+      if (!deleted) return res.status(404).json({ message: "Package not found" });
+      res.json({ message: "Package deleted" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete package" });
+    }
+  });
+
+  // ============ STUDENT BALANCES & LOW BALANCE ALERTS ============
+
+  app.get("/api/admin/student-tracker", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const studentsWithBalances = await storage.getAllStudentsWithBalances();
+      res.json(studentsWithBalances);
+    } catch (error) {
+      console.error("Error fetching student tracker:", error);
+      res.status(500).json({ message: "Failed to fetch student tracker" });
+    }
+  });
+
+  // Log a balance contact (admin followed up with student)
+  app.post("/api/admin/students/:id/contacts", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const { notes } = req.body;
+      const contact = await storage.createBalanceContact({
+        studentId: req.params.id,
+        notes,
+        contactedBy: req.user?.id,
+      });
+      res.status(201).json(contact);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to log contact" });
+    }
+  });
+
+  // ============ MASTER SCHEDULE ============
+
+  app.get("/api/admin/master-schedule", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const schedules = await storage.getAllMasterSchedules();
+      res.json(schedules);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch master schedule" });
+    }
+  });
+
+  app.post("/api/admin/master-schedule", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const { studentId, teacherId, dayOfWeek, startTime, endTime, frequency, notes } = req.body;
+      if (!studentId || !teacherId || dayOfWeek === undefined || !startTime || !endTime) {
+        return res.status(400).json({ message: "studentId, teacherId, dayOfWeek, startTime, endTime are required" });
+      }
+      const schedule = await storage.createMasterSchedule({ studentId, teacherId, dayOfWeek, startTime, endTime, frequency: frequency ?? "weekly", notes });
+      res.status(201).json(schedule);
+    } catch (error) {
+      console.error("Error creating schedule:", error);
+      res.status(500).json({ message: "Failed to create schedule entry" });
+    }
+  });
+
+  app.patch("/api/admin/master-schedule/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const updated = await storage.updateMasterSchedule(req.params.id, req.body);
+      if (!updated) return res.status(404).json({ message: "Schedule entry not found" });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update schedule entry" });
+    }
+  });
+
+  app.delete("/api/admin/master-schedule/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const deleted = await storage.deleteMasterSchedule(req.params.id);
+      if (!deleted) return res.status(404).json({ message: "Schedule entry not found" });
+      res.json({ message: "Schedule entry deleted" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete schedule entry" });
+    }
+  });
+
   return httpServer;
 }

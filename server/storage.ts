@@ -1,6 +1,6 @@
-import { teachers, leaveRequests, bonuses, appSettings, classEvents, dropdownOptions, type Teacher, type InsertTeacher, type LeaveRequest, type InsertLeaveRequest, type UpdateLeaveRequest, type Bonus, type InsertBonus, type AppSetting, type ClassEvent, type InsertClassEvent, type DropdownOption, type InsertDropdownOption } from "@shared/schema";
+import { teachers, leaveRequests, bonuses, appSettings, classEvents, dropdownOptions, students, studentPackages, studentBalanceContacts, masterSchedule, type Teacher, type InsertTeacher, type LeaveRequest, type InsertLeaveRequest, type UpdateLeaveRequest, type Bonus, type InsertBonus, type AppSetting, type ClassEvent, type InsertClassEvent, type DropdownOption, type InsertDropdownOption, type Student, type InsertStudent, type StudentPackage, type InsertStudentPackage, type StudentBalanceContact, type InsertStudentBalanceContact, type MasterSchedule, type InsertMasterSchedule } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, lte, or, isNull, asc } from "drizzle-orm";
+import { eq, and, gte, lte, or, isNull, asc, sql, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Teachers
@@ -49,6 +49,34 @@ export interface IStorage {
   getClassEventsByTitleAndTeacher(teacherId: string, title: string): Promise<ClassEvent[]>;
   deleteClassEventsByGroupId(groupId: string): Promise<number>;
   deleteClassEventsByTitleAndTeacher(teacherId: string, title: string): Promise<number>;
+
+  // Students
+  getAllStudents(): Promise<Array<Student & { teacherName: string }>>;
+  getStudentsByTeacher(teacherId: string): Promise<Student[]>;
+  getStudent(id: string): Promise<Student | undefined>;
+  createStudent(student: InsertStudent): Promise<Student>;
+  updateStudent(id: string, updates: Partial<InsertStudent>): Promise<Student | undefined>;
+  deleteStudent(id: string): Promise<boolean>;
+
+  // Student Packages (top-ups)
+  getPackagesByStudent(studentId: string): Promise<StudentPackage[]>;
+  createStudentPackage(pkg: InsertStudentPackage): Promise<StudentPackage>;
+  deleteStudentPackage(id: string): Promise<boolean>;
+
+  // Student Balance (calculated)
+  getStudentBalance(studentId: string): Promise<{ totalPurchased: number; totalUsed: number; remaining: number }>;
+  getAllStudentsWithBalances(): Promise<Array<Student & { teacherName: string; totalPurchased: number; totalUsed: number; remaining: number; lastLessonDate: string | null }>>;
+
+  // Student Balance Contacts
+  getBalanceContactsByStudent(studentId: string): Promise<StudentBalanceContact[]>;
+  createBalanceContact(contact: InsertStudentBalanceContact): Promise<StudentBalanceContact>;
+
+  // Master Schedule
+  getAllMasterSchedules(): Promise<Array<MasterSchedule & { studentName: string; teacherName: string }>>;
+  getMasterSchedulesByStudent(studentId: string): Promise<MasterSchedule[]>;
+  createMasterSchedule(schedule: InsertMasterSchedule): Promise<MasterSchedule>;
+  updateMasterSchedule(id: string, updates: Partial<InsertMasterSchedule>): Promise<MasterSchedule | undefined>;
+  deleteMasterSchedule(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -203,6 +231,7 @@ export class DatabaseStorage implements IStorage {
         endDateTime: classEvents.endDateTime,
         colorId: classEvents.colorId,
         backgroundColor: classEvents.backgroundColor,
+        studentId: classEvents.studentId,
         isAvailabilityBlock: classEvents.isAvailabilityBlock,
         isRecurring: classEvents.isRecurring,
         recurrenceGroupId: classEvents.recurrenceGroupId,
@@ -296,6 +325,143 @@ export class DatabaseStorage implements IStorage {
   async deleteClassEventsByTitleAndTeacher(teacherId: string, title: string): Promise<number> {
     const result = await db.delete(classEvents).where(and(eq(classEvents.teacherId, teacherId), eq(classEvents.title, title))).returning();
     return result.length;
+  }
+
+  // Students
+  async getAllStudents(): Promise<Array<Student & { teacherName: string }>> {
+    const rows = await db
+      .select({ ...students, teacherName: teachers.name })
+      .from(students)
+      .innerJoin(teachers, eq(students.teacherId, teachers.id))
+      .orderBy(asc(students.name));
+    return rows as Array<Student & { teacherName: string }>;
+  }
+
+  async getStudentsByTeacher(teacherId: string): Promise<Student[]> {
+    return db.select().from(students).where(eq(students.teacherId, teacherId)).orderBy(asc(students.name));
+  }
+
+  async getStudent(id: string): Promise<Student | undefined> {
+    const [student] = await db.select().from(students).where(eq(students.id, id));
+    return student;
+  }
+
+  async createStudent(student: InsertStudent): Promise<Student> {
+    const [created] = await db.insert(students).values(student).returning();
+    return created;
+  }
+
+  async updateStudent(id: string, updates: Partial<InsertStudent>): Promise<Student | undefined> {
+    const [updated] = await db.update(students).set({ ...updates, updatedAt: new Date() }).where(eq(students.id, id)).returning();
+    return updated;
+  }
+
+  async deleteStudent(id: string): Promise<boolean> {
+    const result = await db.delete(students).where(eq(students.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Student Packages (top-ups)
+  async getPackagesByStudent(studentId: string): Promise<StudentPackage[]> {
+    return db.select().from(studentPackages).where(eq(studentPackages.studentId, studentId)).orderBy(desc(studentPackages.purchaseDate));
+  }
+
+  async createStudentPackage(pkg: InsertStudentPackage): Promise<StudentPackage> {
+    const [created] = await db.insert(studentPackages).values(pkg).returning();
+    return created;
+  }
+
+  async deleteStudentPackage(id: string): Promise<boolean> {
+    const result = await db.delete(studentPackages).where(eq(studentPackages.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Student Balance (calculated from packages minus lesson durations)
+  async getStudentBalance(studentId: string): Promise<{ totalPurchased: number; totalUsed: number; remaining: number }> {
+    const [purchasedRow] = await db
+      .select({ total: sql<number>`coalesce(sum(${studentPackages.minutesPurchased}), 0)` })
+      .from(studentPackages)
+      .where(eq(studentPackages.studentId, studentId));
+
+    const totalPurchased = Number(purchasedRow?.total ?? 0);
+
+    // Sum durations of completed lessons linked to this student
+    const [usedRow] = await db
+      .select({
+        total: sql<number>`coalesce(sum(extract(epoch from (${classEvents.endDateTime} - ${classEvents.startDateTime})) / 60), 0)`
+      })
+      .from(classEvents)
+      .where(
+        and(
+          eq(classEvents.studentId, studentId),
+          eq(classEvents.isAvailabilityBlock, false),
+          lte(classEvents.endDateTime, new Date()),
+        )
+      );
+
+    const totalUsed = Math.round(Number(usedRow?.total ?? 0));
+    return { totalPurchased, totalUsed, remaining: totalPurchased - totalUsed };
+  }
+
+  async getAllStudentsWithBalances(): Promise<Array<Student & { teacherName: string; totalPurchased: number; totalUsed: number; remaining: number; lastLessonDate: string | null }>> {
+    const allStudents = await this.getAllStudents();
+    const results = await Promise.all(
+      allStudents.map(async (student) => {
+        const balance = await this.getStudentBalance(student.id);
+        const [lastLesson] = await db
+          .select({ endDateTime: classEvents.endDateTime })
+          .from(classEvents)
+          .where(and(eq(classEvents.studentId, student.id), eq(classEvents.isAvailabilityBlock, false), lte(classEvents.endDateTime, new Date())))
+          .orderBy(desc(classEvents.endDateTime))
+          .limit(1);
+        return {
+          ...student,
+          ...balance,
+          lastLessonDate: lastLesson ? lastLesson.endDateTime.toISOString() : null,
+        };
+      })
+    );
+    return results;
+  }
+
+  // Student Balance Contacts
+  async getBalanceContactsByStudent(studentId: string): Promise<StudentBalanceContact[]> {
+    return db.select().from(studentBalanceContacts).where(eq(studentBalanceContacts.studentId, studentId)).orderBy(desc(studentBalanceContacts.contactedAt));
+  }
+
+  async createBalanceContact(contact: InsertStudentBalanceContact): Promise<StudentBalanceContact> {
+    const [created] = await db.insert(studentBalanceContacts).values(contact).returning();
+    return created;
+  }
+
+  // Master Schedule
+  async getAllMasterSchedules(): Promise<Array<MasterSchedule & { studentName: string; teacherName: string }>> {
+    const rows = await db
+      .select({ ...masterSchedule, studentName: students.name, teacherName: teachers.name })
+      .from(masterSchedule)
+      .innerJoin(students, eq(masterSchedule.studentId, students.id))
+      .innerJoin(teachers, eq(masterSchedule.teacherId, teachers.id))
+      .orderBy(asc(masterSchedule.dayOfWeek), asc(masterSchedule.startTime));
+    return rows as Array<MasterSchedule & { studentName: string; teacherName: string }>;
+  }
+
+  async getMasterSchedulesByStudent(studentId: string): Promise<MasterSchedule[]> {
+    return db.select().from(masterSchedule).where(eq(masterSchedule.studentId, studentId));
+  }
+
+  async createMasterSchedule(schedule: InsertMasterSchedule): Promise<MasterSchedule> {
+    const [created] = await db.insert(masterSchedule).values(schedule).returning();
+    return created;
+  }
+
+  async updateMasterSchedule(id: string, updates: Partial<InsertMasterSchedule>): Promise<MasterSchedule | undefined> {
+    const [updated] = await db.update(masterSchedule).set({ ...updates, updatedAt: new Date() }).where(eq(masterSchedule.id, id)).returning();
+    return updated;
+  }
+
+  async deleteMasterSchedule(id: string): Promise<boolean> {
+    const result = await db.delete(masterSchedule).where(eq(masterSchedule.id, id)).returning();
+    return result.length > 0;
   }
 }
 
