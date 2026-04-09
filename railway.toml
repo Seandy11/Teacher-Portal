@@ -4,3 +4,6 @@ buildCommand = "npm run build"
 
 [deploy]
 startCommand = "npm run start"
+
+[nixpacks]
+nodeVersion = "20"
