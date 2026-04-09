@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, boolean, timestamp, date, pgEnum, integer, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, boolean, timestamp, date, pgEnum, integer, decimal, time } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -90,6 +90,8 @@ export const googleTokens = pgTable("google_tokens", {
 export const teachersRelations = relations(teachers, ({ many }) => ({
   leaveRequests: many(leaveRequests),
   bonuses: many(bonuses),
+  students: many(students),
+  masterSchedules: many(masterSchedule),
 }));
 
 export const leaveRequestsRelations = relations(leaveRequests, ({ one }) => ({
@@ -145,6 +147,90 @@ export type AppSetting = typeof appSettings.$inferSelect;
 export const BONUS_CATEGORIES = ["assessment", "training", "referral", "retention", "demo"] as const;
 export type BonusCategory = typeof BONUS_CATEGORIES[number];
 
+// Students table
+export const students = pgTable("students", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  teacherId: varchar("teacher_id").notNull().references(() => teachers.id),
+  isArc: boolean("is_arc").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  notes: text("notes"),
+  importedFromSheet: boolean("imported_from_sheet").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const studentsRelations = relations(students, ({ one, many }) => ({
+  teacher: one(teachers, { fields: [students.teacherId], references: [teachers.id] }),
+  packages: many(studentPackages),
+  balanceContacts: many(studentBalanceContacts),
+  masterSchedules: many(masterSchedule),
+}));
+
+export const insertStudentSchema = createInsertSchema(students).omit({ id: true, createdAt: true, updatedAt: true });
+export type Student = typeof students.$inferSelect;
+export type InsertStudent = z.infer<typeof insertStudentSchema>;
+
+// Student packages table - top-up history (minutes purchased)
+export const studentPackages = pgTable("student_packages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  studentId: varchar("student_id").notNull().references(() => students.id),
+  minutesPurchased: integer("minutes_purchased").notNull(),
+  purchaseDate: date("purchase_date").notNull(),
+  notes: text("notes"),
+  importedFromSheet: boolean("imported_from_sheet").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const studentPackagesRelations = relations(studentPackages, ({ one }) => ({
+  student: one(students, { fields: [studentPackages.studentId], references: [students.id] }),
+}));
+
+export const insertStudentPackageSchema = createInsertSchema(studentPackages).omit({ id: true, createdAt: true });
+export type StudentPackage = typeof studentPackages.$inferSelect;
+export type InsertStudentPackage = z.infer<typeof insertStudentPackageSchema>;
+
+// Student balance contacts table - tracks when admin followed up on low balance
+export const studentBalanceContacts = pgTable("student_balance_contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  studentId: varchar("student_id").notNull().references(() => students.id),
+  contactedAt: timestamp("contacted_at").defaultNow(),
+  notes: text("notes"),
+  contactedBy: varchar("contacted_by"), // admin user ID
+});
+
+export const studentBalanceContactsRelations = relations(studentBalanceContacts, ({ one }) => ({
+  student: one(students, { fields: [studentBalanceContacts.studentId], references: [students.id] }),
+}));
+
+export const insertStudentBalanceContactSchema = createInsertSchema(studentBalanceContacts).omit({ id: true });
+export type StudentBalanceContact = typeof studentBalanceContacts.$inferSelect;
+export type InsertStudentBalanceContact = z.infer<typeof insertStudentBalanceContactSchema>;
+
+// Master schedule table - recurring lesson plans (intended timetable, not actual calendar)
+export const masterSchedule = pgTable("master_schedule", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  studentId: varchar("student_id").notNull().references(() => students.id),
+  teacherId: varchar("teacher_id").notNull().references(() => teachers.id),
+  dayOfWeek: integer("day_of_week").notNull(), // 0=Sunday, 1=Monday ... 6=Saturday
+  startTime: time("start_time").notNull(),
+  endTime: time("end_time").notNull(),
+  frequency: varchar("frequency").notNull().default("weekly"), // weekly | biweekly
+  isActive: boolean("is_active").notNull().default(true),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const masterScheduleRelations = relations(masterSchedule, ({ one }) => ({
+  student: one(students, { fields: [masterSchedule.studentId], references: [students.id] }),
+  teacher: one(teachers, { fields: [masterSchedule.teacherId], references: [teachers.id] }),
+}));
+
+export const insertMasterScheduleSchema = createInsertSchema(masterSchedule).omit({ id: true, createdAt: true, updatedAt: true });
+export type MasterSchedule = typeof masterSchedule.$inferSelect;
+export type InsertMasterSchedule = z.infer<typeof insertMasterScheduleSchema>;
+
 // Class events table - portal-native storage (replaces Google Calendar as source of truth)
 export const classEvents = pgTable("class_events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -157,6 +243,7 @@ export const classEvents = pgTable("class_events", {
   endDateTime: timestamp("end_date_time", { withTimezone: true }).notNull(),
   colorId: varchar("color_id"),
   backgroundColor: varchar("background_color"),
+  studentId: varchar("student_id").references(() => students.id), // null for availability blocks / unlinked events
   isAvailabilityBlock: boolean("is_availability_block").default(false),
   isRecurring: boolean("is_recurring").default(false),
   recurrenceGroupId: varchar("recurrence_group_id"), // Links all events in a recurring series
@@ -167,6 +254,7 @@ export const classEvents = pgTable("class_events", {
 
 export const classEventsRelations = relations(classEvents, ({ one }) => ({
   teacher: one(teachers, { fields: [classEvents.teacherId], references: [teachers.id] }),
+  student: one(students, { fields: [classEvents.studentId], references: [students.id] }),
 }));
 
 export const insertClassEventSchema = createInsertSchema(classEvents).omit({
