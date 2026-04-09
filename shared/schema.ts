@@ -86,12 +86,28 @@ export const googleTokens = pgTable("google_tokens", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Teacher rate history - tracks rate changes for accurate historical pay calculation
+export const teacherRateHistory = pgTable("teacher_rate_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teacherId: varchar("teacher_id").notNull().references(() => teachers.id),
+  rate: decimal("rate", { precision: 10, scale: 2 }).notNull(),
+  effectiveMonth: varchar("effective_month").notNull(), // YYYY-MM: rate applies FROM this month onwards
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const teacherRateHistoryRelations = relations(teacherRateHistory, ({ one }) => ({
+  teacher: one(teachers, { fields: [teacherRateHistory.teacherId], references: [teachers.id] }),
+}));
+
+export type TeacherRateHistory = typeof teacherRateHistory.$inferSelect;
+
 // Relations
 export const teachersRelations = relations(teachers, ({ many }) => ({
   leaveRequests: many(leaveRequests),
   bonuses: many(bonuses),
   students: many(students),
   masterSchedules: many(masterSchedule),
+  rateHistory: many(teacherRateHistory),
 }));
 
 export const leaveRequestsRelations = relations(leaveRequests, ({ one }) => ({

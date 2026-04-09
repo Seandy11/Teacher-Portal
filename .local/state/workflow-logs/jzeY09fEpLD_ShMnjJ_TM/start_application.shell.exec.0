@@ -1,0 +1,1344 @@
+[1G[0K⠙[1G[0K⠹[1G[0K
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+[1G[0K⠹[1G[0K7:26:13 AM [express] serving on port 5000
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+7:26:20 AM [express] GET /api/auth/user 401 in 1ms :: {"message":"Unauthorized"}
+7:26:37 AM [express] GET /api/auth/user 401 in 1ms :: {"message":"Unauthorized"}
+7:26:41 AM [express] POST /api/login 401 in 360ms :: {"message":"Invalid email or password"}
+7:26:50 AM [express] POST /api/login 401 in 327ms :: {"message":"Invalid email or password"}
+7:26:57 AM [express] POST /api/login 200 in 373ms :: {"id":"admin-master-001","email":"admin@brighthorizononline.com","firstName":"Admin","lastName":"Master","profileImageUrl":null,"createdAt":"2026-03-04T10:13:10.883Z","updatedAt":"2026-03-04T10:13:10.883Z"}
+7:26:58 AM [express] GET /api/auth/user 200 in 10ms :: {"id":"admin-master-001","email":"admin@brighthorizononline.com","firstName":"Admin","lastName":"Master","profileImageUrl":null,"createdAt":"2026-03-04T10:13:10.883Z","updatedAt":"2026-03-04T10:13:10.883Z"}
+7:26:58 AM [express] GET /api/teachers/me 200 in 14ms :: {"id":"3e67141a-2b13-4a48-9d92-d1519e5c9547","userId":"admin-master-001","email":"admin@brighthorizononline.com","name":"Admin","role":"admin","calendarId":null,"sheetId":null,"sheetRowStart":null,"hourlyRate":null,"isActive":true,"createdAt":"2026-03-04T10:13:14.974Z","updatedAt":"2026-03-04T10:13:14.974Z"}
+7:26:58 AM [express] GET /api/admin/impersonate/status 200 in 15ms :: {"isImpersonating":false}
+7:26:58 AM [express] GET /api/admin/teachers 200 in 10ms :: [{"id":"303bb4d8-82e2-4640-bf65-56c0dc8805a2","userId":"pending_1768898992604","email":"piercingsbypaulie@gmail.com","name":"Paul","role":"teacher","calendarId":"245b9f04fea3f8aa6ad277ceba06e7b754e99ff0f9eda5b4781399b08edbaff9@group.calendar.google.com","sheetId":"1Usca2TShRq2WiWvZi64L4u--LPVSZMX6x8tpwYjAUSk","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-01-20T08:49:52.607Z","updatedAt":"2026-01-22T12:57:37.147Z"},{"id":"51e4e63a-4ced-4182-80e2-3c6f58fd2ec3","userId":"pending_1768899851167","email":"deanolrbeck@gmail.com","name":"Dean","role":"teacher","calendarId":"a49e251ce39fc5884f556f2aa69219b9af661a154380f2e9e1002a047aa66585@group.calendar.google.com","sheetId":"1veNbKFarWcck2Qv9LDLqQ8_xbf1sNsQI5JxbtRWJECw","sheetRowStart":null,"hourlyRate":"175.00","isActive":true,"createdAt":"2026-01-20T09:04:11.171Z","updatedAt":"2026-02-25T09:19:19.379Z"},{"id":"3e67141a-2b13-4a48-9d92-d1519e5c9547","userId":"admin-master-001","email":"admin@brighthorizononline.com","name":"Admin","role":"admin","calendarId":null,"sheetId":null,"sheetRowStart":null,"hourlyRate":null,"isActive":true,"createdAt":"2026-03-04T10:13:14.974Z","updatedAt":"2026-03-04T10:13:14.974Z"},{"id":"13423c40-72dd-4d27-9eb8-cfb242ca3342","userId":"05678c25-1edd-4e2a-87c6-85cdcb153acb","email":"christi.ibt@gmail.com","name":"Christi","role":"teacher","calendarId":"fb3de0858b8b793eda5262d47771539392bca01bd338d86aeed41e7d3899e761@group.calendar.google.com","sheetId":"1MoLv7dAhwx40naoVAbvkrNFomUQBeHCNcx4kLIUG6nA","sheetRowStart":"","hourlyRate":"175.00","isActive":true,"createdAt":"2026-03-04T13:05:20.412Z","updatedAt":"2026-03-04T13:05:20.412Z"},{"id":"7a741a5a-e591-4cb9-a7f3-0fa14f7df2c5","userId":"bc1c29a5-f2de-425c-9dc7-ea5376f5112b","email":"jameesimon927@gmail.com","name":"Jamee","role":"teacher","calendarId":"b57788d40a70bf38bb34aef9a07966f7679ef87ea5aa06797386ef04f3224bbc@group.calendar.google.com","sheetId":"1-WAtji7BZHwMjqR7ywqPXLJ9GyJ6x4j5wWcq28RGS2g","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T09:29:29.700Z","updatedAt":"2026-03-06T09:29:29.700Z"},{"id":"64acbd9a-5341-4ad9-9647-d1e9ceb1228a","userId":"a7ceff33-8805-40b8-97e5-a1603105eaaa","email":"Michaeladaniel0@gmail.com","name":"Michaela","role":"teacher","calendarId":"d384dd099f01b0fc739777fb6aed36d1c983d6ff6c829ec37186529bfeaf1fb7@group.calendar.google.com","sheetId":"1Su11jS3MQI8oDQkgCKlq9TRAlGRNbuBdaXCagu4wglo","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:19:14.734Z","updatedAt":"2026-03-06T10:19:14.734Z"},{"id":"b8913f5a-ac87-4087-a6fe-a94c77f62177","userId":"c7751922-5863-42dc-8e8a-7f70400b32e1","email":"jono.abrahamse@gmail.com","name":"Jonathan","role":"teacher","calendarId":"f66c007cd32a943353c199cf4aa6049332eb7d25a616872cbfe4614addee8cab@group.calendar.google.com","sheetId":"18nAXnR1rzBY6N3sCaTwyUgPnlic5HG6797OTUvj06zI","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:20:21.094Z","updatedAt":"2026-03-06T10:20:21.094Z"},{"id":"5c8429c3-629c-4021-82ca-94c7cf3becb6","userId":"c6236bc4-56ca-41c7-83ab-064a77d8eefd","email":"boniquesolaan24@gmail.com","name":"Bonique","role":"teacher","calendarId":"b72dd86914eb9abb1a6508272004be7165b563e72bccb3fcf7e01a0ed386d2b7@group.calendar.google.com","sheetId":"1pQYyspvdVCGK6-1VYN2DeS8h2DooehXhRh3457G9Ec8","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:21:24.610Z","updatedAt":"2026-03-06T10:21:24.610Z"},{"id":"8ea54ed8-9667-433b-9ced-119cc70bcccc","userId":"63d46336-eeb1-4e61-bd65-ff440287a6dc","email":"teacheraimee25@gmail.com","name":"Aimee","role":"teacher","calendarId":"181757a06518516be69f3e4114226d04f97645f702a443b84c3181b08234bd2b@group.calendar.google.com","sheetId":"1pJaroRwAyERg2SM0YrPTznW035nRYF2hz3YfW1zOQs4","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:22:15.487Z","updatedAt":"2026-03-06T10:22:15.487Z"},{"id":"224711b8-fc88-4574-b391-9e994b4c2abb","userId":"3a450e86-44d5-4d7d-bc45-2c72dc91d528","email":"durantbrian66@gmail.com","name":"Brian","role":"teacher","calendarId":"81104cb3862b1d2d93091458b69b363a293f21dbfc34c5b266bd6819e0ccd040@group.calendar.google.com","sheetId":"1c-mdkSp1pUbhKwfnNMq8sJDkm4tqi1sU0BwO2Jwyr6Y","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:23:12.400Z","updatedAt":"2026-03-06T10:23:12.400Z"},{"id":"586bd755-fa1c-4861-8ef3-eb1a331acb32","userId":"eb986c5d-ba15-4f7e-9904-066efea045df","email":"badge.wilson1980@gmail.com","name":"Carla","role":"teacher","calendarId":"cd1c03ff447fbb068dba7ea9e15adb38931bb06abd09ca9d2c5300e86b3d4fe5@group.calendar.google.com","sheetId":"1XsXIOdlp5ecJ0hUUkBLrcqaP6LUqpdoXWMDKwK5vYdY","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:24:24.991Z","updatedAt":"2026-03-06T10:24:24.991Z"}]
+7:26:58 AM [express] GET /api/auth/google/status 200 in 19ms :: {"connected":true}
+7:26:58 AM [express] GET /api/admin/leave-requests 200 in 23ms :: []
+Error fetching payroll: GaxiosError: invalid_grant
+    at Gaxios._request [90m(/home/runner/workspace/[39mnode_modules/[4mgaxios[24m/src/gaxios.ts:146:15[90m)[39m
+[90m    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)[39m
+    at async OAuth2Client.refreshTokenNoCache [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:212:19[90m)[39m
+    at async OAuth2Client.refreshAccessTokenAsync [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:247:19[90m)[39m
+    at async getAuthenticatedClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:76:29[90m)[39m
+    at async getGoogleCalendarClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:98:16[90m)[39m
+    at async <anonymous> [90m(/home/runner/workspace/[39mserver/routes.ts:1189:24[90m)[39m {
+  config: {
+    retry: [33mtrue[39m,
+    retryConfig: {
+      httpMethodsToRetry: [36m[Array][39m,
+      currentRetryAttempt: [33m0[39m,
+      retry: [33m3[39m,
+      noResponseRetries: [33m2[39m,
+      retryDelayMultiplier: [33m2[39m,
+      timeOfFirstRequest: [33m1774164423024[39m,
+      totalTimeout: [33m9007199254740991[39m,
+      maxRetryDelay: [33m9007199254740991[39m,
+      statusCodesToRetry: [36m[Array][39m
+    },
+    method: [32m'POST'[39m,
+    url: [32m'https://oauth2.googleapis.com/token'[39m,
+    data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    headers: {
+      [32m'Content-Type'[39m: [32m'application/x-www-form-urlencoded'[39m,
+      [32m'User-Agent'[39m: [32m'google-api-nodejs-client/9.15.1'[39m,
+      [32m'x-goog-api-client'[39m: [32m'gl-node/20.20.0'[39m
+    },
+    paramsSerializer: [36m[Function: paramsSerializer][39m,
+    body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    validateStatus: [36m[Function: validateStatus][39m,
+    responseType: [32m'unknown'[39m,
+    errorRedactor: [36m[Function: defaultErrorRedactor][39m
+  },
+  response: {
+    config: {
+      retry: [33mtrue[39m,
+      retryConfig: [36m[Object][39m,
+      method: [32m'POST'[39m,
+      url: [32m'https://oauth2.googleapis.com/token'[39m,
+      data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      headers: [36m[Object][39m,
+      paramsSerializer: [36m[Function: paramsSerializer][39m,
+      body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      validateStatus: [36m[Function: validateStatus][39m,
+      responseType: [32m'unknown'[39m,
+      errorRedactor: [36m[Function: defaultErrorRedactor][39m
+    },
+    data: {
+      error: [32m'invalid_grant'[39m,
+      error_description: [32m'Token has been expired or revoked.'[39m
+    },
+    headers: {
+      [32m'cache-control'[39m: [32m'no-cache, no-store, max-age=0, must-revalidate'[39m,
+      [32m'content-encoding'[39m: [32m'gzip'[39m,
+      [32m'content-type'[39m: [32m'application/json; charset=utf-8'[39m,
+      date: [32m'Sun, 22 Mar 2026 07:27:03 GMT'[39m,
+      expires: [32m'Mon, 01 Jan 1990 00:00:00 GMT'[39m,
+      pragma: [32m'no-cache'[39m,
+      server: [32m'scaffolding on HTTPServer2'[39m,
+      [32m'transfer-encoding'[39m: [32m'chunked'[39m,
+      vary: [32m'Origin, X-Origin, Referer'[39m,
+      [32m'x-content-type-options'[39m: [32m'nosniff'[39m,
+      [32m'x-frame-options'[39m: [32m'SAMEORIGIN'[39m,
+      [32m'x-xss-protection'[39m: [32m'0'[39m
+    },
+    status: [33m400[39m,
+    statusText: [32m'Bad Request'[39m,
+    request: { responseURL: [32m'https://oauth2.googleapis.com/token'[39m }
+  },
+  error: [90mundefined[39m,
+  status: [33m400[39m,
+  [[32mSymbol(gaxios-gaxios-error)[39m]: [32m'6.7.1'[39m
+}
+7:27:03 AM [express] GET /api/admin/payroll 500 in 83ms :: {"message":"Failed to fetch payroll data"}
+Error fetching payroll: GaxiosError: invalid_grant
+    at Gaxios._request [90m(/home/runner/workspace/[39mnode_modules/[4mgaxios[24m/src/gaxios.ts:146:15[90m)[39m
+[90m    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)[39m
+    at async OAuth2Client.refreshTokenNoCache [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:212:19[90m)[39m
+    at async OAuth2Client.refreshAccessTokenAsync [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:247:19[90m)[39m
+    at async getAuthenticatedClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:76:29[90m)[39m
+    at async getGoogleCalendarClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:98:16[90m)[39m
+    at async <anonymous> [90m(/home/runner/workspace/[39mserver/routes.ts:1189:24[90m)[39m {
+  config: {
+    retry: [33mtrue[39m,
+    retryConfig: {
+      httpMethodsToRetry: [36m[Array][39m,
+      currentRetryAttempt: [33m0[39m,
+      retry: [33m3[39m,
+      noResponseRetries: [33m2[39m,
+      retryDelayMultiplier: [33m2[39m,
+      timeOfFirstRequest: [33m1774164424637[39m,
+      totalTimeout: [33m9007199254740991[39m,
+      maxRetryDelay: [33m9007199254740991[39m,
+      statusCodesToRetry: [36m[Array][39m
+    },
+    method: [32m'POST'[39m,
+    url: [32m'https://oauth2.googleapis.com/token'[39m,
+    data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    headers: {
+      [32m'Content-Type'[39m: [32m'application/x-www-form-urlencoded'[39m,
+      [32m'User-Agent'[39m: [32m'google-api-nodejs-client/9.15.1'[39m,
+      [32m'x-goog-api-client'[39m: [32m'gl-node/20.20.0'[39m
+    },
+    paramsSerializer: [36m[Function: paramsSerializer][39m,
+    body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    validateStatus: [36m[Function: validateStatus][39m,
+    responseType: [32m'unknown'[39m,
+    errorRedactor: [36m[Function: defaultErrorRedactor][39m
+  },
+  response: {
+    config: {
+      retry: [33mtrue[39m,
+      retryConfig: [36m[Object][39m,
+      method: [32m'POST'[39m,
+      url: [32m'https://oauth2.googleapis.com/token'[39m,
+      data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      headers: [36m[Object][39m,
+      paramsSerializer: [36m[Function: paramsSerializer][39m,
+      body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      validateStatus: [36m[Function: validateStatus][39m,
+      responseType: [32m'unknown'[39m,
+      errorRedactor: [36m[Function: defaultErrorRedactor][39m
+    },
+    data: {
+      error: [32m'invalid_grant'[39m,
+      error_description: [32m'Token has been expired or revoked.'[39m
+    },
+    headers: {
+      [32m'cache-control'[39m: [32m'no-cache, no-store, max-age=0, must-revalidate'[39m,
+      [32m'content-encoding'[39m: [32m'gzip'[39m,
+      [32m'content-type'[39m: [32m'application/json; charset=utf-8'[39m,
+      date: [32m'Sun, 22 Mar 2026 07:27:04 GMT'[39m,
+      expires: [32m'Mon, 01 Jan 1990 00:00:00 GMT'[39m,
+      pragma: [32m'no-cache'[39m,
+      server: [32m'scaffolding on HTTPServer2'[39m,
+      [32m'transfer-encoding'[39m: [32m'chunked'[39m,
+      vary: [32m'Origin, X-Origin, Referer'[39m,
+      [32m'x-content-type-options'[39m: [32m'nosniff'[39m,
+      [32m'x-frame-options'[39m: [32m'SAMEORIGIN'[39m,
+      [32m'x-xss-protection'[39m: [32m'0'[39m
+    },
+    status: [33m400[39m,
+    statusText: [32m'Bad Request'[39m,
+    request: { responseURL: [32m'https://oauth2.googleapis.com/token'[39m }
+  },
+  error: [90mundefined[39m,
+  status: [33m400[39m,
+  [[32mSymbol(gaxios-gaxios-error)[39m]: [32m'6.7.1'[39m
+}
+7:27:04 AM [express] GET /api/admin/payroll 500 in 32ms :: {"message":"Failed to fetch payroll data"}
+Error fetching payroll: GaxiosError: invalid_grant
+    at Gaxios._request [90m(/home/runner/workspace/[39mnode_modules/[4mgaxios[24m/src/gaxios.ts:146:15[90m)[39m
+[90m    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)[39m
+    at async OAuth2Client.refreshTokenNoCache [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:212:19[90m)[39m
+    at async OAuth2Client.refreshAccessTokenAsync [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:247:19[90m)[39m
+    at async getAuthenticatedClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:76:29[90m)[39m
+    at async getGoogleCalendarClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:98:16[90m)[39m
+    at async <anonymous> [90m(/home/runner/workspace/[39mserver/routes.ts:1189:24[90m)[39m {
+  config: {
+    retry: [33mtrue[39m,
+    retryConfig: {
+      httpMethodsToRetry: [36m[Array][39m,
+      currentRetryAttempt: [33m0[39m,
+      retry: [33m3[39m,
+      noResponseRetries: [33m2[39m,
+      retryDelayMultiplier: [33m2[39m,
+      timeOfFirstRequest: [33m1774164425679[39m,
+      totalTimeout: [33m9007199254740991[39m,
+      maxRetryDelay: [33m9007199254740991[39m,
+      statusCodesToRetry: [36m[Array][39m
+    },
+    method: [32m'POST'[39m,
+    url: [32m'https://oauth2.googleapis.com/token'[39m,
+    data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    headers: {
+      [32m'Content-Type'[39m: [32m'application/x-www-form-urlencoded'[39m,
+      [32m'User-Agent'[39m: [32m'google-api-nodejs-client/9.15.1'[39m,
+      [32m'x-goog-api-client'[39m: [32m'gl-node/20.20.0'[39m
+    },
+    paramsSerializer: [36m[Function: paramsSerializer][39m,
+    body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    validateStatus: [36m[Function: validateStatus][39m,
+    responseType: [32m'unknown'[39m,
+    errorRedactor: [36m[Function: defaultErrorRedactor][39m
+  },
+  response: {
+    config: {
+      retry: [33mtrue[39m,
+      retryConfig: [36m[Object][39m,
+      method: [32m'POST'[39m,
+      url: [32m'https://oauth2.googleapis.com/token'[39m,
+      data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      headers: [36m[Object][39m,
+      paramsSerializer: [36m[Function: paramsSerializer][39m,
+      body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      validateStatus: [36m[Function: validateStatus][39m,
+      responseType: [32m'unknown'[39m,
+      errorRedactor: [36m[Function: defaultErrorRedactor][39m
+    },
+    data: {
+      error: [32m'invalid_grant'[39m,
+      error_description: [32m'Token has been expired or revoked.'[39m
+    },
+    headers: {
+      [32m'cache-control'[39m: [32m'no-cache, no-store, max-age=0, must-revalidate'[39m,
+      [32m'content-encoding'[39m: [32m'gzip'[39m,
+      [32m'content-type'[39m: [32m'application/json; charset=utf-8'[39m,
+      date: [32m'Sun, 22 Mar 2026 07:27:05 GMT'[39m,
+      expires: [32m'Mon, 01 Jan 1990 00:00:00 GMT'[39m,
+      pragma: [32m'no-cache'[39m,
+      server: [32m'scaffolding on HTTPServer2'[39m,
+      [32m'transfer-encoding'[39m: [32m'chunked'[39m,
+      vary: [32m'Origin, X-Origin, Referer'[39m,
+      [32m'x-content-type-options'[39m: [32m'nosniff'[39m,
+      [32m'x-frame-options'[39m: [32m'SAMEORIGIN'[39m,
+      [32m'x-xss-protection'[39m: [32m'0'[39m
+    },
+    status: [33m400[39m,
+    statusText: [32m'Bad Request'[39m,
+    request: { responseURL: [32m'https://oauth2.googleapis.com/token'[39m }
+  },
+  error: [90mundefined[39m,
+  status: [33m400[39m,
+  [[32mSymbol(gaxios-gaxios-error)[39m]: [32m'6.7.1'[39m
+}
+7:27:05 AM [express] GET /api/admin/payroll 500 in 63ms :: {"message":"Failed to fetch payroll data"}
+Error fetching payroll: GaxiosError: invalid_grant
+    at Gaxios._request [90m(/home/runner/workspace/[39mnode_modules/[4mgaxios[24m/src/gaxios.ts:146:15[90m)[39m
+[90m    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)[39m
+    at async OAuth2Client.refreshTokenNoCache [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:212:19[90m)[39m
+    at async OAuth2Client.refreshAccessTokenAsync [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:247:19[90m)[39m
+    at async getAuthenticatedClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:76:29[90m)[39m
+    at async getGoogleCalendarClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:98:16[90m)[39m
+    at async <anonymous> [90m(/home/runner/workspace/[39mserver/routes.ts:1189:24[90m)[39m {
+  config: {
+    retry: [33mtrue[39m,
+    retryConfig: {
+      httpMethodsToRetry: [36m[Array][39m,
+      currentRetryAttempt: [33m0[39m,
+      retry: [33m3[39m,
+      noResponseRetries: [33m2[39m,
+      retryDelayMultiplier: [33m2[39m,
+      timeOfFirstRequest: [33m1774164426614[39m,
+      totalTimeout: [33m9007199254740991[39m,
+      maxRetryDelay: [33m9007199254740991[39m,
+      statusCodesToRetry: [36m[Array][39m
+    },
+    method: [32m'POST'[39m,
+    url: [32m'https://oauth2.googleapis.com/token'[39m,
+    data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    headers: {
+      [32m'Content-Type'[39m: [32m'application/x-www-form-urlencoded'[39m,
+      [32m'User-Agent'[39m: [32m'google-api-nodejs-client/9.15.1'[39m,
+      [32m'x-goog-api-client'[39m: [32m'gl-node/20.20.0'[39m
+    },
+    paramsSerializer: [36m[Function: paramsSerializer][39m,
+    body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    validateStatus: [36m[Function: validateStatus][39m,
+    responseType: [32m'unknown'[39m,
+    errorRedactor: [36m[Function: defaultErrorRedactor][39m
+  },
+  response: {
+    config: {
+      retry: [33mtrue[39m,
+      retryConfig: [36m[Object][39m,
+      method: [32m'POST'[39m,
+      url: [32m'https://oauth2.googleapis.com/token'[39m,
+      data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      headers: [36m[Object][39m,
+      paramsSerializer: [36m[Function: paramsSerializer][39m,
+      body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      validateStatus: [36m[Function: validateStatus][39m,
+      responseType: [32m'unknown'[39m,
+      errorRedactor: [36m[Function: defaultErrorRedactor][39m
+    },
+    data: {
+      error: [32m'invalid_grant'[39m,
+      error_description: [32m'Token has been expired or revoked.'[39m
+    },
+    headers: {
+      [32m'cache-control'[39m: [32m'no-cache, no-store, max-age=0, must-revalidate'[39m,
+      [32m'content-encoding'[39m: [32m'gzip'[39m,
+      [32m'content-type'[39m: [32m'application/json; charset=utf-8'[39m,
+      date: [32m'Sun, 22 Mar 2026 07:27:06 GMT'[39m,
+      expires: [32m'Mon, 01 Jan 1990 00:00:00 GMT'[39m,
+      pragma: [32m'no-cache'[39m,
+      server: [32m'scaffolding on HTTPServer2'[39m,
+      [32m'transfer-encoding'[39m: [32m'chunked'[39m,
+      vary: [32m'Origin, X-Origin, Referer'[39m,
+      [32m'x-content-type-options'[39m: [32m'nosniff'[39m,
+      [32m'x-frame-options'[39m: [32m'SAMEORIGIN'[39m,
+      [32m'x-xss-protection'[39m: [32m'0'[39m
+    },
+    status: [33m400[39m,
+    statusText: [32m'Bad Request'[39m,
+    request: { responseURL: [32m'https://oauth2.googleapis.com/token'[39m }
+  },
+  error: [90mundefined[39m,
+  status: [33m400[39m,
+  [[32mSymbol(gaxios-gaxios-error)[39m]: [32m'6.7.1'[39m
+}
+7:27:06 AM [express] GET /api/admin/payroll 500 in 38ms :: {"message":"Failed to fetch payroll data"}
+Error fetching payroll: GaxiosError: invalid_grant
+    at Gaxios._request [90m(/home/runner/workspace/[39mnode_modules/[4mgaxios[24m/src/gaxios.ts:146:15[90m)[39m
+[90m    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)[39m
+    at async OAuth2Client.refreshTokenNoCache [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:212:19[90m)[39m
+    at async OAuth2Client.refreshAccessTokenAsync [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:247:19[90m)[39m
+    at async getAuthenticatedClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:76:29[90m)[39m
+    at async getGoogleCalendarClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:98:16[90m)[39m
+    at async <anonymous> [90m(/home/runner/workspace/[39mserver/routes.ts:1189:24[90m)[39m {
+  config: {
+    retry: [33mtrue[39m,
+    retryConfig: {
+      httpMethodsToRetry: [36m[Array][39m,
+      currentRetryAttempt: [33m0[39m,
+      retry: [33m3[39m,
+      noResponseRetries: [33m2[39m,
+      retryDelayMultiplier: [33m2[39m,
+      timeOfFirstRequest: [33m1774164427408[39m,
+      totalTimeout: [33m9007199254740991[39m,
+      maxRetryDelay: [33m9007199254740991[39m,
+      statusCodesToRetry: [36m[Array][39m
+    },
+    method: [32m'POST'[39m,
+    url: [32m'https://oauth2.googleapis.com/token'[39m,
+    data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    headers: {
+      [32m'Content-Type'[39m: [32m'application/x-www-form-urlencoded'[39m,
+      [32m'User-Agent'[39m: [32m'google-api-nodejs-client/9.15.1'[39m,
+      [32m'x-goog-api-client'[39m: [32m'gl-node/20.20.0'[39m
+    },
+    paramsSerializer: [36m[Function: paramsSerializer][39m,
+    body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    validateStatus: [36m[Function: validateStatus][39m,
+    responseType: [32m'unknown'[39m,
+    errorRedactor: [36m[Function: defaultErrorRedactor][39m
+  },
+  response: {
+    config: {
+      retry: [33mtrue[39m,
+      retryConfig: [36m[Object][39m,
+      method: [32m'POST'[39m,
+      url: [32m'https://oauth2.googleapis.com/token'[39m,
+      data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      headers: [36m[Object][39m,
+      paramsSerializer: [36m[Function: paramsSerializer][39m,
+      body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      validateStatus: [36m[Function: validateStatus][39m,
+      responseType: [32m'unknown'[39m,
+      errorRedactor: [36m[Function: defaultErrorRedactor][39m
+    },
+    data: {
+      error: [32m'invalid_grant'[39m,
+      error_description: [32m'Token has been expired or revoked.'[39m
+    },
+    headers: {
+      [32m'cache-control'[39m: [32m'no-cache, no-store, max-age=0, must-revalidate'[39m,
+      [32m'content-encoding'[39m: [32m'gzip'[39m,
+      [32m'content-type'[39m: [32m'application/json; charset=utf-8'[39m,
+      date: [32m'Sun, 22 Mar 2026 07:27:07 GMT'[39m,
+      expires: [32m'Mon, 01 Jan 1990 00:00:00 GMT'[39m,
+      pragma: [32m'no-cache'[39m,
+      server: [32m'scaffolding on HTTPServer2'[39m,
+      [32m'transfer-encoding'[39m: [32m'chunked'[39m,
+      vary: [32m'Origin, X-Origin, Referer'[39m,
+      [32m'x-content-type-options'[39m: [32m'nosniff'[39m,
+      [32m'x-frame-options'[39m: [32m'SAMEORIGIN'[39m,
+      [32m'x-xss-protection'[39m: [32m'0'[39m
+    },
+    status: [33m400[39m,
+    statusText: [32m'Bad Request'[39m,
+    request: { responseURL: [32m'https://oauth2.googleapis.com/token'[39m }
+  },
+  error: [90mundefined[39m,
+  status: [33m400[39m,
+  [[32mSymbol(gaxios-gaxios-error)[39m]: [32m'6.7.1'[39m
+}
+7:27:07 AM [express] GET /api/admin/payroll 500 in 34ms :: {"message":"Failed to fetch payroll data"}
+Error fetching calendar list: GaxiosError: invalid_grant
+    at Gaxios._request [90m(/home/runner/workspace/[39mnode_modules/[4mgaxios[24m/src/gaxios.ts:146:15[90m)[39m
+[90m    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)[39m
+    at async OAuth2Client.refreshTokenNoCache [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:212:19[90m)[39m
+    at async OAuth2Client.refreshAccessTokenAsync [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:247:19[90m)[39m
+    at async getAuthenticatedClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:76:29[90m)[39m
+    at async getGoogleCalendarClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:98:16[90m)[39m
+    at async <anonymous> [90m(/home/runner/workspace/[39mserver/routes.ts:494:24[90m)[39m {
+  config: {
+    retry: [33mtrue[39m,
+    retryConfig: {
+      httpMethodsToRetry: [36m[Array][39m,
+      currentRetryAttempt: [33m0[39m,
+      retry: [33m3[39m,
+      noResponseRetries: [33m2[39m,
+      retryDelayMultiplier: [33m2[39m,
+      timeOfFirstRequest: [33m1774164429103[39m,
+      totalTimeout: [33m9007199254740991[39m,
+      maxRetryDelay: [33m9007199254740991[39m,
+      statusCodesToRetry: [36m[Array][39m
+    },
+    method: [32m'POST'[39m,
+    url: [32m'https://oauth2.googleapis.com/token'[39m,
+    data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    headers: {
+      [32m'Content-Type'[39m: [32m'application/x-www-form-urlencoded'[39m,
+      [32m'User-Agent'[39m: [32m'google-api-nodejs-client/9.15.1'[39m,
+      [32m'x-goog-api-client'[39m: [32m'gl-node/20.20.0'[39m
+    },
+    paramsSerializer: [36m[Function: paramsSerializer][39m,
+    body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    validateStatus: [36m[Function: validateStatus][39m,
+    responseType: [32m'unknown'[39m,
+    errorRedactor: [36m[Function: defaultErrorRedactor][39m
+  },
+  response: {
+    config: {
+      retry: [33mtrue[39m,
+      retryConfig: [36m[Object][39m,
+      method: [32m'POST'[39m,
+      url: [32m'https://oauth2.googleapis.com/token'[39m,
+      data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      headers: [36m[Object][39m,
+      paramsSerializer: [36m[Function: paramsSerializer][39m,
+      body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      validateStatus: [36m[Function: validateStatus][39m,
+      responseType: [32m'unknown'[39m,
+      errorRedactor: [36m[Function: defaultErrorRedactor][39m
+    },
+    data: {
+      error: [32m'invalid_grant'[39m,
+      error_description: [32m'Token has been expired or revoked.'[39m
+    },
+    headers: {
+      [32m'cache-control'[39m: [32m'no-cache, no-store, max-age=0, must-revalidate'[39m,
+      [32m'content-encoding'[39m: [32m'gzip'[39m,
+      [32m'content-type'[39m: [32m'application/json; charset=utf-8'[39m,
+      date: [32m'Sun, 22 Mar 2026 07:27:09 GMT'[39m,
+      expires: [32m'Mon, 01 Jan 1990 00:00:00 GMT'[39m,
+      pragma: [32m'no-cache'[39m,
+      server: [32m'scaffolding on HTTPServer2'[39m,
+      [32m'transfer-encoding'[39m: [32m'chunked'[39m,
+      vary: [32m'Origin, X-Origin, Referer'[39m,
+      [32m'x-content-type-options'[39m: [32m'nosniff'[39m,
+      [32m'x-frame-options'[39m: [32m'SAMEORIGIN'[39m,
+      [32m'x-xss-protection'[39m: [32m'0'[39m
+    },
+    status: [33m400[39m,
+    statusText: [32m'Bad Request'[39m,
+    request: { responseURL: [32m'https://oauth2.googleapis.com/token'[39m }
+  },
+  error: [90mundefined[39m,
+  status: [33m400[39m,
+  [[32mSymbol(gaxios-gaxios-error)[39m]: [32m'6.7.1'[39m
+}
+7:27:09 AM [express] GET /api/admin/calendars 500 in 19ms :: {"message":"Failed to fetch calendars"}
+Error fetching calendar list: GaxiosError: invalid_grant
+    at Gaxios._request [90m(/home/runner/workspace/[39mnode_modules/[4mgaxios[24m/src/gaxios.ts:146:15[90m)[39m
+[90m    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)[39m
+    at async OAuth2Client.refreshTokenNoCache [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:212:19[90m)[39m
+    at async OAuth2Client.refreshAccessTokenAsync [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:247:19[90m)[39m
+    at async getAuthenticatedClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:76:29[90m)[39m
+    at async getGoogleCalendarClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:98:16[90m)[39m
+    at async <anonymous> [90m(/home/runner/workspace/[39mserver/routes.ts:494:24[90m)[39m {
+  config: {
+    retry: [33mtrue[39m,
+    retryConfig: {
+      httpMethodsToRetry: [36m[Array][39m,
+      currentRetryAttempt: [33m0[39m,
+      retry: [33m3[39m,
+      noResponseRetries: [33m2[39m,
+      retryDelayMultiplier: [33m2[39m,
+      timeOfFirstRequest: [33m1774164436992[39m,
+      totalTimeout: [33m9007199254740991[39m,
+      maxRetryDelay: [33m9007199254740991[39m,
+      statusCodesToRetry: [36m[Array][39m
+    },
+    method: [32m'POST'[39m,
+    url: [32m'https://oauth2.googleapis.com/token'[39m,
+    data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    headers: {
+      [32m'Content-Type'[39m: [32m'application/x-www-form-urlencoded'[39m,
+      [32m'User-Agent'[39m: [32m'google-api-nodejs-client/9.15.1'[39m,
+      [32m'x-goog-api-client'[39m: [32m'gl-node/20.20.0'[39m
+    },
+    paramsSerializer: [36m[Function: paramsSerializer][39m,
+    body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    validateStatus: [36m[Function: validateStatus][39m,
+    responseType: [32m'unknown'[39m,
+    errorRedactor: [36m[Function: defaultErrorRedactor][39m
+  },
+  response: {
+    config: {
+      retry: [33mtrue[39m,
+      retryConfig: [36m[Object][39m,
+      method: [32m'POST'[39m,
+      url: [32m'https://oauth2.googleapis.com/token'[39m,
+      data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      headers: [36m[Object][39m,
+      paramsSerializer: [36m[Function: paramsSerializer][39m,
+      body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      validateStatus: [36m[Function: validateStatus][39m,
+      responseType: [32m'unknown'[39m,
+      errorRedactor: [36m[Function: defaultErrorRedactor][39m
+    },
+    data: {
+      error: [32m'invalid_grant'[39m,
+      error_description: [32m'Token has been expired or revoked.'[39m
+    },
+    headers: {
+      [32m'cache-control'[39m: [32m'no-cache, no-store, max-age=0, must-revalidate'[39m,
+      [32m'content-encoding'[39m: [32m'gzip'[39m,
+      [32m'content-type'[39m: [32m'application/json; charset=utf-8'[39m,
+      date: [32m'Sun, 22 Mar 2026 07:27:16 GMT'[39m,
+      expires: [32m'Mon, 01 Jan 1990 00:00:00 GMT'[39m,
+      pragma: [32m'no-cache'[39m,
+      server: [32m'scaffolding on HTTPServer2'[39m,
+      [32m'transfer-encoding'[39m: [32m'chunked'[39m,
+      vary: [32m'Origin, X-Origin, Referer'[39m,
+      [32m'x-content-type-options'[39m: [32m'nosniff'[39m,
+      [32m'x-frame-options'[39m: [32m'SAMEORIGIN'[39m,
+      [32m'x-xss-protection'[39m: [32m'0'[39m
+    },
+    status: [33m400[39m,
+    statusText: [32m'Bad Request'[39m,
+    request: { responseURL: [32m'https://oauth2.googleapis.com/token'[39m }
+  },
+  error: [90mundefined[39m,
+  status: [33m400[39m,
+  [[32mSymbol(gaxios-gaxios-error)[39m]: [32m'6.7.1'[39m
+}
+7:27:16 AM [express] GET /api/admin/calendars 500 in 41ms :: {"message":"Failed to fetch calendars"}
+Admin 3e67141a-2b13-4a48-9d92-d1519e5c9547 started impersonating teacher 303bb4d8-82e2-4640-bf65-56c0dc8805a2
+7:27:19 AM [express] POST /api/admin/impersonate/303bb4d8-82e2-4640-bf65-56c0dc8805a2 200 in 8ms :: {"success":true,"impersonating":{"id":"303bb4d8-82e2-4640-bf65-56c0dc8805a2","userId":"pending_1768898992604","email":"piercingsbypaulie@gmail.com","name":"Paul","role":"teacher","calendarId":"245b9f04fea3f8aa6ad277ceba06e7b754e99ff0f9eda5b4781399b08edbaff9@group.calendar.google.com","sheetId":"1Usca2TShRq2WiWvZi64L4u--LPVSZMX6x8tpwYjAUSk","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-01-20T08:49:52.607Z","updatedAt":"2026-01-22T12:57:37.147Z"},"message":"Now viewing as Paul"}
+7:27:20 AM [express] GET /api/admin/impersonate/status 200 in 7ms :: {"isImpersonating":true,"teacher":{"id":"303bb4d8-82e2-4640-bf65-56c0dc8805a2","name":"Paul"}}
+7:27:20 AM [express] GET /api/leave-requests/me 200 in 11ms :: []
+Error fetching calendar events: GaxiosError: invalid_grant
+    at Gaxios._request [90m(/home/runner/workspace/[39mnode_modules/[4mgaxios[24m/src/gaxios.ts:146:15[90m)[39m
+[90m    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)[39m
+    at async OAuth2Client.refreshTokenNoCache [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:212:19[90m)[39m
+    at async OAuth2Client.refreshAccessTokenAsync [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:247:19[90m)[39m
+    at async getAuthenticatedClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:76:29[90m)[39m
+    at async getGoogleCalendarClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:98:16[90m)[39m
+    at async <anonymous> [90m(/home/runner/workspace/[39mserver/routes.ts:183:24[90m)[39m {
+  config: {
+    retry: [33mtrue[39m,
+    retryConfig: {
+      httpMethodsToRetry: [36m[Array][39m,
+      currentRetryAttempt: [33m0[39m,
+      retry: [33m3[39m,
+      noResponseRetries: [33m2[39m,
+      retryDelayMultiplier: [33m2[39m,
+      timeOfFirstRequest: [33m1774164440612[39m,
+      totalTimeout: [33m9007199254740991[39m,
+      maxRetryDelay: [33m9007199254740991[39m,
+      statusCodesToRetry: [36m[Array][39m
+    },
+    method: [32m'POST'[39m,
+    url: [32m'https://oauth2.googleapis.com/token'[39m,
+    data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    headers: {
+      [32m'Content-Type'[39m: [32m'application/x-www-form-urlencoded'[39m,
+      [32m'User-Agent'[39m: [32m'google-api-nodejs-client/9.15.1'[39m,
+      [32m'x-goog-api-client'[39m: [32m'gl-node/20.20.0'[39m
+    },
+    paramsSerializer: [36m[Function: paramsSerializer][39m,
+    body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    validateStatus: [36m[Function: validateStatus][39m,
+    responseType: [32m'unknown'[39m,
+    errorRedactor: [36m[Function: defaultErrorRedactor][39m
+  },
+  response: {
+    config: {
+      retry: [33mtrue[39m,
+      retryConfig: [36m[Object][39m,
+      method: [32m'POST'[39m,
+      url: [32m'https://oauth2.googleapis.com/token'[39m,
+      data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      headers: [36m[Object][39m,
+      paramsSerializer: [36m[Function: paramsSerializer][39m,
+      body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      validateStatus: [36m[Function: validateStatus][39m,
+      responseType: [32m'unknown'[39m,
+      errorRedactor: [36m[Function: defaultErrorRedactor][39m
+    },
+    data: {
+      error: [32m'invalid_grant'[39m,
+      error_description: [32m'Token has been expired or revoked.'[39m
+    },
+    headers: {
+      [32m'cache-control'[39m: [32m'no-cache, no-store, max-age=0, must-revalidate'[39m,
+      [32m'content-encoding'[39m: [32m'gzip'[39m,
+      [32m'content-type'[39m: [32m'application/json; charset=utf-8'[39m,
+      date: [32m'Sun, 22 Mar 2026 07:27:20 GMT'[39m,
+      expires: [32m'Mon, 01 Jan 1990 00:00:00 GMT'[39m,
+      pragma: [32m'no-cache'[39m,
+      server: [32m'scaffolding on HTTPServer2'[39m,
+      [32m'transfer-encoding'[39m: [32m'chunked'[39m,
+      vary: [32m'Origin, X-Origin, Referer'[39m,
+      [32m'x-content-type-options'[39m: [32m'nosniff'[39m,
+      [32m'x-frame-options'[39m: [32m'SAMEORIGIN'[39m,
+      [32m'x-xss-protection'[39m: [32m'0'[39m
+    },
+    status: [33m400[39m,
+    statusText: [32m'Bad Request'[39m,
+    request: { responseURL: [32m'https://oauth2.googleapis.com/token'[39m }
+  },
+  error: [90mundefined[39m,
+  status: [33m400[39m,
+  [[32mSymbol(gaxios-gaxios-error)[39m]: [32m'6.7.1'[39m
+}
+7:27:20 AM [express] GET /api/calendar/events 500 in 27ms :: {"message":"Failed to fetch calendar events"}
+Error fetching sheet tabs: GaxiosError: invalid_grant
+    at Gaxios._request [90m(/home/runner/workspace/[39mnode_modules/[4mgaxios[24m/src/gaxios.ts:146:15[90m)[39m
+[90m    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)[39m
+    at async OAuth2Client.refreshTokenNoCache [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:212:19[90m)[39m
+    at async OAuth2Client.refreshAccessTokenAsync [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:247:19[90m)[39m
+    at async getAuthenticatedClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:76:29[90m)[39m
+    at async getGoogleSheetsClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:103:16[90m)[39m
+    at async <anonymous> [90m(/home/runner/workspace/[39mserver/routes.ts:326:22[90m)[39m {
+  config: {
+    retry: [33mtrue[39m,
+    retryConfig: {
+      httpMethodsToRetry: [36m[Array][39m,
+      currentRetryAttempt: [33m0[39m,
+      retry: [33m3[39m,
+      noResponseRetries: [33m2[39m,
+      retryDelayMultiplier: [33m2[39m,
+      timeOfFirstRequest: [33m1774164440640[39m,
+      totalTimeout: [33m9007199254740991[39m,
+      maxRetryDelay: [33m9007199254740991[39m,
+      statusCodesToRetry: [36m[Array][39m
+    },
+    method: [32m'POST'[39m,
+    url: [32m'https://oauth2.googleapis.com/token'[39m,
+    data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    headers: {
+      [32m'Content-Type'[39m: [32m'application/x-www-form-urlencoded'[39m,
+      [32m'User-Agent'[39m: [32m'google-api-nodejs-client/9.15.1'[39m,
+      [32m'x-goog-api-client'[39m: [32m'gl-node/20.20.0'[39m
+    },
+    paramsSerializer: [36m[Function: paramsSerializer][39m,
+    body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    validateStatus: [36m[Function: validateStatus][39m,
+    responseType: [32m'unknown'[39m,
+    errorRedactor: [36m[Function: defaultErrorRedactor][39m
+  },
+  response: {
+    config: {
+      retry: [33mtrue[39m,
+      retryConfig: [36m[Object][39m,
+      method: [32m'POST'[39m,
+      url: [32m'https://oauth2.googleapis.com/token'[39m,
+      data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      headers: [36m[Object][39m,
+      paramsSerializer: [36m[Function: paramsSerializer][39m,
+      body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      validateStatus: [36m[Function: validateStatus][39m,
+      responseType: [32m'unknown'[39m,
+      errorRedactor: [36m[Function: defaultErrorRedactor][39m
+    },
+    data: {
+      error: [32m'invalid_grant'[39m,
+      error_description: [32m'Token has been expired or revoked.'[39m
+    },
+    headers: {
+      [32m'cache-control'[39m: [32m'no-cache, no-store, max-age=0, must-revalidate'[39m,
+      [32m'content-encoding'[39m: [32m'gzip'[39m,
+      [32m'content-type'[39m: [32m'application/json; charset=utf-8'[39m,
+      date: [32m'Sun, 22 Mar 2026 07:27:20 GMT'[39m,
+      expires: [32m'Mon, 01 Jan 1990 00:00:00 GMT'[39m,
+      pragma: [32m'no-cache'[39m,
+      server: [32m'scaffolding on HTTPServer2'[39m,
+      [32m'transfer-encoding'[39m: [32m'chunked'[39m,
+      vary: [32m'Origin, X-Origin, Referer'[39m,
+      [32m'x-content-type-options'[39m: [32m'nosniff'[39m,
+      [32m'x-frame-options'[39m: [32m'SAMEORIGIN'[39m,
+      [32m'x-xss-protection'[39m: [32m'0'[39m
+    },
+    status: [33m400[39m,
+    statusText: [32m'Bad Request'[39m,
+    request: { responseURL: [32m'https://oauth2.googleapis.com/token'[39m }
+  },
+  error: [90mundefined[39m,
+  status: [33m400[39m,
+  [[32mSymbol(gaxios-gaxios-error)[39m]: [32m'6.7.1'[39m
+}
+7:27:20 AM [express] GET /api/attendance/tabs 500 in 42ms :: {"message":"Failed to fetch sheet tabs"}
+Error fetching calendar events: GaxiosError: invalid_grant
+    at Gaxios._request [90m(/home/runner/workspace/[39mnode_modules/[4mgaxios[24m/src/gaxios.ts:146:15[90m)[39m
+[90m    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)[39m
+    at async OAuth2Client.refreshTokenNoCache [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:212:19[90m)[39m
+    at async OAuth2Client.refreshAccessTokenAsync [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:247:19[90m)[39m
+    at async getAuthenticatedClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:76:29[90m)[39m
+    at async getGoogleCalendarClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:98:16[90m)[39m
+    at async <anonymous> [90m(/home/runner/workspace/[39mserver/routes.ts:183:24[90m)[39m {
+  config: {
+    retry: [33mtrue[39m,
+    retryConfig: {
+      httpMethodsToRetry: [36m[Array][39m,
+      currentRetryAttempt: [33m0[39m,
+      retry: [33m3[39m,
+      noResponseRetries: [33m2[39m,
+      retryDelayMultiplier: [33m2[39m,
+      timeOfFirstRequest: [33m1774164442138[39m,
+      totalTimeout: [33m9007199254740991[39m,
+      maxRetryDelay: [33m9007199254740991[39m,
+      statusCodesToRetry: [36m[Array][39m
+    },
+    method: [32m'POST'[39m,
+    url: [32m'https://oauth2.googleapis.com/token'[39m,
+    data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    headers: {
+      [32m'Content-Type'[39m: [32m'application/x-www-form-urlencoded'[39m,
+      [32m'User-Agent'[39m: [32m'google-api-nodejs-client/9.15.1'[39m,
+      [32m'x-goog-api-client'[39m: [32m'gl-node/20.20.0'[39m
+    },
+    paramsSerializer: [36m[Function: paramsSerializer][39m,
+    body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    validateStatus: [36m[Function: validateStatus][39m,
+    responseType: [32m'unknown'[39m,
+    errorRedactor: [36m[Function: defaultErrorRedactor][39m
+  },
+  response: {
+    config: {
+      retry: [33mtrue[39m,
+      retryConfig: [36m[Object][39m,
+      method: [32m'POST'[39m,
+      url: [32m'https://oauth2.googleapis.com/token'[39m,
+      data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      headers: [36m[Object][39m,
+      paramsSerializer: [36m[Function: paramsSerializer][39m,
+      body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      validateStatus: [36m[Function: validateStatus][39m,
+      responseType: [32m'unknown'[39m,
+      errorRedactor: [36m[Function: defaultErrorRedactor][39m
+    },
+    data: {
+      error: [32m'invalid_grant'[39m,
+      error_description: [32m'Token has been expired or revoked.'[39m
+    },
+    headers: {
+      [32m'cache-control'[39m: [32m'no-cache, no-store, max-age=0, must-revalidate'[39m,
+      [32m'content-encoding'[39m: [32m'gzip'[39m,
+      [32m'content-type'[39m: [32m'application/json; charset=utf-8'[39m,
+      date: [32m'Sun, 22 Mar 2026 07:27:22 GMT'[39m,
+      expires: [32m'Mon, 01 Jan 1990 00:00:00 GMT'[39m,
+      pragma: [32m'no-cache'[39m,
+      server: [32m'scaffolding on HTTPServer2'[39m,
+      [32m'transfer-encoding'[39m: [32m'chunked'[39m,
+      vary: [32m'Origin, X-Origin, Referer'[39m,
+      [32m'x-content-type-options'[39m: [32m'nosniff'[39m,
+      [32m'x-frame-options'[39m: [32m'SAMEORIGIN'[39m,
+      [32m'x-xss-protection'[39m: [32m'0'[39m
+    },
+    status: [33m400[39m,
+    statusText: [32m'Bad Request'[39m,
+    request: { responseURL: [32m'https://oauth2.googleapis.com/token'[39m }
+  },
+  error: [90mundefined[39m,
+  status: [33m400[39m,
+  [[32mSymbol(gaxios-gaxios-error)[39m]: [32m'6.7.1'[39m
+}
+7:27:22 AM [express] GET /api/calendar/events 500 in 29ms :: {"message":"Failed to fetch calendar events"}
+Error fetching bonuses from payroll sheet: GaxiosError: invalid_grant
+    at Gaxios._request [90m(/home/runner/workspace/[39mnode_modules/[4mgaxios[24m/src/gaxios.ts:146:15[90m)[39m
+[90m    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)[39m
+    at async OAuth2Client.refreshTokenNoCache [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:212:19[90m)[39m
+    at async OAuth2Client.refreshAccessTokenAsync [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:247:19[90m)[39m
+    at async getAuthenticatedClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:76:29[90m)[39m
+    at async getGoogleSheetsClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:103:16[90m)[39m
+    at async fetchBonusesFromSheet [90m(/home/runner/workspace/[39mserver/routes.ts:877:22[90m)[39m
+    at async <anonymous> [90m(/home/runner/workspace/[39mserver/routes.ts:941:23[90m)[39m {
+  config: {
+    retry: [33mtrue[39m,
+    retryConfig: {
+      httpMethodsToRetry: [36m[Array][39m,
+      currentRetryAttempt: [33m0[39m,
+      retry: [33m3[39m,
+      noResponseRetries: [33m2[39m,
+      retryDelayMultiplier: [33m2[39m,
+      timeOfFirstRequest: [33m1774164443555[39m,
+      totalTimeout: [33m9007199254740991[39m,
+      maxRetryDelay: [33m9007199254740991[39m,
+      statusCodesToRetry: [36m[Array][39m
+    },
+    method: [32m'POST'[39m,
+    url: [32m'https://oauth2.googleapis.com/token'[39m,
+    data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    headers: {
+      [32m'Content-Type'[39m: [32m'application/x-www-form-urlencoded'[39m,
+      [32m'User-Agent'[39m: [32m'google-api-nodejs-client/9.15.1'[39m,
+      [32m'x-goog-api-client'[39m: [32m'gl-node/20.20.0'[39m
+    },
+    paramsSerializer: [36m[Function: paramsSerializer][39m,
+    body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    validateStatus: [36m[Function: validateStatus][39m,
+    responseType: [32m'unknown'[39m,
+    errorRedactor: [36m[Function: defaultErrorRedactor][39m
+  },
+  response: {
+    config: {
+      retry: [33mtrue[39m,
+      retryConfig: [36m[Object][39m,
+      method: [32m'POST'[39m,
+      url: [32m'https://oauth2.googleapis.com/token'[39m,
+      data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      headers: [36m[Object][39m,
+      paramsSerializer: [36m[Function: paramsSerializer][39m,
+      body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      validateStatus: [36m[Function: validateStatus][39m,
+      responseType: [32m'unknown'[39m,
+      errorRedactor: [36m[Function: defaultErrorRedactor][39m
+    },
+    data: {
+      error: [32m'invalid_grant'[39m,
+      error_description: [32m'Token has been expired or revoked.'[39m
+    },
+    headers: {
+      [32m'cache-control'[39m: [32m'no-cache, no-store, max-age=0, must-revalidate'[39m,
+      [32m'content-encoding'[39m: [32m'gzip'[39m,
+      [32m'content-type'[39m: [32m'application/json; charset=utf-8'[39m,
+      date: [32m'Sun, 22 Mar 2026 07:27:23 GMT'[39m,
+      expires: [32m'Mon, 01 Jan 1990 00:00:00 GMT'[39m,
+      pragma: [32m'no-cache'[39m,
+      server: [32m'scaffolding on HTTPServer2'[39m,
+      [32m'transfer-encoding'[39m: [32m'chunked'[39m,
+      vary: [32m'Origin, X-Origin, Referer'[39m,
+      [32m'x-content-type-options'[39m: [32m'nosniff'[39m,
+      [32m'x-frame-options'[39m: [32m'SAMEORIGIN'[39m,
+      [32m'x-xss-protection'[39m: [32m'0'[39m
+    },
+    status: [33m400[39m,
+    statusText: [32m'Bad Request'[39m,
+    request: { responseURL: [32m'https://oauth2.googleapis.com/token'[39m }
+  },
+  error: [90mundefined[39m,
+  status: [33m400[39m,
+  [[32mSymbol(gaxios-gaxios-error)[39m]: [32m'6.7.1'[39m
+}
+Error fetching calendar for pay calculation: GaxiosError: invalid_grant
+    at Gaxios._request [90m(/home/runner/workspace/[39mnode_modules/[4mgaxios[24m/src/gaxios.ts:146:15[90m)[39m
+[90m    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)[39m
+    at async OAuth2Client.refreshTokenNoCache [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:212:19[90m)[39m
+    at async OAuth2Client.refreshAccessTokenAsync [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:247:19[90m)[39m
+    at async getAuthenticatedClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:76:29[90m)[39m
+    at async getGoogleCalendarClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:98:16[90m)[39m
+    at async <anonymous> [90m(/home/runner/workspace/[39mserver/routes.ts:949:28[90m)[39m {
+  config: {
+    retry: [33mtrue[39m,
+    retryConfig: {
+      httpMethodsToRetry: [36m[Array][39m,
+      currentRetryAttempt: [33m0[39m,
+      retry: [33m3[39m,
+      noResponseRetries: [33m2[39m,
+      retryDelayMultiplier: [33m2[39m,
+      timeOfFirstRequest: [33m1774164443569[39m,
+      totalTimeout: [33m9007199254740991[39m,
+      maxRetryDelay: [33m9007199254740991[39m,
+      statusCodesToRetry: [36m[Array][39m
+    },
+    method: [32m'POST'[39m,
+    url: [32m'https://oauth2.googleapis.com/token'[39m,
+    data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    headers: {
+      [32m'Content-Type'[39m: [32m'application/x-www-form-urlencoded'[39m,
+      [32m'User-Agent'[39m: [32m'google-api-nodejs-client/9.15.1'[39m,
+      [32m'x-goog-api-client'[39m: [32m'gl-node/20.20.0'[39m
+    },
+    paramsSerializer: [36m[Function: paramsSerializer][39m,
+    body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    validateStatus: [36m[Function: validateStatus][39m,
+    responseType: [32m'unknown'[39m,
+    errorRedactor: [36m[Function: defaultErrorRedactor][39m
+  },
+  response: {
+    config: {
+      retry: [33mtrue[39m,
+      retryConfig: [36m[Object][39m,
+      method: [32m'POST'[39m,
+      url: [32m'https://oauth2.googleapis.com/token'[39m,
+      data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      headers: [36m[Object][39m,
+      paramsSerializer: [36m[Function: paramsSerializer][39m,
+      body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      validateStatus: [36m[Function: validateStatus][39m,
+      responseType: [32m'unknown'[39m,
+      errorRedactor: [36m[Function: defaultErrorRedactor][39m
+    },
+    data: {
+      error: [32m'invalid_grant'[39m,
+      error_description: [32m'Token has been expired or revoked.'[39m
+    },
+    headers: {
+      [32m'cache-control'[39m: [32m'no-cache, no-store, max-age=0, must-revalidate'[39m,
+      [32m'content-encoding'[39m: [32m'gzip'[39m,
+      [32m'content-type'[39m: [32m'application/json; charset=utf-8'[39m,
+      date: [32m'Sun, 22 Mar 2026 07:27:23 GMT'[39m,
+      expires: [32m'Mon, 01 Jan 1990 00:00:00 GMT'[39m,
+      pragma: [32m'no-cache'[39m,
+      server: [32m'scaffolding on HTTPServer2'[39m,
+      [32m'transfer-encoding'[39m: [32m'chunked'[39m,
+      vary: [32m'Origin, X-Origin, Referer'[39m,
+      [32m'x-content-type-options'[39m: [32m'nosniff'[39m,
+      [32m'x-frame-options'[39m: [32m'SAMEORIGIN'[39m,
+      [32m'x-xss-protection'[39m: [32m'0'[39m
+    },
+    status: [33m400[39m,
+    statusText: [32m'Bad Request'[39m,
+    request: { responseURL: [32m'https://oauth2.googleapis.com/token'[39m }
+  },
+  error: [90mundefined[39m,
+  status: [33m400[39m,
+  [[32mSymbol(gaxios-gaxios-error)[39m]: [32m'6.7.1'[39m
+}
+7:27:23 AM [express] GET /api/pay/summary 200 in 61ms :: {"month":"2026-03","teacherId":"303bb4d8-82e2-4640-bf65-56c0dc8805a2","teacherName":"Paul","hourlyRate":150,"totalMinutes":0,"hoursWorked":0,"basePay":0,"bonuses":{"assessment":0,"training":0,"referral":0,"retention":0,"demo":0,"total":0},"totalPay":0,"isCurrentMonth":true,"eventBreakdown":{"counted":[],"skipped":[]},"bonusRows":[]}
+Error fetching bonuses from payroll sheet: GaxiosError: invalid_grant
+    at Gaxios._request [90m(/home/runner/workspace/[39mnode_modules/[4mgaxios[24m/src/gaxios.ts:146:15[90m)[39m
+[90m    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)[39m
+    at async OAuth2Client.refreshTokenNoCache [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:212:19[90m)[39m
+    at async OAuth2Client.refreshAccessTokenAsync [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:247:19[90m)[39m
+    at async getAuthenticatedClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:76:29[90m)[39m
+    at async getGoogleSheetsClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:103:16[90m)[39m
+    at async fetchBonusesFromSheet [90m(/home/runner/workspace/[39mserver/routes.ts:877:22[90m)[39m
+    at async <anonymous> [90m(/home/runner/workspace/[39mserver/routes.ts:941:23[90m)[39m {
+  config: {
+    retry: [33mtrue[39m,
+    retryConfig: {
+      httpMethodsToRetry: [36m[Array][39m,
+      currentRetryAttempt: [33m0[39m,
+      retry: [33m3[39m,
+      noResponseRetries: [33m2[39m,
+      retryDelayMultiplier: [33m2[39m,
+      timeOfFirstRequest: [33m1774164446863[39m,
+      totalTimeout: [33m9007199254740991[39m,
+      maxRetryDelay: [33m9007199254740991[39m,
+      statusCodesToRetry: [36m[Array][39m
+    },
+    method: [32m'POST'[39m,
+    url: [32m'https://oauth2.googleapis.com/token'[39m,
+    data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    headers: {
+      [32m'Content-Type'[39m: [32m'application/x-www-form-urlencoded'[39m,
+      [32m'User-Agent'[39m: [32m'google-api-nodejs-client/9.15.1'[39m,
+      [32m'x-goog-api-client'[39m: [32m'gl-node/20.20.0'[39m
+    },
+    paramsSerializer: [36m[Function: paramsSerializer][39m,
+    body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    validateStatus: [36m[Function: validateStatus][39m,
+    responseType: [32m'unknown'[39m,
+    errorRedactor: [36m[Function: defaultErrorRedactor][39m
+  },
+  response: {
+    config: {
+      retry: [33mtrue[39m,
+      retryConfig: [36m[Object][39m,
+      method: [32m'POST'[39m,
+      url: [32m'https://oauth2.googleapis.com/token'[39m,
+      data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      headers: [36m[Object][39m,
+      paramsSerializer: [36m[Function: paramsSerializer][39m,
+      body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      validateStatus: [36m[Function: validateStatus][39m,
+      responseType: [32m'unknown'[39m,
+      errorRedactor: [36m[Function: defaultErrorRedactor][39m
+    },
+    data: {
+      error: [32m'invalid_grant'[39m,
+      error_description: [32m'Token has been expired or revoked.'[39m
+    },
+    headers: {
+      [32m'cache-control'[39m: [32m'no-cache, no-store, max-age=0, must-revalidate'[39m,
+      [32m'content-encoding'[39m: [32m'gzip'[39m,
+      [32m'content-type'[39m: [32m'application/json; charset=utf-8'[39m,
+      date: [32m'Sun, 22 Mar 2026 07:27:26 GMT'[39m,
+      expires: [32m'Mon, 01 Jan 1990 00:00:00 GMT'[39m,
+      pragma: [32m'no-cache'[39m,
+      server: [32m'scaffolding on HTTPServer2'[39m,
+      [32m'transfer-encoding'[39m: [32m'chunked'[39m,
+      vary: [32m'Origin, X-Origin, Referer'[39m,
+      [32m'x-content-type-options'[39m: [32m'nosniff'[39m,
+      [32m'x-frame-options'[39m: [32m'SAMEORIGIN'[39m,
+      [32m'x-xss-protection'[39m: [32m'0'[39m
+    },
+    status: [33m400[39m,
+    statusText: [32m'Bad Request'[39m,
+    request: { responseURL: [32m'https://oauth2.googleapis.com/token'[39m }
+  },
+  error: [90mundefined[39m,
+  status: [33m400[39m,
+  [[32mSymbol(gaxios-gaxios-error)[39m]: [32m'6.7.1'[39m
+}
+Error fetching calendar for pay calculation: GaxiosError: invalid_grant
+    at Gaxios._request [90m(/home/runner/workspace/[39mnode_modules/[4mgaxios[24m/src/gaxios.ts:146:15[90m)[39m
+[90m    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)[39m
+    at async OAuth2Client.refreshTokenNoCache [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:212:19[90m)[39m
+    at async OAuth2Client.refreshAccessTokenAsync [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:247:19[90m)[39m
+    at async getAuthenticatedClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:76:29[90m)[39m
+    at async getGoogleCalendarClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:98:16[90m)[39m
+    at async <anonymous> [90m(/home/runner/workspace/[39mserver/routes.ts:949:28[90m)[39m {
+  config: {
+    retry: [33mtrue[39m,
+    retryConfig: {
+      httpMethodsToRetry: [36m[Array][39m,
+      currentRetryAttempt: [33m0[39m,
+      retry: [33m3[39m,
+      noResponseRetries: [33m2[39m,
+      retryDelayMultiplier: [33m2[39m,
+      timeOfFirstRequest: [33m1774164446887[39m,
+      totalTimeout: [33m9007199254740991[39m,
+      maxRetryDelay: [33m9007199254740991[39m,
+      statusCodesToRetry: [36m[Array][39m
+    },
+    method: [32m'POST'[39m,
+    url: [32m'https://oauth2.googleapis.com/token'[39m,
+    data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    headers: {
+      [32m'Content-Type'[39m: [32m'application/x-www-form-urlencoded'[39m,
+      [32m'User-Agent'[39m: [32m'google-api-nodejs-client/9.15.1'[39m,
+      [32m'x-goog-api-client'[39m: [32m'gl-node/20.20.0'[39m
+    },
+    paramsSerializer: [36m[Function: paramsSerializer][39m,
+    body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    validateStatus: [36m[Function: validateStatus][39m,
+    responseType: [32m'unknown'[39m,
+    errorRedactor: [36m[Function: defaultErrorRedactor][39m
+  },
+  response: {
+    config: {
+      retry: [33mtrue[39m,
+      retryConfig: [36m[Object][39m,
+      method: [32m'POST'[39m,
+      url: [32m'https://oauth2.googleapis.com/token'[39m,
+      data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      headers: [36m[Object][39m,
+      paramsSerializer: [36m[Function: paramsSerializer][39m,
+      body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      validateStatus: [36m[Function: validateStatus][39m,
+      responseType: [32m'unknown'[39m,
+      errorRedactor: [36m[Function: defaultErrorRedactor][39m
+    },
+    data: {
+      error: [32m'invalid_grant'[39m,
+      error_description: [32m'Token has been expired or revoked.'[39m
+    },
+    headers: {
+      [32m'cache-control'[39m: [32m'no-cache, no-store, max-age=0, must-revalidate'[39m,
+      [32m'content-encoding'[39m: [32m'gzip'[39m,
+      [32m'content-type'[39m: [32m'application/json; charset=utf-8'[39m,
+      date: [32m'Sun, 22 Mar 2026 07:27:26 GMT'[39m,
+      expires: [32m'Mon, 01 Jan 1990 00:00:00 GMT'[39m,
+      pragma: [32m'no-cache'[39m,
+      server: [32m'scaffolding on HTTPServer2'[39m,
+      [32m'transfer-encoding'[39m: [32m'chunked'[39m,
+      vary: [32m'Origin, X-Origin, Referer'[39m,
+      [32m'x-content-type-options'[39m: [32m'nosniff'[39m,
+      [32m'x-frame-options'[39m: [32m'SAMEORIGIN'[39m,
+      [32m'x-xss-protection'[39m: [32m'0'[39m
+    },
+    status: [33m400[39m,
+    statusText: [32m'Bad Request'[39m,
+    request: { responseURL: [32m'https://oauth2.googleapis.com/token'[39m }
+  },
+  error: [90mundefined[39m,
+  status: [33m400[39m,
+  [[32mSymbol(gaxios-gaxios-error)[39m]: [32m'6.7.1'[39m
+}
+7:27:26 AM [express] GET /api/pay/summary 200 in 61ms :: {"month":"2026-02","teacherId":"303bb4d8-82e2-4640-bf65-56c0dc8805a2","teacherName":"Paul","hourlyRate":150,"totalMinutes":0,"hoursWorked":0,"basePay":0,"bonuses":{"assessment":0,"training":0,"referral":0,"retention":0,"demo":0,"total":0},"totalPay":0,"isCurrentMonth":false,"eventBreakdown":{"counted":[],"skipped":[]},"bonusRows":[]}
+7:27:57 AM [express] GET /api/auth/user 304 in 5ms :: {"id":"admin-master-001","email":"admin@brighthorizononline.com","firstName":"Admin","lastName":"Master","profileImageUrl":null,"createdAt":"2026-03-04T10:13:10.883Z","updatedAt":"2026-03-04T10:13:10.883Z"}
+7:27:57 AM [express] GET /api/teachers/me 200 in 10ms :: {"id":"303bb4d8-82e2-4640-bf65-56c0dc8805a2","userId":"pending_1768898992604","email":"piercingsbypaulie@gmail.com","name":"Paul","role":"teacher","calendarId":"245b9f04fea3f8aa6ad277ceba06e7b754e99ff0f9eda5b4781399b08edbaff9@group.calendar.google.com","sheetId":"1Usca2TShRq2WiWvZi64L4u--LPVSZMX6x8tpwYjAUSk","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-01-20T08:49:52.607Z","updatedAt":"2026-01-22T12:57:37.147Z"}
+7:27:57 AM [express] GET /api/admin/impersonate/status 304 in 11ms :: {"isImpersonating":true,"teacher":{"id":"303bb4d8-82e2-4640-bf65-56c0dc8805a2","name":"Paul"}}
+7:27:57 AM [express] GET /api/leave-requests/me 304 in 11ms :: []
+Error fetching calendar events: GaxiosError: invalid_grant
+    at Gaxios._request [90m(/home/runner/workspace/[39mnode_modules/[4mgaxios[24m/src/gaxios.ts:146:15[90m)[39m
+[90m    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)[39m
+    at async OAuth2Client.refreshTokenNoCache [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:212:19[90m)[39m
+    at async OAuth2Client.refreshAccessTokenAsync [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:247:19[90m)[39m
+    at async getAuthenticatedClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:76:29[90m)[39m
+    at async getGoogleCalendarClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:98:16[90m)[39m
+    at async <anonymous> [90m(/home/runner/workspace/[39mserver/routes.ts:183:24[90m)[39m {
+  config: {
+    retry: [33mtrue[39m,
+    retryConfig: {
+      httpMethodsToRetry: [36m[Array][39m,
+      currentRetryAttempt: [33m0[39m,
+      retry: [33m3[39m,
+      noResponseRetries: [33m2[39m,
+      retryDelayMultiplier: [33m2[39m,
+      timeOfFirstRequest: [33m1774164477892[39m,
+      totalTimeout: [33m9007199254740991[39m,
+      maxRetryDelay: [33m9007199254740991[39m,
+      statusCodesToRetry: [36m[Array][39m
+    },
+    method: [32m'POST'[39m,
+    url: [32m'https://oauth2.googleapis.com/token'[39m,
+    data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    headers: {
+      [32m'Content-Type'[39m: [32m'application/x-www-form-urlencoded'[39m,
+      [32m'User-Agent'[39m: [32m'google-api-nodejs-client/9.15.1'[39m,
+      [32m'x-goog-api-client'[39m: [32m'gl-node/20.20.0'[39m
+    },
+    paramsSerializer: [36m[Function: paramsSerializer][39m,
+    body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    validateStatus: [36m[Function: validateStatus][39m,
+    responseType: [32m'unknown'[39m,
+    errorRedactor: [36m[Function: defaultErrorRedactor][39m
+  },
+  response: {
+    config: {
+      retry: [33mtrue[39m,
+      retryConfig: [36m[Object][39m,
+      method: [32m'POST'[39m,
+      url: [32m'https://oauth2.googleapis.com/token'[39m,
+      data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      headers: [36m[Object][39m,
+      paramsSerializer: [36m[Function: paramsSerializer][39m,
+      body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      validateStatus: [36m[Function: validateStatus][39m,
+      responseType: [32m'unknown'[39m,
+      errorRedactor: [36m[Function: defaultErrorRedactor][39m
+    },
+    data: {
+      error: [32m'invalid_grant'[39m,
+      error_description: [32m'Token has been expired or revoked.'[39m
+    },
+    headers: {
+      [32m'cache-control'[39m: [32m'no-cache, no-store, max-age=0, must-revalidate'[39m,
+      [32m'content-encoding'[39m: [32m'gzip'[39m,
+      [32m'content-type'[39m: [32m'application/json; charset=utf-8'[39m,
+      date: [32m'Sun, 22 Mar 2026 07:27:57 GMT'[39m,
+      expires: [32m'Mon, 01 Jan 1990 00:00:00 GMT'[39m,
+      pragma: [32m'no-cache'[39m,
+      server: [32m'scaffolding on HTTPServer2'[39m,
+      [32m'transfer-encoding'[39m: [32m'chunked'[39m,
+      vary: [32m'Origin, X-Origin, Referer'[39m,
+      [32m'x-content-type-options'[39m: [32m'nosniff'[39m,
+      [32m'x-frame-options'[39m: [32m'SAMEORIGIN'[39m,
+      [32m'x-xss-protection'[39m: [32m'0'[39m
+    },
+    status: [33m400[39m,
+    statusText: [32m'Bad Request'[39m,
+    request: { responseURL: [32m'https://oauth2.googleapis.com/token'[39m }
+  },
+  error: [90mundefined[39m,
+  status: [33m400[39m,
+  [[32mSymbol(gaxios-gaxios-error)[39m]: [32m'6.7.1'[39m
+}
+7:27:57 AM [express] GET /api/calendar/events 500 in 37ms :: {"message":"Failed to fetch calendar events"}
+Error fetching sheet tabs: GaxiosError: invalid_grant
+    at Gaxios._request [90m(/home/runner/workspace/[39mnode_modules/[4mgaxios[24m/src/gaxios.ts:146:15[90m)[39m
+[90m    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)[39m
+    at async OAuth2Client.refreshTokenNoCache [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:212:19[90m)[39m
+    at async OAuth2Client.refreshAccessTokenAsync [90m(/home/runner/workspace/[39mnode_modules/[4mgoogle-auth-library[24m/build/src/auth/oauth2client.js:247:19[90m)[39m
+    at async getAuthenticatedClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:76:29[90m)[39m
+    at async getGoogleSheetsClient [90m(/home/runner/workspace/[39mserver/integrations/googleCalendar.ts:103:16[90m)[39m
+    at async <anonymous> [90m(/home/runner/workspace/[39mserver/routes.ts:326:22[90m)[39m {
+  config: {
+    retry: [33mtrue[39m,
+    retryConfig: {
+      httpMethodsToRetry: [36m[Array][39m,
+      currentRetryAttempt: [33m0[39m,
+      retry: [33m3[39m,
+      noResponseRetries: [33m2[39m,
+      retryDelayMultiplier: [33m2[39m,
+      timeOfFirstRequest: [33m1774164477900[39m,
+      totalTimeout: [33m9007199254740991[39m,
+      maxRetryDelay: [33m9007199254740991[39m,
+      statusCodesToRetry: [36m[Array][39m
+    },
+    method: [32m'POST'[39m,
+    url: [32m'https://oauth2.googleapis.com/token'[39m,
+    data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    headers: {
+      [32m'Content-Type'[39m: [32m'application/x-www-form-urlencoded'[39m,
+      [32m'User-Agent'[39m: [32m'google-api-nodejs-client/9.15.1'[39m,
+      [32m'x-goog-api-client'[39m: [32m'gl-node/20.20.0'[39m
+    },
+    paramsSerializer: [36m[Function: paramsSerializer][39m,
+    body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+    validateStatus: [36m[Function: validateStatus][39m,
+    responseType: [32m'unknown'[39m,
+    errorRedactor: [36m[Function: defaultErrorRedactor][39m
+  },
+  response: {
+    config: {
+      retry: [33mtrue[39m,
+      retryConfig: [36m[Object][39m,
+      method: [32m'POST'[39m,
+      url: [32m'https://oauth2.googleapis.com/token'[39m,
+      data: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      headers: [36m[Object][39m,
+      paramsSerializer: [36m[Function: paramsSerializer][39m,
+      body: [32m'<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.'[39m,
+      validateStatus: [36m[Function: validateStatus][39m,
+      responseType: [32m'unknown'[39m,
+      errorRedactor: [36m[Function: defaultErrorRedactor][39m
+    },
+    data: {
+      error: [32m'invalid_grant'[39m,
+      error_description: [32m'Token has been expired or revoked.'[39m
+    },
+    headers: {
+      [32m'cache-control'[39m: [32m'no-cache, no-store, max-age=0, must-revalidate'[39m,
+      [32m'content-encoding'[39m: [32m'gzip'[39m,
+      [32m'content-type'[39m: [32m'application/json; charset=utf-8'[39m,
+      date: [32m'Sun, 22 Mar 2026 07:27:57 GMT'[39m,
+      expires: [32m'Mon, 01 Jan 1990 00:00:00 GMT'[39m,
+      pragma: [32m'no-cache'[39m,
+      server: [32m'scaffolding on HTTPServer2'[39m,
+      [32m'transfer-encoding'[39m: [32m'chunked'[39m,
+      vary: [32m'Origin, X-Origin, Referer'[39m,
+      [32m'x-content-type-options'[39m: [32m'nosniff'[39m,
+      [32m'x-frame-options'[39m: [32m'SAMEORIGIN'[39m,
+      [32m'x-xss-protection'[39m: [32m'0'[39m
+    },
+    status: [33m400[39m,
+    statusText: [32m'Bad Request'[39m,
+    request: { responseURL: [32m'https://oauth2.googleapis.com/token'[39m }
+  },
+  error: [90mundefined[39m,
+  status: [33m400[39m,
+  [[32mSymbol(gaxios-gaxios-error)[39m]: [32m'6.7.1'[39m
+}
+7:27:57 AM [express] GET /api/attendance/tabs 500 in 44ms :: {"message":"Failed to fetch sheet tabs"}
+Stopped impersonating teacher 303bb4d8-82e2-4640-bf65-56c0dc8805a2
+7:31:33 AM [express] POST /api/admin/impersonate/exit 200 in 52ms :: {"success":true,"message":"Stopped impersonation"}
+7:31:33 AM [express] GET /api/admin/impersonate/status 200 in 7ms :: {"isImpersonating":false}
+7:31:33 AM [express] GET /api/teachers/me 200 in 7ms :: {"id":"3e67141a-2b13-4a48-9d92-d1519e5c9547","userId":"admin-master-001","email":"admin@brighthorizononline.com","name":"Admin","role":"admin","calendarId":null,"sheetId":null,"sheetRowStart":null,"hourlyRate":null,"isActive":true,"createdAt":"2026-03-04T10:13:14.974Z","updatedAt":"2026-03-04T10:13:14.974Z"}
+7:31:34 AM [express] GET /api/admin/teachers 304 in 23ms :: [{"id":"303bb4d8-82e2-4640-bf65-56c0dc8805a2","userId":"pending_1768898992604","email":"piercingsbypaulie@gmail.com","name":"Paul","role":"teacher","calendarId":"245b9f04fea3f8aa6ad277ceba06e7b754e99ff0f9eda5b4781399b08edbaff9@group.calendar.google.com","sheetId":"1Usca2TShRq2WiWvZi64L4u--LPVSZMX6x8tpwYjAUSk","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-01-20T08:49:52.607Z","updatedAt":"2026-01-22T12:57:37.147Z"},{"id":"51e4e63a-4ced-4182-80e2-3c6f58fd2ec3","userId":"pending_1768899851167","email":"deanolrbeck@gmail.com","name":"Dean","role":"teacher","calendarId":"a49e251ce39fc5884f556f2aa69219b9af661a154380f2e9e1002a047aa66585@group.calendar.google.com","sheetId":"1veNbKFarWcck2Qv9LDLqQ8_xbf1sNsQI5JxbtRWJECw","sheetRowStart":null,"hourlyRate":"175.00","isActive":true,"createdAt":"2026-01-20T09:04:11.171Z","updatedAt":"2026-02-25T09:19:19.379Z"},{"id":"3e67141a-2b13-4a48-9d92-d1519e5c9547","userId":"admin-master-001","email":"admin@brighthorizononline.com","name":"Admin","role":"admin","calendarId":null,"sheetId":null,"sheetRowStart":null,"hourlyRate":null,"isActive":true,"createdAt":"2026-03-04T10:13:14.974Z","updatedAt":"2026-03-04T10:13:14.974Z"},{"id":"13423c40-72dd-4d27-9eb8-cfb242ca3342","userId":"05678c25-1edd-4e2a-87c6-85cdcb153acb","email":"christi.ibt@gmail.com","name":"Christi","role":"teacher","calendarId":"fb3de0858b8b793eda5262d47771539392bca01bd338d86aeed41e7d3899e761@group.calendar.google.com","sheetId":"1MoLv7dAhwx40naoVAbvkrNFomUQBeHCNcx4kLIUG6nA","sheetRowStart":"","hourlyRate":"175.00","isActive":true,"createdAt":"2026-03-04T13:05:20.412Z","updatedAt":"2026-03-04T13:05:20.412Z"},{"id":"7a741a5a-e591-4cb9-a7f3-0fa14f7df2c5","userId":"bc1c29a5-f2de-425c-9dc7-ea5376f5112b","email":"jameesimon927@gmail.com","name":"Jamee","role":"teacher","calendarId":"b57788d40a70bf38bb34aef9a07966f7679ef87ea5aa06797386ef04f3224bbc@group.calendar.google.com","sheetId":"1-WAtji7BZHwMjqR7ywqPXLJ9GyJ6x4j5wWcq28RGS2g","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T09:29:29.700Z","updatedAt":"2026-03-06T09:29:29.700Z"},{"id":"64acbd9a-5341-4ad9-9647-d1e9ceb1228a","userId":"a7ceff33-8805-40b8-97e5-a1603105eaaa","email":"Michaeladaniel0@gmail.com","name":"Michaela","role":"teacher","calendarId":"d384dd099f01b0fc739777fb6aed36d1c983d6ff6c829ec37186529bfeaf1fb7@group.calendar.google.com","sheetId":"1Su11jS3MQI8oDQkgCKlq9TRAlGRNbuBdaXCagu4wglo","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:19:14.734Z","updatedAt":"2026-03-06T10:19:14.734Z"},{"id":"b8913f5a-ac87-4087-a6fe-a94c77f62177","userId":"c7751922-5863-42dc-8e8a-7f70400b32e1","email":"jono.abrahamse@gmail.com","name":"Jonathan","role":"teacher","calendarId":"f66c007cd32a943353c199cf4aa6049332eb7d25a616872cbfe4614addee8cab@group.calendar.google.com","sheetId":"18nAXnR1rzBY6N3sCaTwyUgPnlic5HG6797OTUvj06zI","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:20:21.094Z","updatedAt":"2026-03-06T10:20:21.094Z"},{"id":"5c8429c3-629c-4021-82ca-94c7cf3becb6","userId":"c6236bc4-56ca-41c7-83ab-064a77d8eefd","email":"boniquesolaan24@gmail.com","name":"Bonique","role":"teacher","calendarId":"b72dd86914eb9abb1a6508272004be7165b563e72bccb3fcf7e01a0ed386d2b7@group.calendar.google.com","sheetId":"1pQYyspvdVCGK6-1VYN2DeS8h2DooehXhRh3457G9Ec8","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:21:24.610Z","updatedAt":"2026-03-06T10:21:24.610Z"},{"id":"8ea54ed8-9667-433b-9ced-119cc70bcccc","userId":"63d46336-eeb1-4e61-bd65-ff440287a6dc","email":"teacheraimee25@gmail.com","name":"Aimee","role":"teacher","calendarId":"181757a06518516be69f3e4114226d04f97645f702a443b84c3181b08234bd2b@group.calendar.google.com","sheetId":"1pJaroRwAyERg2SM0YrPTznW035nRYF2hz3YfW1zOQs4","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:22:15.487Z","updatedAt":"2026-03-06T10:22:15.487Z"},{"id":"224711b8-fc88-4574-b391-9e994b4c2abb","userId":"3a450e86-44d5-4d7d-bc45-2c72dc91d528","email":"durantbrian66@gmail.com","name":"Brian","role":"teacher","calendarId":"81104cb3862b1d2d93091458b69b363a293f21dbfc34c5b266bd6819e0ccd040@group.calendar.google.com","sheetId":"1c-mdkSp1pUbhKwfnNMq8sJDkm4tqi1sU0BwO2Jwyr6Y","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:23:12.400Z","updatedAt":"2026-03-06T10:23:12.400Z"},{"id":"586bd755-fa1c-4861-8ef3-eb1a331acb32","userId":"eb986c5d-ba15-4f7e-9904-066efea045df","email":"badge.wilson1980@gmail.com","name":"Carla","role":"teacher","calendarId":"cd1c03ff447fbb068dba7ea9e15adb38931bb06abd09ca9d2c5300e86b3d4fe5@group.calendar.google.com","sheetId":"1XsXIOdlp5ecJ0hUUkBLrcqaP6LUqpdoXWMDKwK5vYdY","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:24:24.991Z","updatedAt":"2026-03-06T10:24:24.991Z"}]
+7:31:34 AM [express] GET /api/auth/google/status 304 in 27ms :: {"connected":true}
+7:31:34 AM [express] GET /api/admin/leave-requests 304 in 29ms :: []
+7:31:38 AM [express] GET /api/auth/user 304 in 6ms :: {"id":"admin-master-001","email":"admin@brighthorizononline.com","firstName":"Admin","lastName":"Master","profileImageUrl":null,"createdAt":"2026-03-04T10:13:10.883Z","updatedAt":"2026-03-04T10:13:10.883Z"}
+7:31:39 AM [express] GET /api/teachers/me 304 in 7ms :: {"id":"3e67141a-2b13-4a48-9d92-d1519e5c9547","userId":"admin-master-001","email":"admin@brighthorizononline.com","name":"Admin","role":"admin","calendarId":null,"sheetId":null,"sheetRowStart":null,"hourlyRate":null,"isActive":true,"createdAt":"2026-03-04T10:13:14.974Z","updatedAt":"2026-03-04T10:13:14.974Z"}
+7:31:39 AM [express] GET /api/admin/impersonate/status 304 in 7ms :: {"isImpersonating":false}
+7:31:39 AM [express] GET /api/auth/google/status 304 in 5ms :: {"connected":true}
+7:31:39 AM [express] GET /api/admin/teachers 304 in 8ms :: [{"id":"303bb4d8-82e2-4640-bf65-56c0dc8805a2","userId":"pending_1768898992604","email":"piercingsbypaulie@gmail.com","name":"Paul","role":"teacher","calendarId":"245b9f04fea3f8aa6ad277ceba06e7b754e99ff0f9eda5b4781399b08edbaff9@group.calendar.google.com","sheetId":"1Usca2TShRq2WiWvZi64L4u--LPVSZMX6x8tpwYjAUSk","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-01-20T08:49:52.607Z","updatedAt":"2026-01-22T12:57:37.147Z"},{"id":"51e4e63a-4ced-4182-80e2-3c6f58fd2ec3","userId":"pending_1768899851167","email":"deanolrbeck@gmail.com","name":"Dean","role":"teacher","calendarId":"a49e251ce39fc5884f556f2aa69219b9af661a154380f2e9e1002a047aa66585@group.calendar.google.com","sheetId":"1veNbKFarWcck2Qv9LDLqQ8_xbf1sNsQI5JxbtRWJECw","sheetRowStart":null,"hourlyRate":"175.00","isActive":true,"createdAt":"2026-01-20T09:04:11.171Z","updatedAt":"2026-02-25T09:19:19.379Z"},{"id":"3e67141a-2b13-4a48-9d92-d1519e5c9547","userId":"admin-master-001","email":"admin@brighthorizononline.com","name":"Admin","role":"admin","calendarId":null,"sheetId":null,"sheetRowStart":null,"hourlyRate":null,"isActive":true,"createdAt":"2026-03-04T10:13:14.974Z","updatedAt":"2026-03-04T10:13:14.974Z"},{"id":"13423c40-72dd-4d27-9eb8-cfb242ca3342","userId":"05678c25-1edd-4e2a-87c6-85cdcb153acb","email":"christi.ibt@gmail.com","name":"Christi","role":"teacher","calendarId":"fb3de0858b8b793eda5262d47771539392bca01bd338d86aeed41e7d3899e761@group.calendar.google.com","sheetId":"1MoLv7dAhwx40naoVAbvkrNFomUQBeHCNcx4kLIUG6nA","sheetRowStart":"","hourlyRate":"175.00","isActive":true,"createdAt":"2026-03-04T13:05:20.412Z","updatedAt":"2026-03-04T13:05:20.412Z"},{"id":"7a741a5a-e591-4cb9-a7f3-0fa14f7df2c5","userId":"bc1c29a5-f2de-425c-9dc7-ea5376f5112b","email":"jameesimon927@gmail.com","name":"Jamee","role":"teacher","calendarId":"b57788d40a70bf38bb34aef9a07966f7679ef87ea5aa06797386ef04f3224bbc@group.calendar.google.com","sheetId":"1-WAtji7BZHwMjqR7ywqPXLJ9GyJ6x4j5wWcq28RGS2g","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T09:29:29.700Z","updatedAt":"2026-03-06T09:29:29.700Z"},{"id":"64acbd9a-5341-4ad9-9647-d1e9ceb1228a","userId":"a7ceff33-8805-40b8-97e5-a1603105eaaa","email":"Michaeladaniel0@gmail.com","name":"Michaela","role":"teacher","calendarId":"d384dd099f01b0fc739777fb6aed36d1c983d6ff6c829ec37186529bfeaf1fb7@group.calendar.google.com","sheetId":"1Su11jS3MQI8oDQkgCKlq9TRAlGRNbuBdaXCagu4wglo","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:19:14.734Z","updatedAt":"2026-03-06T10:19:14.734Z"},{"id":"b8913f5a-ac87-4087-a6fe-a94c77f62177","userId":"c7751922-5863-42dc-8e8a-7f70400b32e1","email":"jono.abrahamse@gmail.com","name":"Jonathan","role":"teacher","calendarId":"f66c007cd32a943353c199cf4aa6049332eb7d25a616872cbfe4614addee8cab@group.calendar.google.com","sheetId":"18nAXnR1rzBY6N3sCaTwyUgPnlic5HG6797OTUvj06zI","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:20:21.094Z","updatedAt":"2026-03-06T10:20:21.094Z"},{"id":"5c8429c3-629c-4021-82ca-94c7cf3becb6","userId":"c6236bc4-56ca-41c7-83ab-064a77d8eefd","email":"boniquesolaan24@gmail.com","name":"Bonique","role":"teacher","calendarId":"b72dd86914eb9abb1a6508272004be7165b563e72bccb3fcf7e01a0ed386d2b7@group.calendar.google.com","sheetId":"1pQYyspvdVCGK6-1VYN2DeS8h2DooehXhRh3457G9Ec8","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:21:24.610Z","updatedAt":"2026-03-06T10:21:24.610Z"},{"id":"8ea54ed8-9667-433b-9ced-119cc70bcccc","userId":"63d46336-eeb1-4e61-bd65-ff440287a6dc","email":"teacheraimee25@gmail.com","name":"Aimee","role":"teacher","calendarId":"181757a06518516be69f3e4114226d04f97645f702a443b84c3181b08234bd2b@group.calendar.google.com","sheetId":"1pJaroRwAyERg2SM0YrPTznW035nRYF2hz3YfW1zOQs4","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:22:15.487Z","updatedAt":"2026-03-06T10:22:15.487Z"},{"id":"224711b8-fc88-4574-b391-9e994b4c2abb","userId":"3a450e86-44d5-4d7d-bc45-2c72dc91d528","email":"durantbrian66@gmail.com","name":"Brian","role":"teacher","calendarId":"81104cb3862b1d2d93091458b69b363a293f21dbfc34c5b266bd6819e0ccd040@group.calendar.google.com","sheetId":"1c-mdkSp1pUbhKwfnNMq8sJDkm4tqi1sU0BwO2Jwyr6Y","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:23:12.400Z","updatedAt":"2026-03-06T10:23:12.400Z"},{"id":"586bd755-fa1c-4861-8ef3-eb1a331acb32","userId":"eb986c5d-ba15-4f7e-9904-066efea045df","email":"badge.wilson1980@gmail.com","name":"Carla","role":"teacher","calendarId":"cd1c03ff447fbb068dba7ea9e15adb38931bb06abd09ca9d2c5300e86b3d4fe5@group.calendar.google.com","sheetId":"1XsXIOdlp5ecJ0hUUkBLrcqaP6LUqpdoXWMDKwK5vYdY","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:24:24.991Z","updatedAt":"2026-03-06T10:24:24.991Z"}]
+7:31:39 AM [express] GET /api/admin/leave-requests 304 in 9ms :: []
+7:31:40 AM [express] GET /api/auth/google 302 in 10ms
+7:32:47 AM [express] GET /api/auth/google/callback 302 in 198ms
+7:32:52 AM [express] GET /api/auth/user 304 in 5ms :: {"id":"admin-master-001","email":"admin@brighthorizononline.com","firstName":"Admin","lastName":"Master","profileImageUrl":null,"createdAt":"2026-03-04T10:13:10.883Z","updatedAt":"2026-03-04T10:13:10.883Z"}
+7:32:53 AM [express] GET /api/teachers/me 304 in 5ms :: {"id":"3e67141a-2b13-4a48-9d92-d1519e5c9547","userId":"admin-master-001","email":"admin@brighthorizononline.com","name":"Admin","role":"admin","calendarId":null,"sheetId":null,"sheetRowStart":null,"hourlyRate":null,"isActive":true,"createdAt":"2026-03-04T10:13:14.974Z","updatedAt":"2026-03-04T10:13:14.974Z"}
+7:32:53 AM [express] GET /api/admin/impersonate/status 304 in 6ms :: {"isImpersonating":false}
+7:32:53 AM [express] GET /api/admin/leave-requests 304 in 9ms :: []
+7:32:53 AM [express] GET /api/admin/teachers 304 in 11ms :: [{"id":"303bb4d8-82e2-4640-bf65-56c0dc8805a2","userId":"pending_1768898992604","email":"piercingsbypaulie@gmail.com","name":"Paul","role":"teacher","calendarId":"245b9f04fea3f8aa6ad277ceba06e7b754e99ff0f9eda5b4781399b08edbaff9@group.calendar.google.com","sheetId":"1Usca2TShRq2WiWvZi64L4u--LPVSZMX6x8tpwYjAUSk","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-01-20T08:49:52.607Z","updatedAt":"2026-01-22T12:57:37.147Z"},{"id":"51e4e63a-4ced-4182-80e2-3c6f58fd2ec3","userId":"pending_1768899851167","email":"deanolrbeck@gmail.com","name":"Dean","role":"teacher","calendarId":"a49e251ce39fc5884f556f2aa69219b9af661a154380f2e9e1002a047aa66585@group.calendar.google.com","sheetId":"1veNbKFarWcck2Qv9LDLqQ8_xbf1sNsQI5JxbtRWJECw","sheetRowStart":null,"hourlyRate":"175.00","isActive":true,"createdAt":"2026-01-20T09:04:11.171Z","updatedAt":"2026-02-25T09:19:19.379Z"},{"id":"3e67141a-2b13-4a48-9d92-d1519e5c9547","userId":"admin-master-001","email":"admin@brighthorizononline.com","name":"Admin","role":"admin","calendarId":null,"sheetId":null,"sheetRowStart":null,"hourlyRate":null,"isActive":true,"createdAt":"2026-03-04T10:13:14.974Z","updatedAt":"2026-03-04T10:13:14.974Z"},{"id":"13423c40-72dd-4d27-9eb8-cfb242ca3342","userId":"05678c25-1edd-4e2a-87c6-85cdcb153acb","email":"christi.ibt@gmail.com","name":"Christi","role":"teacher","calendarId":"fb3de0858b8b793eda5262d47771539392bca01bd338d86aeed41e7d3899e761@group.calendar.google.com","sheetId":"1MoLv7dAhwx40naoVAbvkrNFomUQBeHCNcx4kLIUG6nA","sheetRowStart":"","hourlyRate":"175.00","isActive":true,"createdAt":"2026-03-04T13:05:20.412Z","updatedAt":"2026-03-04T13:05:20.412Z"},{"id":"7a741a5a-e591-4cb9-a7f3-0fa14f7df2c5","userId":"bc1c29a5-f2de-425c-9dc7-ea5376f5112b","email":"jameesimon927@gmail.com","name":"Jamee","role":"teacher","calendarId":"b57788d40a70bf38bb34aef9a07966f7679ef87ea5aa06797386ef04f3224bbc@group.calendar.google.com","sheetId":"1-WAtji7BZHwMjqR7ywqPXLJ9GyJ6x4j5wWcq28RGS2g","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T09:29:29.700Z","updatedAt":"2026-03-06T09:29:29.700Z"},{"id":"64acbd9a-5341-4ad9-9647-d1e9ceb1228a","userId":"a7ceff33-8805-40b8-97e5-a1603105eaaa","email":"Michaeladaniel0@gmail.com","name":"Michaela","role":"teacher","calendarId":"d384dd099f01b0fc739777fb6aed36d1c983d6ff6c829ec37186529bfeaf1fb7@group.calendar.google.com","sheetId":"1Su11jS3MQI8oDQkgCKlq9TRAlGRNbuBdaXCagu4wglo","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:19:14.734Z","updatedAt":"2026-03-06T10:19:14.734Z"},{"id":"b8913f5a-ac87-4087-a6fe-a94c77f62177","userId":"c7751922-5863-42dc-8e8a-7f70400b32e1","email":"jono.abrahamse@gmail.com","name":"Jonathan","role":"teacher","calendarId":"f66c007cd32a943353c199cf4aa6049332eb7d25a616872cbfe4614addee8cab@group.calendar.google.com","sheetId":"18nAXnR1rzBY6N3sCaTwyUgPnlic5HG6797OTUvj06zI","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:20:21.094Z","updatedAt":"2026-03-06T10:20:21.094Z"},{"id":"5c8429c3-629c-4021-82ca-94c7cf3becb6","userId":"c6236bc4-56ca-41c7-83ab-064a77d8eefd","email":"boniquesolaan24@gmail.com","name":"Bonique","role":"teacher","calendarId":"b72dd86914eb9abb1a6508272004be7165b563e72bccb3fcf7e01a0ed386d2b7@group.calendar.google.com","sheetId":"1pQYyspvdVCGK6-1VYN2DeS8h2DooehXhRh3457G9Ec8","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:21:24.610Z","updatedAt":"2026-03-06T10:21:24.610Z"},{"id":"8ea54ed8-9667-433b-9ced-119cc70bcccc","userId":"63d46336-eeb1-4e61-bd65-ff440287a6dc","email":"teacheraimee25@gmail.com","name":"Aimee","role":"teacher","calendarId":"181757a06518516be69f3e4114226d04f97645f702a443b84c3181b08234bd2b@group.calendar.google.com","sheetId":"1pJaroRwAyERg2SM0YrPTznW035nRYF2hz3YfW1zOQs4","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:22:15.487Z","updatedAt":"2026-03-06T10:22:15.487Z"},{"id":"224711b8-fc88-4574-b391-9e994b4c2abb","userId":"3a450e86-44d5-4d7d-bc45-2c72dc91d528","email":"durantbrian66@gmail.com","name":"Brian","role":"teacher","calendarId":"81104cb3862b1d2d93091458b69b363a293f21dbfc34c5b266bd6819e0ccd040@group.calendar.google.com","sheetId":"1c-mdkSp1pUbhKwfnNMq8sJDkm4tqi1sU0BwO2Jwyr6Y","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:23:12.400Z","updatedAt":"2026-03-06T10:23:12.400Z"},{"id":"586bd755-fa1c-4861-8ef3-eb1a331acb32","userId":"eb986c5d-ba15-4f7e-9904-066efea045df","email":"badge.wilson1980@gmail.com","name":"Carla","role":"teacher","calendarId":"cd1c03ff447fbb068dba7ea9e15adb38931bb06abd09ca9d2c5300e86b3d4fe5@group.calendar.google.com","sheetId":"1XsXIOdlp5ecJ0hUUkBLrcqaP6LUqpdoXWMDKwK5vYdY","sheetRowStart":"","hourlyRate":"150.00","isActive":true,"createdAt":"2026-03-06T10:24:24.991Z","updatedAt":"2026-03-06T10:24:24.991Z"}]
+7:32:53 AM [express] GET /api/auth/google/status 304 in 19ms :: {"connected":true}
+Bonuses for Paul (2026-3): 0 rows matched {
+  assessment: [33m0[39m,
+  training: [33m0[39m,
+  referral: [33m0[39m,
+  retention: [33m0[39m,
+  demo: [33m0[39m,
+  total: [33m0[39m
+}
+Bonuses for Christi (2026-3): 0 rows matched {
+  assessment: [33m0[39m,
+  training: [33m0[39m,
+  referral: [33m0[39m,
+  retention: [33m0[39m,
+  demo: [33m0[39m,
+  total: [33m0[39m
+}
+Bonuses for Dean (2026-3): 0 rows matched {
+  assessment: [33m0[39m,
+  training: [33m0[39m,
+  referral: [33m0[39m,
+  retention: [33m0[39m,
+  demo: [33m0[39m,
+  total: [33m0[39m
+}
+Bonuses for Brian (2026-3): 0 rows matched {
+  assessment: [33m0[39m,
+  training: [33m0[39m,
+  referral: [33m0[39m,
+  retention: [33m0[39m,
+  demo: [33m0[39m,
+  total: [33m0[39m
+}
+Bonuses for Jamee (2026-3): 0 rows matched {
+  assessment: [33m0[39m,
+  training: [33m0[39m,
+  referral: [33m0[39m,
+  retention: [33m0[39m,
+  demo: [33m0[39m,
+  total: [33m0[39m
+}
+Bonuses for Jonathan (2026-3): 0 rows matched {
+  assessment: [33m0[39m,
+  training: [33m0[39m,
+  referral: [33m0[39m,
+  retention: [33m0[39m,
+  demo: [33m0[39m,
+  total: [33m0[39m
+}
+Bonuses for Aimee (2026-3): 0 rows matched {
+  assessment: [33m0[39m,
+  training: [33m0[39m,
+  referral: [33m0[39m,
+  retention: [33m0[39m,
+  demo: [33m0[39m,
+  total: [33m0[39m
+}
+Bonuses for Michaela (2026-3): 0 rows matched {
+  assessment: [33m0[39m,
+  training: [33m0[39m,
+  referral: [33m0[39m,
+  retention: [33m0[39m,
+  demo: [33m0[39m,
+  total: [33m0[39m
+}
+Bonuses for Carla (2026-3): 0 rows matched {
+  assessment: [33m0[39m,
+  training: [33m0[39m,
+  referral: [33m0[39m,
+  retention: [33m0[39m,
+  demo: [33m0[39m,
+  total: [33m0[39m
+}
+Bonuses for Bonique (2026-3): 0 rows matched {
+  assessment: [33m0[39m,
+  training: [33m0[39m,
+  referral: [33m0[39m,
+  retention: [33m0[39m,
+  demo: [33m0[39m,
+  total: [33m0[39m
+}
+7:33:02 AM [express] GET /api/admin/payroll 200 in 1096ms :: [{"month":"2026-03","teacherId":"303bb4d8-82e2-4640-bf65-56c0dc8805a2","teacherName":"Paul","hourlyRate":150,"totalMinutes":2085,"hoursWorked":34.75,"basePay":5212.5,"bonuses":{"assessment":0,"training":0,"referral":0,"retention":0,"demo":0,"total":0},"totalPay":5212.5,"isCurrentMonth":true,"eventBreakdown":{"counted":[{"title":"ES_Jasmine","duration":40,"date":"2026/03/01","time":"13:10 - 13:50"},{"title":"YLE Flyers_Gordon","duration":45,"date":"2026/03/01","time":"14:00 - 14:45"},{"title":"Casper","duration":45,"date":"2026/03/03","time":"09:00 - 09:45"},{"title":"YLE Starters_Hedy","duration":30,"date":"2026/03/03","time":"10:00 - 10:30"},{"title":"ES_Kelvin","duration":30,"date":"2026/03/03","time":"12:35 - 13:05"},{"title":"YLE Starters_Harry2","duration":30,"date":"2026/03/03","time":"13:10 - 13:40"},{"title":"YLE Movers_Gordon","duration":30,"date":"2026/03/03","time":"14:25 - 14:55"},{"title":"YLE_Jenny","duration":60,"date":"2026/03/04","time":"11:05 - 12:05"},{"title":"ES_Jasmine","duration":30,"date":"2026/03/04","time":"12:10 - 12:40"},{"title":"ES_Chloe2","duration":30,"date":"2026/03/04","time":"12:45 - 13:15"},{"title":"ES_Nora","duration":30,"date":"2026/03/04","time":"13:30 - 14:00"},{"title":"EB_Seven","duration":20,"date":"2026/03/04","time":"14:05 - 14:25"},{"title":"YLE Flyers_Gordon","duration":30,"date":"2026/03/04","time":"14:25 - 14:55"},{"title":"Casper","duration":45,"date":"2026/03/05","time":"09:00 - 09:45"},{"title":"A2 KET_Luke","duration":50,"date":"2026/03/05","time":"11:05 - 11:55"},{"title":"ES_Kelvin","duration":30,"date":"2026/03/05","time":"12:00 - 12:30"},{"title":"YLE Starters_Harry2","duration":45,"date":"2026/03/05","time":"13:10 - 13:55"},{"title":"ES_Kelvin","duration":30,"date":"2026/03/06","time":"12:35 - 13:05"},{"title":"ES_Jasmine","duration":30,"date":"2026/03/06","time":"13:15 - 13:45"},{"title":"YLE Flyers_Gordon","duration":30,"date":"2026/03/06","time":"14:25 - 14:55"},{"title":"YLE Starters_Patrick","duration":30,"date":"2026/03/07","time":"13:00 - 13:30"},{"title":"ES EB_Seven","duration":20,"date":"2026/03/07","time":"13:35 - 13:55"},{"title":"YLE Flyers_Gordon","duration":30,"date":"2026/03/07","time":"14:25 - 14:55"},{"title":"Casper","duration":45,"date":"2026/03/11","time":"09:00 - 09:45"},{"title":"YLE Starters_Hedy","duration":30,"date":"2026/03/11","time":"09:50 - 10:20"},{"title":"YLE Flyers_Gordon","duration":30,"date":"2026/03/11","time":"10:25 - 10:55"},{"title":"ES_Jasmine","duration":30,"date":"2026/03/11","time":"12:10 - 12:40"},{"title":"ES_Chloe2","duration":30,"date":"2026/03/11","time":"12:45 - 13:15"},{"title":"ES_Nora","duration":30,"date":"2026/03/11","time":"13:30 - 14:00"},{"title":"ES_Kelvin","duration":30,"date":"2026/03/12","time":"12:00 - 12:30"},{"title":"YLE Starters_Harry2","duration":45,"date":"2026/03/12","time":"13:10 - 13:55"},{"title":"ES EB_Seven","duration":20,"date":"2026/03/12","time":"14:00 - 14:20"},{"title":"YLE Flyers_Gordon","duration":30,"date":"2026/03/12","time":"14:25 - 14:55"},{"title":"YLE Flyers_Gordon","duration":30,"date":"2026/03/13","time":"11:45 - 12:15"},{"title":"ES_Kelvin","duration":30,"date":"2026/03/13","time":"12:35 - 13:05"},{"title":"ES_Jasmine","duration":30,"date":"2026/03/13","time":"13:15 - 13:45"},{"title":"ESL Level 1_Harry","duration":30,"date":"2026/03/13","time":"15:00 - 15:30"},{"title":"YLE Starters_Patrick","duration":30,"date":"2026/03/14","time":"13:00 - 13:30"},{"title":"ES EB_Seven","duration":20,"date":"2026/03/14","time":"13:35 - 13:55"},{"title":"YLE Flyers_Gordon","duration":30,"date":"2026/03/14","time":"14:05 - 14:35"},{"title":"ES_Zane","duration":15,"date":"2026/03/14","time":"14:40 - 14:55"},{"title":"ESL Level 1_Harry","duration":30,"date":"2026/03/14","time":"15:00 - 15:30"},{"title":"YLE Flyers_Gordon","duration":30,"date":"2026/03/16","time":"12:35 - 13:05"},{"title":"YLE Starters_Harry2","duration":45,"date":"2026/03/16","time":"13:10 - 13:55"},{"title":"ARC_April","duration":30,"date":"2026/03/16","time":"14:00 - 14:30"},{"title":"YLE Starters_Hedy","duration":30,"date":"2026/03/17","time":"10:00 - 10:30"},{"title":"YLE Movers_Jenny","duration":60,"date":"2026/03/17","time":"11:30 - 12:30"},{"title":"ES_Kelvin","duration":30,"date":"2026/03/17","time":"12:35 - 13:05"},{"title":"YLE Starters_Leo","duration":30,"date":"2026/03/17","time":"13:10 - 13:40"},{"title":"YLE Movers_Gordon","duration":30,"date":"2026/03/17","time":"13:45 - 14:15"},{"title":"ES_Jasmine","duration":30,"date":"2026/03/17","time":"14:20 - 14:50"},{"title":"ES_Kelvin","duration":30,"date":"2026/03/19","time":"12:00 - 12:30"},{"title":"ES_Jasmine","duration":30,"date":"2026/03/19","time":"12:35 - 13:05"},{"title":"YLE Starters_Harry2","duration":45,"date":"2026/03/19","time":"13:10 - 13:55"},{"title":"ES EB_Seven","duration":20,"date":"2026/03/19","time":"14:00 - 14:20"},{"title":"YLE Flyers_Gordon","duration":30,"date":"2026/03/19","time":"14:25 - 14:55"},{"title":"YLE Starters_Leo","duration":30,"date":"2026/03/20","time":"10:50 - 11:20"},{"title":"YLE Flyers_Gordon","duration":30,"date":"2026/03/20","time":"11:25 - 11:55"},{"title":"ES_Jasmine","duration":30,"date":"2026/03/20","time":"13:15 - 13:45"},{"title":"ES_Chloe2","duration":30,"date":"2026/03/20","time":"14:00 - 14:30"},{"title":"ESL Level 1_Harry","duration":30,"date":"2026/03/20","time":"15:00 - 15:30"},{"title":"YLE Starters_Patrick","duration":30,"date":"2026/03/21","time":"13:00 - 13:30"},{"title":"ES EB_Seven","duration":20,"date":"2026/03/21","time":"13:35 - 13:55"},{"title":"YLE Flyers_Gordon","duration":30,"date":"2026/03/21","time":"14:05 - 14:35"},{"title":"ESL Level 1_Harry","duration":30,"date":"2026/03/21","time":"15:00 - 15:30"}],"skipped":[{"title":"DEMO_Leo","reason":"DEMO class"},{"title":"Sick leave","reason":"grey event"},{"title":"ARC DEMO_April","reason":"DEMO class"},{"title":"DEMO_Leah","reason":"DEMO class"},{"title":"SICK LEAVE","reason":"grey event"},{"title":"?_Leah","reason":"not ended yet"},{"title":"YLE Flyers_Gordon","reason":"not ended yet"},{"title":"YLE Starters_Harry2","reason":"not ended yet"},{"title":"ARC_April","reason":"not ended yet"},{"title":"YLE Starters_Hedy","reason":"not ended yet"},{"title":"YLE Movers_Jenny","reason":"not ended yet"},{"title":"ES_Kelvin","reason":"not ended yet"},{"title":"YLE Starters_Leo","reason":"not ended yet"},{"title":"YLE Movers_Gordon","reason":"not ended yet"},{"title":"ES_Jasmine","reason":"not ended yet"},{"title":"YLE Flyers_Gordon","reason":"not ended yet"},{"title":"A2 KET_Luke","reason":"not ended yet"},{"title":"ES_Jasmine","reason":"not ended yet"},{"title":"ES_Chloe2","reason":"not ended yet"},{"title":"ES_Nora","reason":"not ended yet"},{"title":"ES_Kelvin","reason":"not ended yet"},{"title":"YLE Starters_Harry2","reason":"not ended yet"},{"title":"YLE Flyers_Gordon","reason":"not ended yet"},{"title":"YLE Starters_Leo","reason":"not ended yet"},{"title":"YLE Flyers_Gordon","reason":"not ended yet"},{"title":"ES_Jasmine","reason":"not ended yet"},{"title":"ES_Kelvin","reason":"not ended yet"},{"title":"PERSONAL LEAVE","reason":"grey event"},{"title":"ESL Level 1_Harry","reason":"not ended yet"},{"title":"YLE Starters_Patrick","reason":"not ended yet"},{"title":"YLE Flyers_Gordon","reason":"not ended yet"},{"title":"ESL Level 1_Harry","reason":"not ended yet"},{"title":"?_Leah","reason":"not ended yet"},{"title":"YLE Flyers_Gordon","reason":"not ended yet"},{"title":"YLE Starters_Harry2","reason":"not ended yet"},{"title":"YLE Starters_Harry2","reason":"not ended yet"},{"title":"ARC_April","reason":"not ended yet"},{"title":"YLE Starters_Hedy","reason":"not ended yet"},{"title":"YLE Movers_Jenny","reason":"not ended yet"},{"title":"ES_Kelvin","reason":"not ended yet"},{"title":"YLE Starters_Leo","reason":"not ended yet"},{"title":"YLE Movers_Gordon","reason":"not ended yet"},{"title":"ES_Jasmine","reason":"not ended yet"}]},"bonusRows":[]},{"month":"2026-03","teacherId":"51e4e63a-4ced-4182-80e2-3c6f58fd2ec3","teacherName":"Dean","hourlyRate":175,"totalMinutes":1475,"hoursWorked":24.58,"basePay":4302.08,"bonuses":{"assessment":0,"training":0,"referral":0,"retention":0,"demo":0,"total":0},"totalPay":4302.08,"isCurrentMonth":true,"eventBreakdown":{"counted":[{"title":"ES JR_Sky","duration":30,"date":"2026/03/01","time":"12:05 - 12:35"},{"title":"ES_Candy","duration":30,"date":"2026/03/01","time":"13:00 - 13:30"},{"title":"ES JR_Lucky","duration":20,"date":"2026/03/01","time":"13:45 - 14:05"},{"title":"ES_Alan","duration":30,"date":"2026/03/02","time":"10:25 - 10:55"},{"title":"ES_Zoey","duration":30,"date":"2026/03/02","time":"11:40 - 12:10"},{"title":"ES_Sky","duration":20,"date":"2026/03/02","time":"12:15 - 12:35"},{"title":"A2 KET_Chloe","duration":30,"date":"2026/03/02","time":"12:40 - 13:10"},{"title":"ES JR _ Henry","duration":20,"date":"2026/03/02","time":"13:25 - 13:45"},{"title":"ES _ Alan","duration":30,"date":"2026/03/03","time":"10:30 - 11:00"},{"title":"EB 1_Luna","duration":30,"date":"2026/03/03","time":"11:05 - 11:35"},{"title":"ES JR _ Doudou","duration":20,"date":"2026/03/03","time":"13:00 - 13:20"},{"title":"ES_Zoe","duration":30,"date":"2026/03/03","time":"14:00 - 14:30"},{"title":"ES JR_Randy","duration":20,"date":"2026/03/03","time":"15:00 - 15:20"},{"title":"ES_Candy","duration":30,"date":"2026/03/04","time":"13:00 - 13:30"},{"title":"ES_Sky","duration":20,"date":"2026/03/05","time":"12:00 - 12:20"},{"title":"EB 1_Luna","duration":30,"date":"2026/03/05","time":"13:00 - 13:30"},{"title":"ES JR _ Doudou","duration":20,"date":"2026/03/05","time":"13:30 - 13:50"},{"title":"ES_Zoe","duration":30,"date":"2026/03/05","time":"14:00 - 14:30"},{"title":"ES JR _ Henry","duration":20,"date":"2026/03/05","time":"14:35 - 14:55"},{"title":"ES_Doudou","duration":20,"date":"2026/03/06","time":"13:00 - 13:20"},{"title":"A2 KET_Chloe","duration":30,"date":"2026/03/08","time":"11:30 - 12:00"},{"title":"ES JR_Sky","duration":20,"date":"2026/03/08","time":"12:05 - 12:25"},{"title":"ES JR_Zane","duration":15,"date":"2026/03/08","time":"12:35 - 12:50"},{"title":"ES_Candy","duration":30,"date":"2026/03/08","time":"13:00 - 13:30"},{"title":"ES JR_Lucky","duration":20,"date":"2026/03/08","time":"13:45 - 14:05"},{"title":"ES_Alan","duration":30,"date":"2026/03/09","time":"10:25 - 10:55"},{"title":"ES_Zoey","duration":30,"date":"2026/03/09","time":"11:40 - 12:10"},{"title":"ES_Sky","duration":20,"date":"2026/03/09","time":"12:15 - 12:35"},{"title":"EB 1_Luna","duration":30,"date":"2026/03/09","time":"12:50 - 13:20"},{"title":"ES _ Alan","duration":30,"date":"2026/03/10","time":"10:30 - 11:00"},{"title":"ES JR_Ivy","duration":20,"date":"2026/03/10","time":"11:40 - 12:00"},{"title":"ES JR _ Doudou","duration":20,"date":"2026/03/10","time":"13:00 - 13:20"},{"title":"ES_Zoe","duration":30,"date":"2026/03/10","time":"14:00 - 14:30"},{"title":"EB 1_Luna","duration":20,"date":"2026/03/10","time":"14:35 - 14:55"},{"title":"ES JR_Randy","duration":20,"date":"2026/03/10","time":"15:00 - 15:20"},{"title":"ES_Sky","duration":20,"date":"2026/03/12","time":"12:00 - 12:20"},{"title":"ES_Candy","duration":30,"date":"2026/03/12","time":"12:55 - 13:25"},{"title":"ES EB _ Doudou","duration":20,"date":"2026/03/12","time":"13:30 - 13:50"},{"title":"ES EB_Zoe","duration":30,"date":"2026/03/12","time":"14:00 - 14:30"},{"title":"ES_Doudou","duration":20,"date":"2026/03/13","time":"13:00 - 13:20"},{"title":"ES_Cici","duration":20,"date":"2026/03/13","time":"13:35 - 13:55"},{"title":"A2 KET_Chloe","duration":30,"date":"2026/03/15","time":"11:30 - 12:00"},{"title":"ES JR_Sky","duration":20,"date":"2026/03/15","time":"12:05 - 12:25"},{"title":"ES JR_Zane","duration":15,"date":"2026/03/15","time":"12:35 - 12:50"},{"title":"ES_Candy","duration":30,"date":"2026/03/15","time":"13:00 - 13:30"},{"title":"ES JR_Lucky","duration":20,"date":"2026/03/15","time":"13:45 - 14:05"},{"title":"ES_Zoey","duration":30,"date":"2026/03/16","time":"11:40 - 12:10"},{"title":"ES_Sky","duration":20,"date":"2026/03/16","time":"12:15 - 12:35"},{"title":"EB 1_Luna","duration":30,"date":"2026/03/16","time":"12:50 - 13:20"},{"title":"ES _ Alan","duration":30,"date":"2026/03/17","time":"10:30 - 11:00"},{"title":"ES JR_Ivy","duration":20,"date":"2026/03/17","time":"11:40 - 12:00"},{"title":"ES JR _ Doudou","duration":20,"date":"2026/03/17","time":"13:00 - 13:20"},{"title":"ES EB_Zoe","duration":30,"date":"2026/03/17","time":"14:00 - 14:30"},{"title":"ES JR_Randy","duration":20,"date":"2026/03/17","time":"15:00 - 15:20"},{"title":"ES_Alan","duration":30,"date":"2026/03/18","time":"10:30 - 11:00"},{"title":"ES_Candy","duration":30,"date":"2026/03/18","time":"13:00 - 13:30"},{"title":"ES_Sky","duration":25,"date":"2026/03/19","time":"12:00 - 12:25"},{"title":"ES EB _ Doudou","duration":20,"date":"2026/03/19","time":"13:30 - 13:50"},{"title":"ES_Ryan2","duration":20,"date":"2026/03/19","time":"14:35 - 14:55"},{"title":"ES_Doudou","duration":20,"date":"2026/03/20","time":"13:00 - 13:20"}],"skipped":[{"title":"DEMO_Zoe2","reason":"DEMO class"},{"title":"Leave","reason":"grey event"},{"title":"DEMO_Ryan2","reason":"DEMO class"},{"title":"DEMO_Mia","reason":"DEMO class"},{"title":"A2 KET_Chloe","reason":"not ended yet"},{"title":"ES JR_Sky","reason":"not ended yet"},{"title":"ES_Candy","reason":"not ended yet"},{"title":"ES JR_Lucky","reason":"not ended yet"},{"title":"ES_Alan","reason":"not ended yet"},{"title":"ES_Zoey","reason":"not ended yet"},{"title":"ES_Sky","reason":"not ended yet"},{"title":"EB 1_Luna","reason":"not ended yet"},{"title":"ES _ Alan","reason":"not ended yet"},{"title":"ES JR_Ivy","reason":"not ended yet"},{"title":"ES JR _ Doudou","reason":"not ended yet"},{"title":"ES EB_Zoe","reason":"not ended yet"},{"title":"ES_Ryan2","reason":"not ended yet"},{"title":"ES JR_Randy","reason":"not ended yet"},{"title":"ES_Candy","reason":"not ended yet"},{"title":"ES_Sky","reason":"not ended yet"},{"title":"ES EB _ Doudou","reason":"not ended yet"},{"title":"ES EB_Zoe","reason":"not ended yet"},{"title":"ES_Ryan2","reason":"not ended yet"},{"title":"A2 KET_Chloe","reason":"not ended yet"},{"title":"ES JR_Sky","reason":"not ended yet"},{"title":"ES_Candy","reason":"not ended yet"},{"title":"ES JR_Lucky","reason":"not ended yet"},{"title":"ES_Alan","reason":"not ended yet"},{"title":"ES_Zoey","reason":"not ended yet"},{"title":"ES_Sky","reason":"not ended yet"},{"title":"EB 1_Luna","reason":"not ended yet"},{"title":"ES _ Alan","reason":"not ended yet"},{"title":"ES JR_Ivy","reason":"not ended yet"},{"title":"ES JR _ Doudou","reason":"not ended yet"},{"title":"ES EB_Zoe","reason":"not ended yet"},{"title":"ES_Ryan2","reason":"not ended yet"},{"title":"ES JR_Randy","reason":"not ended yet"}]},"bonusRows":[]},{"month":"2026-03","teacherId":"13423c40-72dd-4d27-9eb8-cfb242ca3342","teacherName":"Christi","hourlyRate":175,"totalMinutes":1535,"hoursWorked":25.58,"basePay":4477.08,"bonuses":{"assessment":0,"training":0,"referral":0,"retention":0,"demo":0,"total":0},"totalPay":4477.08,"isCurrentMonth":true,"eventBreakdown":{"counted":[{"title":"ES_Anmo","duration":20,"date":"2026/03/02","time":"12:00 - 12:20"},{"title":"YLE Starters_Cyro","duration":30,"date":"2026/03/02","time":"14:30 - 15:00"},{"title":"YLE Movers_Evan","duration":30,"date":"2026/03/03","time":"11:30 - 12:00"},{"title":"YLE Movers_Milly","duration":40,"date":"2026/03/03","time":"13:00 - 13:40"},{"title":"A2 KET_Marc","duration":60,"date":"2026/03/03","time":"13:45 - 14:45"},{"title":"YLE Movers_Summer","duration":45,"date":"2026/03/04","time":"11:00 - 11:45"},{"title":"ES_Anmo","duration":20,"date":"2026/03/04","time":"12:00 - 12:20"},{"title":"YLE Starters_Cyro","duration":30,"date":"2026/03/04","time":"13:30 - 14:00"},{"title":"A2 KET_Marc","duration":45,"date":"2026/03/05","time":"11:10 - 11:55"},{"title":"YLE Movers_Cherry","duration":45,"date":"2026/03/05","time":"12:00 - 12:45"},{"title":"YLE Movers_Evan","duration":30,"date":"2026/03/05","time":"13:30 - 14:00"},{"title":"ES_Echo","duration":20,"date":"2026/03/05","time":"14:05 - 14:25"},{"title":"Storytellers_youyou","duration":30,"date":"2026/03/05","time":"14:30 - 15:00"},{"title":"GC_Fan","duration":30,"date":"2026/03/05","time":"15:30 - 16:00"},{"title":"Storytelling_Youyou","duration":20,"date":"2026/03/09","time":"11:25 - 11:45"},{"title":"ES_Anmo","duration":20,"date":"2026/03/09","time":"12:00 - 12:20"},{"title":"YLE Starters_Cyro","duration":30,"date":"2026/03/09","time":"13:30 - 14:00"},{"title":"ES_Echo","duration":20,"date":"2026/03/09","time":"14:05 - 14:25"},{"title":"GC_Zhou","duration":30,"date":"2026/03/09","time":"15:05 - 15:35"},{"title":"B1 PET PREP_Amy2","duration":60,"date":"2026/03/10","time":"10:50 - 11:50"},{"title":"A2 KET_Marc","duration":35,"date":"2026/03/10","time":"11:55 - 12:30"},{"title":"B1 PET PREP_Amy2","duration":60,"date":"2026/03/12","time":"10:20 - 11:20"},{"title":"YLE Movers_Cherry","duration":45,"date":"2026/03/12","time":"12:00 - 12:45"},{"title":"GC_Zhou","duration":30,"date":"2026/03/12","time":"13:30 - 14:00"},{"title":"ES_Echo","duration":20,"date":"2026/03/12","time":"14:05 - 14:25"},{"title":"YLE Starters_Cyro","duration":30,"date":"2026/03/12","time":"14:30 - 15:00"},{"title":"YLE Movers_Milly","duration":30,"date":"2026/03/13","time":"09:40 - 10:10"},{"title":"YLE Movers_Summer","duration":45,"date":"2026/03/13","time":"11:00 - 11:45"},{"title":"A2 KET_Marc","duration":60,"date":"2026/03/13","time":"11:55 - 12:55"},{"title":"YLE_Harry3","duration":30,"date":"2026/03/13","time":"14:05 - 14:35"},{"title":"GC_Fan","duration":30,"date":"2026/03/13","time":"15:30 - 16:00"},{"title":"ES_Anmo","duration":20,"date":"2026/03/16","time":"12:00 - 12:20"},{"title":"YLE Starters_Cyro","duration":30,"date":"2026/03/16","time":"12:25 - 12:55"},{"title":"B1 PET PREP_Amy2","duration":60,"date":"2026/03/16","time":"13:00 - 14:00"},{"title":"ES_Echo","duration":20,"date":"2026/03/16","time":"14:05 - 14:25"},{"title":"YLE Starters_Annie2","duration":30,"date":"2026/03/16","time":"14:30 - 15:00"},{"title":"A2 KET_Marc","duration":60,"date":"2026/03/17","time":"11:55 - 12:55"},{"title":"YLE Movers_Milly","duration":30,"date":"2026/03/17","time":"13:00 - 13:30"},{"title":"YLE Movers_Summer","duration":45,"date":"2026/03/18","time":"11:00 - 11:45"},{"title":"ES_Anmo","duration":20,"date":"2026/03/18","time":"12:00 - 12:20"},{"title":"B1 PET PREP_Amy2","duration":60,"date":"2026/03/18","time":"12:25 - 13:25"},{"title":"YLE Movers_Milly","duration":30,"date":"2026/03/18","time":"13:30 - 14:00"},{"title":"YLE Starters_Cyro","duration":30,"date":"2026/03/18","time":"14:05 - 14:35"},{"title":"YLE Starters_Cindy","duration":30,"date":"2026/03/18","time":"15:30 - 16:00"}],"skipped":[{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"LEAVE","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"LEAVE","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"DEMO_Christy [adult]","reason":"DEMO class"},{"title":"PUMP","reason":"grey event"},{"title":"LEAVE","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"ES_Anmo","reason":"not ended yet"},{"title":"ES_Echo","reason":"not ended yet"},{"title":"PUMP","reason":"grey event"},{"title":"YLE Movers_Milly","reason":"not ended yet"},{"title":"PUMP","reason":"grey event"},{"title":"YLE Movers_Summer","reason":"not ended yet"},{"title":"ES_Anmo","reason":"not ended yet"},{"title":"YLE Starters_Cyro","reason":"not ended yet"},{"title":"YLE Movers_Milly","reason":"not ended yet"},{"title":"YLE Starters_Cindy","reason":"not ended yet"},{"title":"PUMP","reason":"grey event"},{"title":"YLE Movers_Evan","reason":"not ended yet"},{"title":"YLE Movers_Cherry","reason":"not ended yet"},{"title":"GC_Zhou","reason":"not ended yet"},{"title":"ES_Echo","reason":"not ended yet"},{"title":"YLE Movers_Milly","reason":"not ended yet"},{"title":"PUMP","reason":"grey event"},{"title":"YLE Starters_Cyro","reason":"not ended yet"},{"title":"A2 KET_Eleanor","reason":"not ended yet"},{"title":"A2 KET_Marc","reason":"not ended yet"},{"title":"YLE Starters_Annie2","reason":"not ended yet"},{"title":"YLE_Harry3","reason":"not ended yet"},{"title":"GC_Fan","reason":"not ended yet"},{"title":"YLE Starters_Cindy","reason":"not ended yet"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"PUMP","reason":"grey event"},{"title":"ES_Anmo","reason":"not ended yet"},{"title":"YLE Starters_Cyro","reason":"not ended yet"},{"title":"ES_Echo","reason":"not ended yet"},{"title":"PUMP","reason":"grey event"},{"title":"A2 KET_Marc","reason":"not ended yet"},{"title":"YLE Movers_Milly","reason":"not ended yet"}]},"bonusRows":[]},{"month":"2026-03","teacherId":"7a741a5a-e591-4cb9-a7f3-0fa14f7df2c5","teacherName":"Jamee","hourlyRate":150,"totalMinutes":1680,"hoursWorked":28,"basePay":4200,"bonuses":{"assessment":0,"training":0,"referral":0,"retention":0,"demo":0,"total":0},"totalPay":4200,"isCurrentMonth":true,"eventBreakdown":{"counted":[{"title":"ES_Patricia","duration":30,"date":"2026/03/01","time":"14:00 - 14:30"},{"title":"PU2_Kevin2","duration":30,"date":"2026/03/02","time":"12:45 - 13:15"},{"title":"ES_Alpha","duration":20,"date":"2026/03/02","time":"13:20 - 13:40"},{"title":"YLE_Hannah","duration":30,"date":"2026/03/02","time":"13:45 - 14:15"},{"title":"YLE Movers_Ryder","duration":30,"date":"2026/03/02","time":"14:20 - 14:50"},{"title":"A2 KET_Polly","duration":60,"date":"2026/03/02","time":"19:00 - 20:00"},{"title":"ES_Ben","duration":30,"date":"2026/03/03","time":"13:25 - 13:55"},{"title":"ES_Michael","duration":30,"date":"2026/03/03","time":"14:00 - 14:30"},{"title":"PU2_Kevin2","duration":30,"date":"2026/03/04","time":"12:20 - 12:50"},{"title":"ES_Alpha","duration":20,"date":"2026/03/04","time":"13:20 - 13:40"},{"title":"YLE_Hannah","duration":30,"date":"2026/03/04","time":"13:45 - 14:15"},{"title":"ARC_Xiaoyu","duration":30,"date":"2026/03/05","time":"13:00 - 13:30"},{"title":"ES_Patricia","duration":30,"date":"2026/03/05","time":"14:15 - 14:45"},{"title":"YLE Movers_Kiki","duration":30,"date":"2026/03/06","time":"11:30 - 12:00"},{"title":"ES_Alpha","duration":20,"date":"2026/03/06","time":"13:20 - 13:40"},{"title":"YLE Movers_Ryder","duration":30,"date":"2026/03/06","time":"14:00 - 14:30"},{"title":"ES_Michael","duration":30,"date":"2026/03/06","time":"14:35 - 15:05"},{"title":"YLE Flyers_Sara","duration":30,"date":"2026/03/06","time":"15:10 - 15:40"},{"title":"YLE Movers_Kiki","duration":30,"date":"2026/03/08","time":"11:30 - 12:00"},{"title":"ARC_Eddie","duration":30,"date":"2026/03/08","time":"13:00 - 13:30"},{"title":"ES_Patricia","duration":30,"date":"2026/03/08","time":"14:00 - 14:30"},{"title":"YLE Movers_Ryder","duration":30,"date":"2026/03/09","time":"12:10 - 12:40"},{"title":"PU2_Kevin2","duration":30,"date":"2026/03/09","time":"12:45 - 13:15"},{"title":"ES_Alpha","duration":20,"date":"2026/03/09","time":"13:20 - 13:40"},{"title":"YLE_Hannah","duration":30,"date":"2026/03/09","time":"13:45 - 14:15"},{"title":"A2 KET_Polly","duration":60,"date":"2026/03/09","time":"19:00 - 20:00"},{"title":"COVER_Jenny","duration":60,"date":"2026/03/10","time":"11:30 - 12:30"},{"title":"COVER_Kelvin","duration":30,"date":"2026/03/10","time":"12:35 - 13:05"},{"title":"ES_Ben","duration":30,"date":"2026/03/10","time":"13:25 - 13:55"},{"title":"ES_Michael","duration":30,"date":"2026/03/10","time":"14:00 - 14:30"},{"title":"PU2_Kevin2","duration":30,"date":"2026/03/11","time":"12:20 - 12:50"},{"title":"ES_Alpha","duration":20,"date":"2026/03/11","time":"13:20 - 13:40"},{"title":"YLE_Hannah","duration":30,"date":"2026/03/11","time":"13:45 - 14:15"},{"title":"ARC_Xiaoyu","duration":30,"date":"2026/03/12","time":"13:00 - 13:30"},{"title":"ARC_Eddie","duration":30,"date":"2026/03/12","time":"13:35 - 14:05"},{"title":"ES_Patricia","duration":30,"date":"2026/03/12","time":"14:15 - 14:45"},{"title":"YLE Movers_Kiki","duration":30,"date":"2026/03/13","time":"11:30 - 12:00"},{"title":"YLE Movers_Ryder","duration":30,"date":"2026/03/13","time":"12:05 - 12:35"},{"title":"ES_Michael","duration":30,"date":"2026/03/13","time":"14:35 - 15:05"},{"title":"ARC_Eddie","duration":30,"date":"2026/03/15","time":"12:40 - 13:10"},{"title":"ARC_Xiaoyu","duration":30,"date":"2026/03/15","time":"13:15 - 13:45"},{"title":"ES_Patricia","duration":30,"date":"2026/03/15","time":"14:00 - 14:30"},{"title":"YLE Movers_Ryder","duration":30,"date":"2026/03/16","time":"12:10 - 12:40"},{"title":"PU2_Kevin2","duration":30,"date":"2026/03/16","time":"12:45 - 13:15"},{"title":"ES_Alpha","duration":20,"date":"2026/03/16","time":"13:20 - 13:40"},{"title":"A2 KET_Polly","duration":60,"date":"2026/03/16","time":"19:00 - 20:00"},{"title":"ES_Michael","duration":30,"date":"2026/03/17","time":"14:00 - 14:30"},{"title":"PU2_Kevin2","duration":30,"date":"2026/03/18","time":"12:20 - 12:50"},{"title":"YLE_Hannah","duration":30,"date":"2026/03/18","time":"13:45 - 14:15"},{"title":"ARC_Justin","duration":30,"date":"2026/03/19","time":"10:15 - 10:45"},{"title":"ARC_Eddie","duration":30,"date":"2026/03/19","time":"13:35 - 14:05"},{"title":"YLE Flyers_Ryder","duration":30,"date":"2026/03/20","time":"14:00 - 14:30"},{"title":"ES_Michael","duration":30,"date":"2026/03/20","time":"14:35 - 15:05"},{"title":"YLE Movers_Kiki","duration":30,"date":"2026/03/21","time":"12:25 - 12:55"}],"skipped":[{"title":"ARC DEMO_Justin","reason":"DEMO class"},{"title":"CVC_Youyou","reason":"not ended yet"},{"title":"ARC_Eddie","reason":"not ended yet"},{"title":"ARC_Xiaoyu","reason":"not ended yet"},{"title":"YLE Movers_Ryder","reason":"not ended yet"},{"title":"PU2_Kevin2","reason":"not ended yet"},{"title":"ES_Alpha","reason":"not ended yet"},{"title":"YLE_Hannah","reason":"not ended yet"},{"title":"A2 KET_Polly","reason":"not ended yet"},{"title":"ES_Ryan","reason":"not ended yet"},{"title":"ES_Ben","reason":"not ended yet"},{"title":"ES_Michael","reason":"not ended yet"},{"title":"PU2_Kevin2","reason":"not ended yet"},{"title":"ES_Alpha","reason":"not ended yet"},{"title":"YLE_Hannah","reason":"not ended yet"},{"title":"ES_Ryan","reason":"not ended yet"},{"title":"ARC_Xiaoyu","reason":"not ended yet"},{"title":"ARC_Eddie","reason":"not ended yet"},{"title":"ES_Patricia","reason":"not ended yet"},{"title":"YLE Movers_Kiki","reason":"not ended yet"},{"title":"ES_Alpha","reason":"not ended yet"},{"title":"YLE Movers_Ryder","reason":"not ended yet"},{"title":"ES_Michael","reason":"not ended yet"},{"title":"YLE Movers_Kiki","reason":"not ended yet"},{"title":"ARC_Eddie","reason":"not ended yet"},{"title":"ES_Ryan","reason":"not ended yet"},{"title":"ARC_Xiaoyu","reason":"not ended yet"},{"title":"ES_Patricia","reason":"not ended yet"},{"title":"YLE Movers_Ryder","reason":"not ended yet"},{"title":"PU2_Kevin2","reason":"not ended yet"},{"title":"ES_Alpha","reason":"not ended yet"},{"title":"YLE_Hannah","reason":"not ended yet"},{"title":"A2 KET_Polly","reason":"not ended yet"},{"title":"ES_Ryan","reason":"not ended yet"},{"title":"ES_Ben","reason":"not ended yet"},{"title":"ES_Michael","reason":"not ended yet"}]},"bonusRows":[]},{"month":"2026-03","teacherId":"64acbd9a-5341-4ad9-9647-d1e9ceb1228a","teacherName":"Michaela","hourlyRate":150,"totalMinutes":540,"hoursWorked":9,"basePay":1350,"bonuses":{"assessment":0,"training":0,"referral":0,"retention":0,"demo":0,"total":0},"totalPay":1350,"isCurrentMonth":true,"eventBreakdown":{"counted":[{"title":"Let's Talk_Manny","duration":30,"date":"2026/03/02","time":"11:30 - 12:00"},{"title":"Let's Talk _ Manny","duration":30,"date":"2026/03/03","time":"12:00 - 12:30"},{"title":"PU2_Yannis","duration":30,"date":"2026/03/03","time":"14:30 - 15:00"},{"title":"Writing skills_Joselyn","duration":45,"date":"2026/03/04","time":"10:30 - 11:15"},{"title":"Let's Talk _ Manny","duration":30,"date":"2026/03/04","time":"12:00 - 12:30"},{"title":"Writing Skills_Joselyn","duration":45,"date":"2026/03/05","time":"12:00 - 12:45"},{"title":"YLE Starters_Annie2","duration":30,"date":"2026/03/06","time":"13:30 - 14:00"},{"title":"Writing skills_Joselyn","duration":45,"date":"2026/03/07","time":"11:30 - 12:15"},{"title":"Let's Talk_Manny","duration":30,"date":"2026/03/09","time":"11:30 - 12:00"},{"title":"Let's Talk _ Manny","duration":30,"date":"2026/03/10","time":"12:00 - 12:30"},{"title":"PU2_Yannis","duration":30,"date":"2026/03/10","time":"14:30 - 15:00"},{"title":"Writing Skills_Joselyn","duration":45,"date":"2026/03/12","time":"12:00 - 12:45"},{"title":"Let's Talk_Manny","duration":30,"date":"2026/03/16","time":"11:30 - 12:00"},{"title":"Let's Talk _ Manny","duration":30,"date":"2026/03/17","time":"12:00 - 12:30"},{"title":"PU2_Yannis","duration":30,"date":"2026/03/17","time":"14:30 - 15:00"},{"title":"Let's Talk _ Manny","duration":30,"date":"2026/03/18","time":"12:00 - 12:30"}],"skipped":[{"title":"LEAVE","reason":"grey event"},{"title":"Let's Talk_Manny","reason":"not ended yet"},{"title":"Let's Talk _ Manny","reason":"not ended yet"},{"title":"PU2_Yannis","reason":"not ended yet"},{"title":"Let's Talk _ Manny","reason":"not ended yet"},{"title":"Let's Talk_Manny","reason":"not ended yet"},{"title":"Let's Talk _ Manny","reason":"not ended yet"},{"title":"PU2_Yannis","reason":"not ended yet"}]},"bonusRows":[]},{"month":"2026-03","teacherId":"b8913f5a-ac87-4087-a6fe-a94c77f62177","teacherName":"Jonathan","hourlyRate":150,"totalMinutes":0,"hoursWorked":0,"basePay":0,"bonuses":{"assessment":0,"training":0,"referral":0,"retention":0,"demo":0,"total":0},"totalPay":0,"isCurrentMonth":true,"eventBreakdown":{"counted":[],"skipped":[{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"}]},"bonusRows":[]},{"month":"2026-03","teacherId":"5c8429c3-629c-4021-82ca-94c7cf3becb6","teacherName":"Bonique","hourlyRate":150,"totalMinutes":1165,"hoursWorked":19.42,"basePay":2912.5,"bonuses":{"assessment":0,"training":0,"referral":0,"retention":0,"demo":0,"total":0},"totalPay":2912.5,"isCurrentMonth":true,"eventBreakdown":{"counted":[{"title":"GC_Michael2","duration":60,"date":"2026/03/01","time":"08:00 - 09:00"},{"title":"ES_Edward","duration":30,"date":"2026/03/02","time":"13:55 - 14:25"},{"title":"A2 KET_Audrey","duration":60,"date":"2026/03/03","time":"14:00 - 15:00"},{"title":"EB 1_Luna","duration":30,"date":"2026/03/04","time":"11:30 - 12:00"},{"title":"ES_Edward","duration":30,"date":"2026/03/04","time":"13:55 - 14:25"},{"title":"YLE_Cindy","duration":30,"date":"2026/03/04","time":"14:30 - 15:00"},{"title":"YLE_Cindy","duration":30,"date":"2026/03/05","time":"14:30 - 15:00"},{"title":"A2 KET_Flora","duration":60,"date":"2026/03/07","time":"09:45 - 10:45"},{"title":"EB 1_Luna","duration":30,"date":"2026/03/07","time":"11:00 - 11:30"},{"title":"ES_Edward","duration":30,"date":"2026/03/09","time":"13:55 - 14:25"},{"title":"A2 KET_Audrey","duration":60,"date":"2026/03/10","time":"14:00 - 15:00"},{"title":"COVER_Cici","duration":20,"date":"2026/03/11","time":"13:35 - 13:55"},{"title":"ES_Edward","duration":30,"date":"2026/03/11","time":"13:55 - 14:25"},{"title":"YLE_Cindy","duration":30,"date":"2026/03/11","time":"14:30 - 15:00"},{"title":"EB 1_Luna","duration":30,"date":"2026/03/12","time":"13:30 - 14:00"},{"title":"A2 KET_Flora","duration":60,"date":"2026/03/14","time":"09:45 - 10:45"},{"title":"GC_Gina","duration":60,"date":"2026/03/14","time":"11:35 - 12:35"},{"title":"EB 1_Luna","duration":25,"date":"2026/03/14","time":"12:40 - 13:05"},{"title":"ES_Edward","duration":30,"date":"2026/03/16","time":"13:55 - 14:25"},{"title":"GC_Gina","duration":60,"date":"2026/03/17","time":"12:00 - 13:00"},{"title":"GC_Gina","duration":60,"date":"2026/03/18","time":"12:00 - 13:00"},{"title":"ES_Edward","duration":30,"date":"2026/03/18","time":"13:55 - 14:25"},{"title":"COVER_Cherry","duration":45,"date":"2026/03/19","time":"12:00 - 12:45"},{"title":"ES EB_Luna","duration":30,"date":"2026/03/19","time":"13:30 - 14:00"},{"title":"GC_Michael2","duration":60,"date":"2026/03/19","time":"14:05 - 15:05"},{"title":"A2 KET_Flora","duration":60,"date":"2026/03/21","time":"09:45 - 10:45"},{"title":"A2 KET_Audrey","duration":60,"date":"2026/03/21","time":"11:35 - 12:35"},{"title":"EB 1_Luna","duration":25,"date":"2026/03/21","time":"12:40 - 13:05"}],"skipped":[{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"Leave","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"DEMO_Jennifer [adult]","reason":"DEMO class"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"ES_Edward","reason":"not ended yet"},{"title":"unavailable","reason":"grey event"},{"title":"GC_Gina","reason":"not ended yet"},{"title":"A2 KET_Audrey","reason":"not ended yet"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"GC_Gina","reason":"not ended yet"},{"title":"ES_Edward","reason":"not ended yet"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"ES EB_Luna","reason":"not ended yet"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"unavailable","reason":"grey event"},{"title":"A2 KET_Flora","reason":"not ended yet"},{"title":"GC_Michael2","reason":"not ended yet"},{"title":"EB 1_Luna","reason":"not ended yet"},{"title":"unavailable","reason":"grey event"},{"title":"ES_Edward","reason":"not ended yet"},{"title":"unavailable","reason":"grey event"},{"title":"GC_Gina","reason":"not ended yet"},{"title":"A2 KET_Audrey","reason":"not ended yet"},{"title":"unavailable","reason":"grey event"}]},"bonusRows":[]},{"month":"2026-03","teacherId":"8ea54ed8-9667-433b-9ced-119cc70bcccc","teacherName":"Aimee","hourlyRate":150,"totalMinutes":360,"hoursWorked":6,"basePay":900,"bonuses":{"assessment":0,"training":0,"referral":0,"retention":0,"demo":0,"total":0},"totalPay":900,"isCurrentMonth":true,"eventBreakdown":{"counted":[{"title":"GC_Lily","duration":60,"date":"2026/03/04","time":"07:00 - 08:00"},{"title":"A2 KET_Spring & Sunny","duration":60,"date":"2026/03/08","time":"08:25 - 09:25"},{"title":"GC_Lily","duration":60,"date":"2026/03/11","time":"07:00 - 08:00"},{"title":"Spring & Sunny","duration":60,"date":"2026/03/15","time":"08:25 - 09:25"},{"title":"GC_Lily","duration":60,"date":"2026/03/19","time":"15:05 - 16:05"},{"title":"ESL_Spring & Sunny","duration":60,"date":"2026/03/20","time":"15:35 - 16:35"}],"skipped":[{"title":"GC_Lily [Verna trial]","reason":"not ended yet"},{"title":"ESL_Spring & Sunny","reason":"not ended yet"},{"title":"GC_Lily - reschedule","reason":"not ended yet"}]},"bonusRows":[]},{"month":"2026-03","teacherId":"224711b8-fc88-4574-b391-9e994b4c2abb","teacherName":"Brian","hourlyRate":150,"totalMinutes":2075,"hoursWorked":34.58,"basePay":5187.5,"bonuses":{"assessment":0,"training":0,"referral":0,"retention":0,"demo":0,"total":0},"totalPay":5187.5,"isCurrentMonth":true,"eventBreakdown":{"counted":[{"title":"ESL_Jaron","duration":60,"date":"2026/03/01","time":"14:00 - 15:00"},{"title":"COVER_Heli","duration":60,"date":"2026/03/02","time":"07:00 - 08:00"},{"title":"ESL_Jaron","duration":60,"date":"2026/03/02","time":"11:00 - 12:00"},{"title":"B1 PET PREP_Steven","duration":60,"date":"2026/03/02","time":"13:30 - 14:30"},{"title":"ESL_Jaron","duration":45,"date":"2026/03/03","time":"11:45 - 12:30"},{"title":"ESL_Jaron","duration":45,"date":"2026/03/03","time":"12:35 - 13:20"},{"title":"B1 PET PREP_Steven","duration":60,"date":"2026/03/03","time":"13:30 - 14:30"},{"title":"ESL_Heli","duration":60,"date":"2026/03/04","time":"11:00 - 12:00"},{"title":"B2 FCE_Momo","duration":60,"date":"2026/03/04","time":"12:25 - 13:25"},{"title":"B1 PET PREP_Steven","duration":60,"date":"2026/03/04","time":"13:30 - 14:30"},{"title":"ESL_Taosiyu","duration":40,"date":"2026/03/05","time":"12:20 - 13:00"},{"title":"B1 PET PREP_Steven","duration":60,"date":"2026/03/05","time":"13:30 - 14:30"},{"title":"ARC_Annie","duration":60,"date":"2026/03/06","time":"09:30 - 10:30"},{"title":"B1 PET_William","duration":60,"date":"2026/03/06","time":"12:40 - 13:40"},{"title":"B1 PET PREP_Steven","duration":60,"date":"2026/03/06","time":"13:45 - 14:45"},{"title":"B1 PET_Sean","duration":60,"date":"2026/03/07","time":"12:30 - 13:30"},{"title":"B1 PET_Ivan","duration":60,"date":"2026/03/07","time":"13:35 - 14:35"},{"title":"ARC_Annie","duration":60,"date":"2026/03/09","time":"08:00 - 09:00"},{"title":"COVER_Casper","duration":45,"date":"2026/03/10","time":"09:00 - 09:45"},{"title":"ARC_Annie","duration":60,"date":"2026/03/10","time":"11:00 - 12:00"},{"title":"ESL_Heli","duration":60,"date":"2026/03/10","time":"12:05 - 13:05"},{"title":"COVER_Harry2","duration":30,"date":"2026/03/10","time":"13:10 - 13:40"},{"title":"COVER_Jasmine","duration":30,"date":"2026/03/10","time":"14:20 - 14:50"},{"title":"ARC_Annie","duration":60,"date":"2026/03/11","time":"08:30 - 09:30"},{"title":"B2 FCE_Momo","duration":60,"date":"2026/03/11","time":"12:55 - 13:55"},{"title":"ESL_Taosiyu","duration":40,"date":"2026/03/12","time":"13:20 - 14:00"},{"title":"B1 PET_William","duration":60,"date":"2026/03/13","time":"12:40 - 13:40"},{"title":"ARC_Annie","duration":60,"date":"2026/03/16","time":"10:55 - 11:55"},{"title":"ESL_Heli","duration":60,"date":"2026/03/16","time":"12:00 - 13:00"},{"title":"B2 FCE_Momo","duration":60,"date":"2026/03/17","time":"12:55 - 13:55"},{"title":"GC_Yuri","duration":60,"date":"2026/03/18","time":"10:00 - 11:00"},{"title":"COVER_Luke","duration":60,"date":"2026/03/18","time":"11:05 - 12:05"},{"title":"COVER_Nora","duration":30,"date":"2026/03/18","time":"13:30 - 14:00"},{"title":"ESL_Taosiyu","duration":40,"date":"2026/03/19","time":"13:20 - 14:00"},{"title":"COVER_Echo","duration":20,"date":"2026/03/19","time":"14:05 - 14:25"},{"title":"GC_Yuri","duration":60,"date":"2026/03/20","time":"10:00 - 11:00"},{"title":"COVER_Marc","duration":60,"date":"2026/03/20","time":"11:55 - 12:55"},{"title":"B1 PET_William","duration":60,"date":"2026/03/20","time":"13:00 - 14:00"},{"title":"COVER_Harry3","duration":30,"date":"2026/03/20","time":"14:05 - 14:35"}],"skipped":[{"title":"DEMO ARC_Annie","reason":"DEMO class"},{"title":"DEMO_Kenyon","reason":"DEMO class"},{"title":"DEMO_Yoyo","reason":"DEMO class"},{"title":"B1 PET_Sean","reason":"not ended yet"},{"title":"ESL_Heli","reason":"not ended yet"},{"title":"COVER_Marc","reason":"not ended yet"},{"title":"B2 FCE_Momo","reason":"not ended yet"},{"title":"GC_Yuri","reason":"not ended yet"},{"title":"ESL_Taosiyu","reason":"not ended yet"},{"title":"GC_Yuri","reason":"not ended yet"},{"title":"B1 PET_William","reason":"not ended yet"},{"title":"B1 PET_Sean","reason":"not ended yet"},{"title":"ESL_Heli","reason":"not ended yet"}]},"bonusRows":[]},{"month":"2026-03","teacherId":"586bd755-fa1c-4861-8ef3-eb1a331acb32","teacherName":"Carla","hourlyRate":150,"totalMinutes":0,"hoursWorked":0,"basePay":0,"bonuses":{"assessment":0,"training":0,"referral":0,"retention":0,"demo":0,"total":0},"totalPay":0,"isCurrentMonth":true,"eventBreakdown":{"counted":[],"skipped":[]},"bonusRows":[]}]

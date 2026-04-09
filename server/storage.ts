@@ -1,4 +1,4 @@
-import { teachers, leaveRequests, bonuses, appSettings, classEvents, dropdownOptions, students, studentPackages, studentBalanceContacts, masterSchedule, type Teacher, type InsertTeacher, type LeaveRequest, type InsertLeaveRequest, type UpdateLeaveRequest, type Bonus, type InsertBonus, type AppSetting, type ClassEvent, type InsertClassEvent, type DropdownOption, type InsertDropdownOption, type Student, type InsertStudent, type StudentPackage, type InsertStudentPackage, type StudentBalanceContact, type InsertStudentBalanceContact, type MasterSchedule, type InsertMasterSchedule } from "@shared/schema";
+import { teachers, leaveRequests, bonuses, appSettings, classEvents, dropdownOptions, students, studentPackages, studentBalanceContacts, masterSchedule, teacherRateHistory, type Teacher, type InsertTeacher, type LeaveRequest, type InsertLeaveRequest, type UpdateLeaveRequest, type Bonus, type InsertBonus, type AppSetting, type ClassEvent, type InsertClassEvent, type DropdownOption, type InsertDropdownOption, type Student, type InsertStudent, type StudentPackage, type InsertStudentPackage, type StudentBalanceContact, type InsertStudentBalanceContact, type MasterSchedule, type InsertMasterSchedule } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, or, isNull, asc, sql, desc } from "drizzle-orm";
 
@@ -20,10 +20,16 @@ export interface IStorage {
   updateLeaveRequest(id: string, updates: UpdateLeaveRequest): Promise<LeaveRequest | undefined>;
   
   // Bonuses
+  getAllBonuses(): Promise<Bonus[]>;
   getBonusesByTeacherAndMonth(teacherId: string, month: string): Promise<Bonus[]>;
   getBonusesByTeacher(teacherId: string): Promise<Bonus[]>;
   createBonus(bonus: InsertBonus): Promise<Bonus>;
   deleteBonus(id: string): Promise<boolean>;
+
+  // Rate history
+  getRateForMonth(teacherId: string, month: string): Promise<number | null>;
+  hasRateHistory(teacherId: string): Promise<boolean>;
+  createRateHistory(teacherId: string, rate: string, effectiveMonth: string): Promise<void>;
 
   // Dropdown Options
   getDropdownOptions(): Promise<DropdownOption[]>;
@@ -166,6 +172,30 @@ export class DatabaseStorage implements IStorage {
   async deleteBonus(id: string): Promise<boolean> {
     const result = await db.delete(bonuses).where(eq(bonuses.id, id)).returning();
     return result.length > 0;
+  }
+
+  async getAllBonuses(): Promise<Bonus[]> {
+    return db.select().from(bonuses);
+  }
+
+  // Rate history
+  async getRateForMonth(teacherId: string, month: string): Promise<number | null> {
+    const [row] = await db
+      .select()
+      .from(teacherRateHistory)
+      .where(and(eq(teacherRateHistory.teacherId, teacherId), lte(teacherRateHistory.effectiveMonth, month)))
+      .orderBy(desc(teacherRateHistory.effectiveMonth))
+      .limit(1);
+    return row ? parseFloat(row.rate) : null;
+  }
+
+  async hasRateHistory(teacherId: string): Promise<boolean> {
+    const [row] = await db.select().from(teacherRateHistory).where(eq(teacherRateHistory.teacherId, teacherId)).limit(1);
+    return !!row;
+  }
+
+  async createRateHistory(teacherId: string, rate: string, effectiveMonth: string): Promise<void> {
+    await db.insert(teacherRateHistory).values({ teacherId, rate, effectiveMonth });
   }
 
   // Dropdown Options
