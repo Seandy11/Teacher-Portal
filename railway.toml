@@ -1,9 +1,10 @@
 [build]
 builder = "NIXPACKS"
 buildCommand = "npm run build"
+installCommand = "npm install"
 
 [deploy]
 startCommand = "npm run start"
 
 [nixpacks]
-nodeVersion = "20"
+nodeVersion = "22"
