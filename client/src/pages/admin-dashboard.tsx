@@ -20,23 +20,38 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/auth-utils";
 import { Button } from "@/components/ui/button";
-import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Wallet, Link2, Link2Off, RefreshCw, Gift, GraduationCap, Building, AlertTriangle, CalendarDays } from "lucide-react";
+import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Wallet, Link2, Link2Off, RefreshCw, Gift, GraduationCap, Building, AlertTriangle, CalendarDays, Settings } from "lucide-react";
 import type { Teacher, LeaveRequest } from "@shared/schema";
 
 type AdminView = "dashboard" | "calendar" | "teachers" | "leave" | "payroll" | "bonuses" | "students" | "low-balance" | "master-schedule" | "student-balances" | "arc-billing";
 
-const navItems = [
-  { id: "dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
-  { id: "calendar" as const, label: "Calendar Overview", icon: Calendar },
-  { id: "teachers" as const, label: "Teachers", icon: Users },
-  { id: "leave" as const, label: "Leave Requests", icon: FileText },
-  { id: "payroll" as const, label: "Payroll", icon: Wallet },
-  { id: "bonuses" as const, label: "Bonuses", icon: Gift },
-  { id: "students" as const, label: "Students", icon: GraduationCap },
-  { id: "low-balance" as const, label: "Low Balance Alerts", icon: AlertTriangle },
-  { id: "master-schedule" as const, label: "Master Schedule", icon: CalendarDays },
-  { id: "student-balances" as const, label: "Student Balances (Legacy)", icon: GraduationCap },
-  { id: "arc-billing" as const, label: "ARC Billing", icon: Building },
+const navGroups = [
+  {
+    label: "Overview",
+    items: [
+      { id: "dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
+      { id: "calendar" as const, label: "Calendar", icon: Calendar },
+    ],
+  },
+  {
+    label: "Staff",
+    items: [
+      { id: "teachers" as const, label: "Teachers", icon: Users },
+      { id: "leave" as const, label: "Leave Requests", icon: FileText },
+      { id: "payroll" as const, label: "Payroll", icon: Wallet },
+      { id: "bonuses" as const, label: "Bonuses", icon: Gift },
+    ],
+  },
+  {
+    label: "Students",
+    items: [
+      { id: "students" as const, label: "Students", icon: GraduationCap },
+      { id: "master-schedule" as const, label: "Master Schedule", icon: CalendarDays },
+      { id: "low-balance" as const, label: "Low Balance Alerts", icon: AlertTriangle },
+      { id: "arc-billing" as const, label: "ARC Billing", icon: Building },
+      { id: "student-balances" as const, label: "Balances (Legacy)", icon: GraduationCap },
+    ],
+  },
 ];
 
 export default function AdminDashboard() {
@@ -208,25 +223,27 @@ export default function AdminDashboard() {
       <div className="flex min-h-screen w-full">
         <Sidebar>
           <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>Admin Portal</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {navItems.map((item) => (
-                    <SidebarMenuItem key={item.id}>
-                      <SidebarMenuButton
-                        onClick={() => setActiveView(item.id)}
-                        isActive={activeView === item.id}
-                        data-testid={`nav-${item.id}`}
-                      >
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+            {navGroups.map((group) => (
+              <SidebarGroup key={group.label}>
+                <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {group.items.map((item) => (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton
+                          onClick={() => setActiveView(item.id)}
+                          isActive={activeView === item.id}
+                          data-testid={`nav-${item.id}`}
+                        >
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ))}
           </SidebarContent>
         </Sidebar>
 
