@@ -41,13 +41,13 @@ const navGroups = [
       { id: "leave" as const, label: "Leave Requests", icon: FileText },
       { id: "payroll" as const, label: "Payroll", icon: Wallet },
       { id: "bonuses" as const, label: "Bonuses", icon: Gift },
+      { id: "master-schedule" as const, label: "Master Schedule", icon: CalendarDays },
     ],
   },
   {
     label: "Students",
     items: [
       { id: "students" as const, label: "Students", icon: GraduationCap },
-      { id: "master-schedule" as const, label: "Master Schedule", icon: CalendarDays },
       { id: "low-balance" as const, label: "Low Balance Alerts", icon: AlertTriangle },
       { id: "import-data" as const, label: "Import from Sheets", icon: Database },
       { id: "student-balances" as const, label: "Balances (Legacy)", icon: GraduationCap },

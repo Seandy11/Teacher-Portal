@@ -7,7 +7,7 @@ import { authStorage } from "./replit_integrations/auth/storage";
 import crypto from "crypto";
 import { getGoogleCalendarClient, getAuthUrl, exchangeCodeForTokens, isGoogleConnected } from "./integrations/googleCalendar";
 import { getGoogleSheetsClient } from "./integrations/googleSheets";
-import { insertLeaveRequestSchema, updateLeaveRequestSchema, insertTeacherSchema, insertBonusSchema, insertDropdownOptionSchema, classEvents as classEventsTable, studentPackages as studentPackagesTable, students as studentsTable } from "@shared/schema";
+import { insertLeaveRequestSchema, updateLeaveRequestSchema, insertTeacherSchema, insertBonusSchema, insertDropdownOptionSchema, classEvents as classEventsTable, studentPackages as studentPackagesTable, students as studentsTable, masterSchedule as masterScheduleTable } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import type { CalendarEvent, AttendanceRow } from "@shared/schema";
 
@@ -2273,6 +2273,165 @@ export async function registerRoutes(
       res.json(summary);
     } catch (error: any) {
       console.error("Import error:", error);
+      res.status(500).json({ message: "Import failed: " + (error?.message || "Unknown error") });
+    }
+  });
+
+  // ============ MASTER SCHEDULE IMPORT ============
+
+  // GET saved master schedule sheet settings
+  app.get("/api/admin/settings/master-schedule-sheet", isAuthenticated, requireAdmin, async (req, res) => {
+    const spreadsheetId = await storage.getSetting("master-schedule-spreadsheet-id");
+    const tabName = await storage.getSetting("master-schedule-tab-name");
+    res.json({ spreadsheetId: spreadsheetId || "", tabName: tabName || "Master Schedule" });
+  });
+
+  // SAVE master schedule sheet settings
+  app.post("/api/admin/settings/master-schedule-sheet", isAuthenticated, requireAdmin, async (req, res) => {
+    const { spreadsheetId, tabName } = req.body;
+    if (!spreadsheetId || !tabName) return res.status(400).json({ message: "spreadsheetId and tabName are required" });
+    await storage.setSetting("master-schedule-spreadsheet-id", spreadsheetId.trim());
+    await storage.setSetting("master-schedule-tab-name", tabName.trim());
+    res.json({ success: true });
+  });
+
+  app.post("/api/admin/import-master-schedule", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      if (!await isGoogleConnected()) {
+        return res.status(400).json({ message: "Google not connected." });
+      }
+
+      const { spreadsheetId, tabName, dryRun = true, clearExisting = false } = req.body;
+      if (!spreadsheetId || !tabName) {
+        return res.status(400).json({ message: "spreadsheetId and tabName are required" });
+      }
+
+      const sheets = await getGoogleSheetsClient();
+      const escapedTab = (tabName as string).replace(/'/g, "''");
+
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: `'${escapedTab}'!A1:ZZ500`,
+      });
+
+      const rawRows = (response.data.values || []) as string[][];
+      if (rawRows.length < 3) {
+        return res.json({ dryRun, entries: [], errors: ["Sheet appears empty or too small to parse."] });
+      }
+
+      const DAY_MAP: Record<string, number> = {
+        sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6,
+      };
+
+      // Row 0 = day names (col A=times, col B=SA times, col C+ = teacher columns)
+      // Row 1 = teacher names
+      const dayRow = rawRows[0] || [];
+      const teacherRow = rawRows[1] || [];
+
+      // Identify teacher columns (col index 2+) and their day + teacher name
+      const teacherCols: { colIdx: number; teacherName: string; day: number }[] = [];
+      let lastDay = 1; // default Monday
+
+      for (let c = 2; c < teacherRow.length; c++) {
+        const dayCell = (dayRow[c] || "").toString().trim().toLowerCase();
+        const teacherCell = (teacherRow[c] || "").toString().trim();
+        if (dayCell && DAY_MAP[dayCell] !== undefined) lastDay = DAY_MAP[dayCell];
+        if (teacherCell) {
+          teacherCols.push({ colIdx: c, teacherName: teacherCell, day: lastDay });
+        }
+      }
+
+      // Parse cell content: "StudentName (HH:MM–HH:MM)" or "StudentName (HH:MM-HH:MM)"
+      const lessonRegex = /^(.+?)\s*\((\d{1,2}:\d{2})\s*[–\-—]\s*(\d{1,2}:\d{2})\)\s*$/;
+
+      interface ParsedEntry {
+        studentName: string;
+        teacherName: string;
+        day: number;
+        startTime: string;
+        endTime: string;
+      }
+      const parsed: ParsedEntry[] = [];
+      const parseErrors: string[] = [];
+
+      for (const col of teacherCols) {
+        for (let r = 2; r < rawRows.length; r++) {
+          const cell = (rawRows[r]?.[col.colIdx] || "").toString().trim();
+          if (!cell) continue;
+          const match = cell.match(lessonRegex);
+          if (match) {
+            parsed.push({
+              studentName: match[1].trim(),
+              teacherName: col.teacherName,
+              day: col.day,
+              startTime: match[2],
+              endTime: match[3],
+            });
+          }
+          // Cells that have text but don't match (e.g. color-only blocks or headers) are silently skipped
+        }
+      }
+
+      // Deduplicate (same student+teacher+day+time can appear in merged cells)
+      const seen = new Set<string>();
+      const unique = parsed.filter(e => {
+        const key = `${e.studentName}|${e.teacherName}|${e.day}|${e.startTime}|${e.endTime}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      if (dryRun) {
+        return res.json({ dryRun: true, entries: unique, errors: parseErrors });
+      }
+
+      // Actual import
+      if (clearExisting) {
+        await db.delete(masterScheduleTable);
+      }
+
+      const allTeachers = await storage.getAllTeachers();
+      const allStudents = await storage.getAllStudents();
+
+      let entriesCreated = 0;
+      const importErrors: string[] = [];
+
+      for (const entry of unique) {
+        // Match teacher by name (case-insensitive)
+        const teacher = allTeachers.find(t => t.name.toLowerCase() === entry.teacherName.toLowerCase());
+        if (!teacher) {
+          importErrors.push(`Teacher not found: "${entry.teacherName}" — add them in the Teachers tab first.`);
+          continue;
+        }
+
+        // Match or create student
+        let student = allStudents.find(s => s.name.toLowerCase() === entry.studentName.toLowerCase() && s.teacherId === teacher.id);
+        if (!student) {
+          const created = await storage.createStudent({
+            name: entry.studentName,
+            teacherId: teacher.id,
+            isArc: false,
+            isActive: true,
+            importedFromSheet: true,
+          });
+          allStudents.push({ ...created, teacherName: teacher.name });
+          student = allStudents[allStudents.length - 1];
+        }
+
+        await storage.createMasterSchedule({
+          studentId: student.id,
+          teacherId: teacher.id,
+          dayOfWeek: entry.day,
+          startTime: entry.startTime,
+          endTime: entry.endTime,
+          frequency: "weekly",
+        });
+        entriesCreated++;
+      }
+
+      res.json({ dryRun: false, entriesCreated, errors: importErrors });
+    } catch (error: any) {
+      console.error("Master schedule import error:", error);
       res.status(500).json({ message: "Import failed: " + (error?.message || "Unknown error") });
     }
   });
