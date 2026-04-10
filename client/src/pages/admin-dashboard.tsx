@@ -48,8 +48,13 @@ const navGroups = [
       { id: "students" as const, label: "Students", icon: GraduationCap },
       { id: "master-schedule" as const, label: "Master Schedule", icon: CalendarDays },
       { id: "low-balance" as const, label: "Low Balance Alerts", icon: AlertTriangle },
-      { id: "arc-billing" as const, label: "ARC Billing", icon: Building },
       { id: "student-balances" as const, label: "Balances (Legacy)", icon: GraduationCap },
+    ],
+  },
+  {
+    label: "Collaborators",
+    items: [
+      { id: "arc-billing" as const, label: "ARC Billing", icon: Building },
     ],
   },
 ];
