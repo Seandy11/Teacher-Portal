@@ -286,114 +286,168 @@ export function MasterSchedule({ teachers }: { teachers: Teacher[] }) {
       ) : schedules.length === 0 ? (
         <Card><CardContent className="p-0"><EmptyState icon={CalendarDays} title="No schedule entries" description="Import from Sheets or add entries manually." /></CardContent></Card>
       ) : (() => {
-        // Build the grid data
+        const PX_PER_MIN = 2;
+        const COL_W = 140;
+        const TIME_W = 56;
+
+        function toMin(t: string) {
+          const [h, m] = t.slice(0, 5).split(":").map(Number);
+          return h * 60 + m;
+        }
+        function fmt12(totalMin: number) {
+          const h = Math.floor(totalMin / 60);
+          const m = totalMin % 60;
+          const ampm = h >= 12 ? "PM" : "AM";
+          const h12 = h % 12 || 12;
+          return m === 0 ? `${h12} ${ampm}` : `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+        }
+
         const visibleDays = filterDay === "all"
           ? Array.from(new Set(schedules.map(s => s.dayOfWeek))).sort((a, b) => a - b)
           : [Number(filterDay)];
-
         const visibleTeachers = filterTeacher === "all"
           ? Array.from(new Set(schedules.map(s => s.teacherName))).sort()
           : [activeTeachers.find(t => t.id === filterTeacher)?.name ?? ""].filter(Boolean);
 
-        // columns: one per day-teacher pair
         const cols: { day: number; teacherName: string }[] = [];
-        for (const day of visibleDays) {
-          for (const teacherName of visibleTeachers) {
-            if (schedules.some(s => s.dayOfWeek === day && s.teacherName === teacherName)) {
-              cols.push({ day, teacherName });
-            }
-          }
-        }
+        for (const day of visibleDays)
+          for (const t of visibleTeachers)
+            if (schedules.some(s => s.dayOfWeek === day && s.teacherName === t))
+              cols.push({ day, teacherName: t });
 
-        // All unique start times across visible entries, sorted
         const visibleEntries = schedules.filter(s =>
           visibleDays.includes(s.dayOfWeek) && visibleTeachers.includes(s.teacherName)
         );
-        const allTimes = Array.from(new Set(visibleEntries.map(s => s.startTime.slice(0, 5)))).sort();
 
-        // Lookup: day|teacher|time -> entry
-        const lookup = new Map<string, MasterScheduleEntry>();
-        for (const s of schedules) {
-          lookup.set(`${s.dayOfWeek}|${s.teacherName}|${s.startTime.slice(0, 5)}`, s);
-        }
+        const allStartMins = visibleEntries.map(s => toMin(s.startTime));
+        const allEndMins = visibleEntries.map(s => toMin(s.endTime));
+        const rangeStart = Math.floor(Math.min(...allStartMins) / 60) * 60;
+        const rangeEnd = Math.ceil(Math.max(...allEndMins) / 60) * 60;
+        const totalMins = rangeEnd - rangeStart;
+        const totalHeight = totalMins * PX_PER_MIN;
 
-        // Group cols by day for the header
+        const hourMarks: { min: number; label: string }[] = [];
+        for (let m = rangeStart; m <= rangeEnd; m += 60)
+          hourMarks.push({ min: m, label: fmt12(m) });
+
         const dayGroups: { day: number; count: number }[] = [];
         for (const col of cols) {
           const last = dayGroups[dayGroups.length - 1];
-          if (last && last.day === col.day) { last.count++; }
-          else { dayGroups.push({ day: col.day, count: 1 }); }
+          if (last && last.day === col.day) last.count++;
+          else dayGroups.push({ day: col.day, count: 1 });
         }
 
-        // Pastel colours per student (stable by name)
-        const paletteClasses = ["bg-blue-100 text-blue-800", "bg-green-100 text-green-800", "bg-purple-100 text-purple-800",
-          "bg-orange-100 text-orange-800", "bg-pink-100 text-pink-800", "bg-teal-100 text-teal-800",
-          "bg-yellow-100 text-yellow-800", "bg-red-100 text-red-800", "bg-indigo-100 text-indigo-800"];
+        const palette = [
+          "bg-blue-200 text-blue-900 border-blue-300",
+          "bg-green-200 text-green-900 border-green-300",
+          "bg-purple-200 text-purple-900 border-purple-300",
+          "bg-orange-200 text-orange-900 border-orange-300",
+          "bg-pink-200 text-pink-900 border-pink-300",
+          "bg-teal-200 text-teal-900 border-teal-300",
+          "bg-yellow-200 text-yellow-900 border-yellow-300",
+          "bg-red-200 text-red-900 border-red-300",
+          "bg-indigo-200 text-indigo-900 border-indigo-300",
+          "bg-cyan-200 text-cyan-900 border-cyan-300",
+        ];
         const colorMap = new Map<string, string>();
         Array.from(new Set(schedules.map(s => s.studentName))).sort().forEach((name, i) => {
-          colorMap.set(name, paletteClasses[i % paletteClasses.length]);
+          colorMap.set(name, palette[i % palette.length]);
         });
 
+        const totalWidth = TIME_W + cols.length * COL_W;
+
         return (
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="min-w-max w-full text-sm border-collapse">
-              <thead>
-                {/* Row 1: Day group headers */}
-                <tr className="bg-muted">
-                  <th className="border-r border-b px-3 py-2 text-left font-medium text-muted-foreground w-20 sticky left-0 bg-muted z-10">Time</th>
+          <div className="border rounded-lg overflow-hidden">
+            {/* Sticky double header */}
+            <div className="overflow-x-auto">
+              <div style={{ minWidth: totalWidth }}>
+                {/* Row 1: Day names */}
+                <div className="flex bg-muted border-b">
+                  <div style={{ width: TIME_W, minWidth: TIME_W }} className="shrink-0 border-r" />
                   {dayGroups.map(({ day, count }) => (
-                    <th key={day} colSpan={count} className="border-r border-b px-3 py-2 text-center font-semibold">
+                    <div key={day} style={{ width: count * COL_W, minWidth: count * COL_W }}
+                         className="border-r text-center font-semibold text-sm py-2">
                       {DAYS[day]}
-                    </th>
+                    </div>
                   ))}
-                </tr>
-                {/* Row 2: Teacher sub-headers */}
-                <tr className="bg-muted/50">
-                  <th className="border-r border-b px-3 py-2 sticky left-0 bg-muted/50 z-10" />
+                </div>
+                {/* Row 2: Teacher names */}
+                <div className="flex bg-muted/60 border-b">
+                  <div style={{ width: TIME_W, minWidth: TIME_W }} className="shrink-0 border-r" />
                   {cols.map((col, i) => (
-                    <th key={i} className="border-r border-b px-2 py-2 text-center font-medium text-xs text-muted-foreground min-w-[110px]">
+                    <div key={i} style={{ width: COL_W, minWidth: COL_W }}
+                         className="border-r text-center text-xs text-muted-foreground font-medium py-1.5 truncate px-1">
                       {col.teacherName}
-                    </th>
+                    </div>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {allTimes.map((time) => (
-                  <tr key={time} className="hover:bg-muted/20">
-                    <td className="border-r border-b px-3 py-2 text-xs text-muted-foreground font-medium sticky left-0 bg-background z-10 whitespace-nowrap">
-                      {time}
-                    </td>
-                    {cols.map((col, i) => {
-                      const entry = lookup.get(`${col.day}|${col.teacherName}|${time}`);
+                </div>
+
+                {/* Scrollable body */}
+                <div className="overflow-y-auto" style={{ maxHeight: 620 }}>
+                  <div className="flex" style={{ height: totalHeight }}>
+                    {/* Time axis */}
+                    <div style={{ width: TIME_W, minWidth: TIME_W, height: totalHeight }}
+                         className="shrink-0 relative border-r bg-muted/30">
+                      {hourMarks.map(({ min, label }) => (
+                        <div key={min} style={{ position: "absolute", top: (min - rangeStart) * PX_PER_MIN - 8, left: 0, right: 0 }}
+                             className="text-[10px] text-muted-foreground text-right pr-2 leading-none select-none">
+                          {label}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Teacher-day columns */}
+                    {cols.map((col, ci) => {
+                      const colLessons = schedules.filter(s =>
+                        s.dayOfWeek === col.day && s.teacherName === col.teacherName
+                      );
                       return (
-                        <td key={i} className="border-r border-b px-1 py-1 text-center align-middle min-w-[110px]">
-                          {entry ? (
-                            <div className={`rounded px-2 py-1 text-xs font-medium leading-tight flex items-center justify-between gap-1 ${colorMap.get(entry.studentName) ?? "bg-gray-100 text-gray-800"}`}>
-                              <span className="truncate">{entry.studentName}</span>
-                              <span className="shrink-0 text-[10px] opacity-70">{entry.startTime.slice(0,5)}–{entry.endTime.slice(0,5)}</span>
-                              <div className="flex shrink-0">
-                                <button className="opacity-50 hover:opacity-100" onClick={() => {
-                                  editForm.reset({
-                                    studentId: entry.studentId, teacherId: entry.teacherId,
-                                    dayOfWeek: entry.dayOfWeek, startTime: entry.startTime.slice(0, 5),
-                                    endTime: entry.endTime.slice(0, 5), frequency: entry.frequency as "weekly" | "biweekly",
-                                    notes: entry.notes ?? "",
-                                  });
-                                  setEditEntry(entry);
-                                }}><Edit2 className="h-3 w-3" /></button>
-                                <button className="opacity-50 hover:opacity-100 text-red-600 ml-0.5" onClick={() => setDeleteId(entry.id)}>
-                                  <Trash2 className="h-3 w-3" />
-                                </button>
+                        <div key={ci} style={{ width: COL_W, minWidth: COL_W, height: totalHeight }}
+                             className="shrink-0 relative border-r">
+                          {/* Hour grid lines */}
+                          {hourMarks.map(({ min }) => (
+                            <div key={min} style={{ position: "absolute", top: (min - rangeStart) * PX_PER_MIN, left: 0, right: 0 }}
+                                 className="border-t border-muted-foreground/10" />
+                          ))}
+                          {/* Lesson blocks */}
+                          {colLessons.map(entry => {
+                            const top = (toMin(entry.startTime) - rangeStart) * PX_PER_MIN;
+                            const height = Math.max((toMin(entry.endTime) - toMin(entry.startTime)) * PX_PER_MIN, 24);
+                            const color = colorMap.get(entry.studentName) ?? "bg-gray-200 text-gray-900 border-gray-300";
+                            return (
+                              <div key={entry.id}
+                                   style={{ position: "absolute", top, height, left: 3, right: 3 }}
+                                   className={`rounded border text-xs overflow-hidden group cursor-pointer ${color}`}>
+                                <div className="px-1.5 pt-0.5 font-semibold leading-tight truncate">{entry.studentName}</div>
+                                <div className="px-1.5 text-[10px] opacity-75 leading-tight">
+                                  {entry.startTime.slice(0, 5)} – {entry.endTime.slice(0, 5)}
+                                </div>
+                                {/* Edit/delete — visible on hover */}
+                                <div className="absolute top-0.5 right-0.5 hidden group-hover:flex gap-0.5 bg-white/70 rounded px-0.5">
+                                  <button onClick={() => {
+                                    editForm.reset({
+                                      studentId: entry.studentId, teacherId: entry.teacherId,
+                                      dayOfWeek: entry.dayOfWeek, startTime: entry.startTime.slice(0, 5),
+                                      endTime: entry.endTime.slice(0, 5),
+                                      frequency: entry.frequency as "weekly" | "biweekly",
+                                      notes: entry.notes ?? "",
+                                    });
+                                    setEditEntry(entry);
+                                  }}><Edit2 className="h-3 w-3" /></button>
+                                  <button onClick={() => setDeleteId(entry.id)}>
+                                    <Trash2 className="h-3 w-3 text-red-600" />
+                                  </button>
+                                </div>
                               </div>
-                            </div>
-                          ) : null}
-                        </td>
+                            );
+                          })}
+                        </div>
                       );
                     })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         );
       })()}
