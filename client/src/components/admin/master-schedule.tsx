@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { EmptyState } from "@/components/empty-state";
-import { CalendarDays, Plus, Trash2, Edit2, Download, Eye, AlertTriangle } from "lucide-react";
+import { CalendarDays, Plus, Trash2, Edit2, Download, Eye, AlertTriangle, ZoomIn, ZoomOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Teacher } from "@shared/schema";
@@ -69,6 +69,7 @@ export function MasterSchedule({ teachers }: { teachers: Teacher[] }) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [filterDay, setFilterDay] = useState<string>("all");
   const [filterTeacher, setFilterTeacher] = useState<string>("all");
+  const [zoom, setZoom] = useState(2); // px per minute
   const [showImport, setShowImport] = useState(false);
   const [sheetId, setSheetId] = useState("");
   const [sheetTab, setSheetTab] = useState("Master Schedule");
@@ -262,8 +263,8 @@ export function MasterSchedule({ teachers }: { teachers: Teacher[] }) {
         </Card>
       )}
 
-      {/* Day filter */}
-      <div className="flex gap-3">
+      {/* Filters + zoom */}
+      <div className="flex items-center gap-3 flex-wrap">
         <Select value={filterDay} onValueChange={setFilterDay}>
           <SelectTrigger className="w-40"><SelectValue placeholder="All days" /></SelectTrigger>
           <SelectContent>
@@ -278,6 +279,15 @@ export function MasterSchedule({ teachers }: { teachers: Teacher[] }) {
             {activeTeachers.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
           </SelectContent>
         </Select>
+        <div className="flex items-center gap-1 ml-auto border rounded-md">
+          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setZoom(z => Math.max(1, z - 0.5))} disabled={zoom <= 1}>
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          <span className="text-xs text-muted-foreground w-12 text-center select-none">{zoom === Math.round(zoom) ? zoom : zoom.toFixed(1)}×</span>
+          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setZoom(z => Math.min(5, z + 0.5))} disabled={zoom >= 5}>
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Calendar grid */}
@@ -286,7 +296,7 @@ export function MasterSchedule({ teachers }: { teachers: Teacher[] }) {
       ) : schedules.length === 0 ? (
         <Card><CardContent className="p-0"><EmptyState icon={CalendarDays} title="No schedule entries" description="Import from Sheets or add entries manually." /></CardContent></Card>
       ) : (() => {
-        const PX_PER_MIN = 2;
+        const PX_PER_MIN = zoom;
         const COL_W = 140;
         const TIME_W = 56;
 
@@ -448,6 +458,112 @@ export function MasterSchedule({ teachers }: { teachers: Teacher[] }) {
                 </div>
               </div>
             </div>
+          </div>
+        );
+      })()}
+
+      {/* Totals */}
+      {!isLoading && schedules.length > 0 && (() => {
+        const toMin = (t: string) => { const [h, m] = t.slice(0, 5).split(":").map(Number); return h * 60 + m; };
+        const dur = (s: MasterScheduleEntry) => toMin(s.endTime) - toMin(s.startTime);
+        const fmtMin = (m: number) => m >= 60 ? `${Math.floor(m / 60)}h ${m % 60 > 0 ? `${m % 60}m` : ""}`.trim() : `${m}m`;
+
+        const visibleDays = filterDay === "all"
+          ? Array.from(new Set(schedules.map(s => s.dayOfWeek))).sort((a, b) => a - b)
+          : [Number(filterDay)];
+        const visibleTeacherNames = filterTeacher === "all"
+          ? Array.from(new Set(schedules.map(s => s.teacherName))).sort()
+          : [activeTeachers.find(t => t.id === filterTeacher)?.name ?? ""].filter(Boolean);
+        const entries = schedules.filter(s =>
+          visibleDays.includes(s.dayOfWeek) && visibleTeacherNames.includes(s.teacherName)
+        );
+
+        // Teacher totals
+        const byTeacher = new Map<string, { lessons: number; minutes: number }>();
+        for (const s of entries) {
+          const t = byTeacher.get(s.teacherName) ?? { lessons: 0, minutes: 0 };
+          t.lessons++; t.minutes += dur(s);
+          byTeacher.set(s.teacherName, t);
+        }
+
+        // Day totals
+        const byDay = new Map<number, { lessons: number; minutes: number }>();
+        for (const s of entries) {
+          const d = byDay.get(s.dayOfWeek) ?? { lessons: 0, minutes: 0 };
+          d.lessons++; d.minutes += dur(s);
+          byDay.set(s.dayOfWeek, d);
+        }
+
+        const weeklyLessons = entries.length;
+        const weeklyMinutes = entries.reduce((sum, s) => sum + dur(s), 0);
+
+        return (
+          <div className="space-y-4">
+            {/* Teacher totals */}
+            <Card>
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Teacher Totals</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/40">
+                      <th className="text-left px-4 py-2 font-medium">Teacher</th>
+                      <th className="text-right px-4 py-2 font-medium">Lessons / week</th>
+                      <th className="text-right px-4 py-2 font-medium">Total time / week</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from(byTeacher.entries()).map(([name, totals]) => (
+                      <tr key={name} className="border-b last:border-0 hover:bg-muted/20">
+                        <td className="px-4 py-2">{name}</td>
+                        <td className="px-4 py-2 text-right">{totals.lessons}</td>
+                        <td className="px-4 py-2 text-right font-medium">{fmtMin(totals.minutes)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+
+            {/* Daily totals */}
+            <Card>
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Daily Totals</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/40">
+                      <th className="text-left px-4 py-2 font-medium">Day</th>
+                      <th className="text-right px-4 py-2 font-medium">Lessons</th>
+                      <th className="text-right px-4 py-2 font-medium">Total time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleDays.filter(d => byDay.has(d)).map(d => {
+                      const totals = byDay.get(d)!;
+                      return (
+                        <tr key={d} className="border-b last:border-0 hover:bg-muted/20">
+                          <td className="px-4 py-2 font-medium">{DAYS[d]}</td>
+                          <td className="px-4 py-2 text-right">{totals.lessons}</td>
+                          <td className="px-4 py-2 text-right font-medium">{fmtMin(totals.minutes)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+
+            {/* Weekly totals */}
+            <Card className="bg-muted/30">
+              <CardContent className="px-4 py-3 flex items-center gap-8">
+                <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Weekly Total</span>
+                <span className="text-sm"><span className="font-semibold text-foreground">{weeklyLessons}</span> lessons</span>
+                <span className="text-sm"><span className="font-semibold text-foreground">{fmtMin(weeklyMinutes)}</span> teaching time</span>
+              </CardContent>
+            </Card>
           </div>
         );
       })()}
