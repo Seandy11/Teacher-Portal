@@ -165,11 +165,6 @@ export function MasterSchedule({ teachers }: { teachers: Teacher[] }) {
     onError: () => toast({ title: "Error", description: "Failed to remove entry.", variant: "destructive" }),
   });
 
-  const filtered = schedules.filter(s => {
-    if (filterDay !== "all" && s.dayOfWeek !== Number(filterDay)) return false;
-    if (filterTeacher !== "all" && s.teacherId !== filterTeacher) return false;
-    return true;
-  });
 
   return (
     <div className="space-y-6">
@@ -267,6 +262,7 @@ export function MasterSchedule({ teachers }: { teachers: Teacher[] }) {
         </Card>
       )}
 
+      {/* Day filter */}
       <div className="flex gap-3">
         <Select value={filterDay} onValueChange={setFilterDay}>
           <SelectTrigger className="w-40"><SelectValue placeholder="All days" /></SelectTrigger>
@@ -284,64 +280,123 @@ export function MasterSchedule({ teachers }: { teachers: Teacher[] }) {
         </Select>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="flex justify-center p-8"><LoadingSpinner /></div>
-          ) : filtered.length === 0 ? (
-            <EmptyState icon={CalendarDays} title="No schedule entries" description="Add recurring lesson plans to build the master schedule." />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Day</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Teacher</TableHead>
-                  <TableHead>Frequency</TableHead>
-                  <TableHead>Notes</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell className="font-medium">{DAYS[entry.dayOfWeek]}</TableCell>
-                    <TableCell className="text-sm">{entry.startTime.slice(0, 5)} – {entry.endTime.slice(0, 5)}</TableCell>
-                    <TableCell>{entry.studentName}</TableCell>
-                    <TableCell>{entry.teacherName}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{entry.frequency === "weekly" ? "Weekly" : "Bi-weekly"}</Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{entry.notes || "—"}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
-                          editForm.reset({
-                            studentId: entry.studentId,
-                            teacherId: entry.teacherId,
-                            dayOfWeek: entry.dayOfWeek,
-                            startTime: entry.startTime.slice(0, 5),
-                            endTime: entry.endTime.slice(0, 5),
-                            frequency: entry.frequency as "weekly" | "biweekly",
-                            notes: entry.notes ?? "",
-                          });
-                          setEditEntry(entry);
-                        }}>
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDeleteId(entry.id)}>
-                          <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+      {/* Calendar grid */}
+      {isLoading ? (
+        <div className="flex justify-center p-8"><LoadingSpinner /></div>
+      ) : schedules.length === 0 ? (
+        <Card><CardContent className="p-0"><EmptyState icon={CalendarDays} title="No schedule entries" description="Import from Sheets or add entries manually." /></CardContent></Card>
+      ) : (() => {
+        // Build the grid data
+        const visibleDays = filterDay === "all"
+          ? Array.from(new Set(schedules.map(s => s.dayOfWeek))).sort((a, b) => a - b)
+          : [Number(filterDay)];
+
+        const visibleTeachers = filterTeacher === "all"
+          ? Array.from(new Set(schedules.map(s => s.teacherName))).sort()
+          : [activeTeachers.find(t => t.id === filterTeacher)?.name ?? ""].filter(Boolean);
+
+        // columns: one per day-teacher pair
+        const cols: { day: number; teacherName: string }[] = [];
+        for (const day of visibleDays) {
+          for (const teacherName of visibleTeachers) {
+            if (schedules.some(s => s.dayOfWeek === day && s.teacherName === teacherName)) {
+              cols.push({ day, teacherName });
+            }
+          }
+        }
+
+        // All unique start times across visible entries, sorted
+        const visibleEntries = schedules.filter(s =>
+          visibleDays.includes(s.dayOfWeek) && visibleTeachers.includes(s.teacherName)
+        );
+        const allTimes = Array.from(new Set(visibleEntries.map(s => s.startTime.slice(0, 5)))).sort();
+
+        // Lookup: day|teacher|time -> entry
+        const lookup = new Map<string, MasterScheduleEntry>();
+        for (const s of schedules) {
+          lookup.set(`${s.dayOfWeek}|${s.teacherName}|${s.startTime.slice(0, 5)}`, s);
+        }
+
+        // Group cols by day for the header
+        const dayGroups: { day: number; count: number }[] = [];
+        for (const col of cols) {
+          const last = dayGroups[dayGroups.length - 1];
+          if (last && last.day === col.day) { last.count++; }
+          else { dayGroups.push({ day: col.day, count: 1 }); }
+        }
+
+        // Pastel colours per student (stable by name)
+        const paletteClasses = ["bg-blue-100 text-blue-800", "bg-green-100 text-green-800", "bg-purple-100 text-purple-800",
+          "bg-orange-100 text-orange-800", "bg-pink-100 text-pink-800", "bg-teal-100 text-teal-800",
+          "bg-yellow-100 text-yellow-800", "bg-red-100 text-red-800", "bg-indigo-100 text-indigo-800"];
+        const colorMap = new Map<string, string>();
+        Array.from(new Set(schedules.map(s => s.studentName))).sort().forEach((name, i) => {
+          colorMap.set(name, paletteClasses[i % paletteClasses.length]);
+        });
+
+        return (
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="min-w-max w-full text-sm border-collapse">
+              <thead>
+                {/* Row 1: Day group headers */}
+                <tr className="bg-muted">
+                  <th className="border-r border-b px-3 py-2 text-left font-medium text-muted-foreground w-20 sticky left-0 bg-muted z-10">Time</th>
+                  {dayGroups.map(({ day, count }) => (
+                    <th key={day} colSpan={count} className="border-r border-b px-3 py-2 text-center font-semibold">
+                      {DAYS[day]}
+                    </th>
+                  ))}
+                </tr>
+                {/* Row 2: Teacher sub-headers */}
+                <tr className="bg-muted/50">
+                  <th className="border-r border-b px-3 py-2 sticky left-0 bg-muted/50 z-10" />
+                  {cols.map((col, i) => (
+                    <th key={i} className="border-r border-b px-2 py-2 text-center font-medium text-xs text-muted-foreground min-w-[110px]">
+                      {col.teacherName}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {allTimes.map((time) => (
+                  <tr key={time} className="hover:bg-muted/20">
+                    <td className="border-r border-b px-3 py-2 text-xs text-muted-foreground font-medium sticky left-0 bg-background z-10 whitespace-nowrap">
+                      {time}
+                    </td>
+                    {cols.map((col, i) => {
+                      const entry = lookup.get(`${col.day}|${col.teacherName}|${time}`);
+                      return (
+                        <td key={i} className="border-r border-b px-1 py-1 text-center align-middle min-w-[110px]">
+                          {entry ? (
+                            <div className={`rounded px-2 py-1 text-xs font-medium leading-tight flex items-center justify-between gap-1 ${colorMap.get(entry.studentName) ?? "bg-gray-100 text-gray-800"}`}>
+                              <span className="truncate">{entry.studentName}</span>
+                              <span className="shrink-0 text-[10px] opacity-70">{entry.startTime.slice(0,5)}–{entry.endTime.slice(0,5)}</span>
+                              <div className="flex shrink-0">
+                                <button className="opacity-50 hover:opacity-100" onClick={() => {
+                                  editForm.reset({
+                                    studentId: entry.studentId, teacherId: entry.teacherId,
+                                    dayOfWeek: entry.dayOfWeek, startTime: entry.startTime.slice(0, 5),
+                                    endTime: entry.endTime.slice(0, 5), frequency: entry.frequency as "weekly" | "biweekly",
+                                    notes: entry.notes ?? "",
+                                  });
+                                  setEditEntry(entry);
+                                }}><Edit2 className="h-3 w-3" /></button>
+                                <button className="opacity-50 hover:opacity-100 text-red-600 ml-0.5" onClick={() => setDeleteId(entry.id)}>
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </div>
+                            </div>
+                          ) : null}
+                        </td>
+                      );
+                    })}
+                  </tr>
                 ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
 
       {/* Add dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
