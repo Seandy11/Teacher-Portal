@@ -456,115 +456,76 @@ export function MasterSchedule({ teachers }: { teachers: Teacher[] }) {
                     })}
                   </div>
                 </div>
-              </div>
+
+              {/* ── Footer rows ── */}
+              {(() => {
+                const dur = (s: MasterScheduleEntry) => toMin(s.endTime) - toMin(s.startTime);
+                const fmtMin = (m: number) => m >= 60 ? `${Math.floor(m / 60)}h${m % 60 > 0 ? ` ${m % 60}m` : ""}` : `${m}m`;
+
+                // Per-column (teacher×day) totals
+                const colTotals = cols.map(col => {
+                  const entries = visibleEntries.filter(s => s.dayOfWeek === col.day && s.teacherName === col.teacherName);
+                  return { lessons: entries.length, minutes: entries.reduce((sum, s) => sum + dur(s), 0) };
+                });
+
+                // Per-day totals
+                const dayTotals = dayGroups.map(({ day }) => {
+                  const entries = visibleEntries.filter(s => s.dayOfWeek === day);
+                  return { day, lessons: entries.length, minutes: entries.reduce((sum, s) => sum + dur(s), 0) };
+                });
+
+                const weeklyLessons = visibleEntries.length;
+                const weeklyMinutes = visibleEntries.reduce((sum, s) => sum + dur(s), 0);
+
+                return (
+                  <>
+                    {/* Row 1 — Teacher totals (one cell per teacher×day column) */}
+                    <div className="flex border-t-2 bg-muted/40">
+                      <div style={{ width: TIME_W, minWidth: TIME_W }}
+                           className="shrink-0 border-r px-2 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center">
+                        Teacher
+                      </div>
+                      {cols.map((col, i) => (
+                        <div key={i} style={{ width: COL_W, minWidth: COL_W }}
+                             className="shrink-0 border-r px-2 py-2 text-center text-xs">
+                          <div className="font-semibold">{colTotals[i].lessons} lesson{colTotals[i].lessons !== 1 ? "s" : ""}</div>
+                          <div className="text-muted-foreground text-[10px]">{fmtMin(colTotals[i].minutes)}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Row 2 — Daily totals (one cell per day group, spanning teacher columns) */}
+                    <div className="flex border-t bg-muted/60">
+                      <div style={{ width: TIME_W, minWidth: TIME_W }}
+                           className="shrink-0 border-r px-2 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center">
+                        Day
+                      </div>
+                      {dayGroups.map(({ day, count }, i) => (
+                        <div key={day} style={{ width: count * COL_W, minWidth: count * COL_W }}
+                             className="shrink-0 border-r px-3 py-2 text-xs flex items-center gap-3">
+                          <span className="font-semibold">{dayTotals[i].lessons} lessons</span>
+                          <span className="text-muted-foreground">{fmtMin(dayTotals[i].minutes)}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Row 3 — Weekly total */}
+                    <div className="flex border-t bg-muted">
+                      <div style={{ width: TIME_W, minWidth: TIME_W }}
+                           className="shrink-0 border-r px-2 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wide flex items-center">
+                        Week
+                      </div>
+                      <div className="flex-1 px-3 py-2 text-xs flex items-center gap-4">
+                        <span><span className="font-bold text-foreground">{weeklyLessons}</span> lessons total</span>
+                        <span><span className="font-bold text-foreground">{fmtMin(weeklyMinutes)}</span> teaching time</span>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
-        );
-      })()}
-
-      {/* Totals */}
-      {!isLoading && schedules.length > 0 && (() => {
-        const toMin = (t: string) => { const [h, m] = t.slice(0, 5).split(":").map(Number); return h * 60 + m; };
-        const dur = (s: MasterScheduleEntry) => toMin(s.endTime) - toMin(s.startTime);
-        const fmtMin = (m: number) => m >= 60 ? `${Math.floor(m / 60)}h ${m % 60 > 0 ? `${m % 60}m` : ""}`.trim() : `${m}m`;
-
-        const visibleDays = filterDay === "all"
-          ? Array.from(new Set(schedules.map(s => s.dayOfWeek))).sort((a, b) => a - b)
-          : [Number(filterDay)];
-        const visibleTeacherNames = filterTeacher === "all"
-          ? Array.from(new Set(schedules.map(s => s.teacherName))).sort()
-          : [activeTeachers.find(t => t.id === filterTeacher)?.name ?? ""].filter(Boolean);
-        const entries = schedules.filter(s =>
-          visibleDays.includes(s.dayOfWeek) && visibleTeacherNames.includes(s.teacherName)
-        );
-
-        // Teacher totals
-        const byTeacher = new Map<string, { lessons: number; minutes: number }>();
-        for (const s of entries) {
-          const t = byTeacher.get(s.teacherName) ?? { lessons: 0, minutes: 0 };
-          t.lessons++; t.minutes += dur(s);
-          byTeacher.set(s.teacherName, t);
-        }
-
-        // Day totals
-        const byDay = new Map<number, { lessons: number; minutes: number }>();
-        for (const s of entries) {
-          const d = byDay.get(s.dayOfWeek) ?? { lessons: 0, minutes: 0 };
-          d.lessons++; d.minutes += dur(s);
-          byDay.set(s.dayOfWeek, d);
-        }
-
-        const weeklyLessons = entries.length;
-        const weeklyMinutes = entries.reduce((sum, s) => sum + dur(s), 0);
-
-        return (
-          <div className="space-y-4">
-            {/* Teacher totals */}
-            <Card>
-              <CardHeader className="pb-2 pt-4 px-4">
-                <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Teacher Totals</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/40">
-                      <th className="text-left px-4 py-2 font-medium">Teacher</th>
-                      <th className="text-right px-4 py-2 font-medium">Lessons / week</th>
-                      <th className="text-right px-4 py-2 font-medium">Total time / week</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Array.from(byTeacher.entries()).map(([name, totals]) => (
-                      <tr key={name} className="border-b last:border-0 hover:bg-muted/20">
-                        <td className="px-4 py-2">{name}</td>
-                        <td className="px-4 py-2 text-right">{totals.lessons}</td>
-                        <td className="px-4 py-2 text-right font-medium">{fmtMin(totals.minutes)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
-
-            {/* Daily totals */}
-            <Card>
-              <CardHeader className="pb-2 pt-4 px-4">
-                <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Daily Totals</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/40">
-                      <th className="text-left px-4 py-2 font-medium">Day</th>
-                      <th className="text-right px-4 py-2 font-medium">Lessons</th>
-                      <th className="text-right px-4 py-2 font-medium">Total time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visibleDays.filter(d => byDay.has(d)).map(d => {
-                      const totals = byDay.get(d)!;
-                      return (
-                        <tr key={d} className="border-b last:border-0 hover:bg-muted/20">
-                          <td className="px-4 py-2 font-medium">{DAYS[d]}</td>
-                          <td className="px-4 py-2 text-right">{totals.lessons}</td>
-                          <td className="px-4 py-2 text-right font-medium">{fmtMin(totals.minutes)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
-
-            {/* Weekly totals */}
-            <Card className="bg-muted/30">
-              <CardContent className="px-4 py-3 flex items-center gap-8">
-                <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Weekly Total</span>
-                <span className="text-sm"><span className="font-semibold text-foreground">{weeklyLessons}</span> lessons</span>
-                <span className="text-sm"><span className="font-semibold text-foreground">{fmtMin(weeklyMinutes)}</span> teaching time</span>
-              </CardContent>
-            </Card>
-          </div>
+        </div>
         );
       })()}
 
