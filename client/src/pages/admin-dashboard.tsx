@@ -13,6 +13,7 @@ import { ArcBilling } from "@/components/admin/arc-billing";
 import { StudentManagement } from "@/components/admin/student-management";
 import { LowBalanceAlerts } from "@/components/admin/low-balance-alerts";
 import { MasterSchedule } from "@/components/admin/master-schedule";
+import { DataImport } from "@/components/admin/data-import";
 import { FullPageLoader } from "@/components/loading-spinner";
 import { ErrorDisplay } from "@/components/error-display";
 import { useAuth } from "@/hooks/use-auth";
@@ -20,10 +21,10 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/auth-utils";
 import { Button } from "@/components/ui/button";
-import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Wallet, Link2, Link2Off, RefreshCw, Gift, GraduationCap, Building, AlertTriangle, CalendarDays, Settings } from "lucide-react";
+import { Users, FileText, LayoutDashboard, UserCheck, Clock, CheckCircle, Calendar, Wallet, Link2, Link2Off, RefreshCw, Gift, GraduationCap, Building, AlertTriangle, CalendarDays, Settings, Database } from "lucide-react";
 import type { Teacher, LeaveRequest } from "@shared/schema";
 
-type AdminView = "dashboard" | "calendar" | "teachers" | "leave" | "payroll" | "bonuses" | "students" | "low-balance" | "master-schedule" | "student-balances" | "arc-billing";
+type AdminView = "dashboard" | "calendar" | "teachers" | "leave" | "payroll" | "bonuses" | "students" | "low-balance" | "master-schedule" | "student-balances" | "arc-billing" | "import-data";
 
 const navGroups = [
   {
@@ -48,6 +49,7 @@ const navGroups = [
       { id: "students" as const, label: "Students", icon: GraduationCap },
       { id: "master-schedule" as const, label: "Master Schedule", icon: CalendarDays },
       { id: "low-balance" as const, label: "Low Balance Alerts", icon: AlertTriangle },
+      { id: "import-data" as const, label: "Import from Sheets", icon: Database },
       { id: "student-balances" as const, label: "Balances (Legacy)", icon: GraduationCap },
     ],
   },
@@ -477,6 +479,10 @@ export default function AdminDashboard() {
 
             {activeView === "student-balances" && (
               <StudentBalances />
+            )}
+
+            {activeView === "import-data" && (
+              <DataImport />
             )}
 
             {activeView === "arc-billing" && (

@@ -1,12 +1,14 @@
 import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { authStorage } from "./replit_integrations/auth/storage";
 import crypto from "crypto";
 import { getGoogleCalendarClient, getAuthUrl, exchangeCodeForTokens, isGoogleConnected } from "./integrations/googleCalendar";
 import { getGoogleSheetsClient } from "./integrations/googleSheets";
-import { insertLeaveRequestSchema, updateLeaveRequestSchema, insertTeacherSchema, insertBonusSchema, insertDropdownOptionSchema } from "@shared/schema";
+import { insertLeaveRequestSchema, updateLeaveRequestSchema, insertTeacherSchema, insertBonusSchema, insertDropdownOptionSchema, classEvents as classEventsTable, studentPackages as studentPackagesTable, students as studentsTable } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import type { CalendarEvent, AttendanceRow } from "@shared/schema";
 
 const MASTER_ADMIN_EMAIL = "admin@brighthorizononline.com";
@@ -2088,6 +2090,190 @@ export async function registerRoutes(
       res.json({ message: "Schedule entry deleted" });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete schedule entry" });
+    }
+  });
+
+  // ============ DATA IMPORT (Google Sheets → DB) ============
+
+  // Parse "1:30", "0:45", "90" into minutes
+  function parseSheetMinutes(raw: string): number {
+    if (!raw) return 0;
+    const s = raw.trim().replace(/[^0-9:]/g, "");
+    if (s.includes(":")) {
+      const [h, m] = s.split(":");
+      const hours = parseInt(h || "0", 10);
+      const mins = parseInt(m || "0", 10);
+      return isNaN(hours) || isNaN(mins) ? 0 : hours * 60 + mins;
+    }
+    const n = parseInt(s, 10);
+    return isNaN(n) ? 0 : n;
+  }
+
+  // Parse date strings from Google Sheets into a JS Date
+  function parseSheetDate(raw: string): Date | null {
+    if (!raw) return null;
+    const s = raw.trim();
+    // DD/MM/YYYY
+    const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (dmy) {
+      const d = new Date(parseInt(dmy[3]), parseInt(dmy[2]) - 1, parseInt(dmy[1]));
+      return isNaN(d.getTime()) ? null : d;
+    }
+    // YYYY-MM-DD
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) {
+      const d = new Date(parseInt(iso[1]), parseInt(iso[2]) - 1, parseInt(iso[3]));
+      return isNaN(d.getTime()) ? null : d;
+    }
+    // Native parse as fallback
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  app.post("/api/admin/import-from-sheets", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      if (!await isGoogleConnected()) {
+        return res.status(400).json({ message: "Google not connected. Connect Google in settings first." });
+      }
+
+      const dryRun = req.body.dryRun === true;
+      const clearExisting = req.body.clearExisting === true;
+
+      const sheets = await getGoogleSheetsClient();
+      const allTeachers = await storage.getAllTeachers();
+      const teachersWithSheets = allTeachers.filter((t: any) => t.isActive && t.sheetId);
+
+      const summary = {
+        dryRun,
+        teachersScanned: 0,
+        studentsFound: 0,
+        studentsCreated: 0,
+        packagesImported: 0,
+        lessonsImported: 0,
+        errors: [] as string[],
+        preview: [] as { teacherName: string; studentName: string; packages: number; lessons: number }[],
+      };
+
+      if (teachersWithSheets.length === 0) {
+        return res.json({ ...summary, errors: ["No teachers have a Google Sheet ID configured."] });
+      }
+
+      if (!dryRun && clearExisting) {
+        await db.delete(classEventsTable).where(eq(classEventsTable.isAvailabilityBlock, false));
+        await db.delete(studentPackagesTable).where(eq(studentPackagesTable.importedFromSheet, true));
+        await db.delete(studentsTable).where(eq(studentsTable.importedFromSheet, true));
+      }
+
+      for (const teacher of teachersWithSheets) {
+        summary.teachersScanned++;
+        try {
+          const spreadsheet = await sheets.spreadsheets.get({
+            spreadsheetId: teacher.sheetId!,
+            fields: "sheets.properties",
+          });
+          const allTabs = (spreadsheet.data.sheets || []).map((s: any) => s.properties.title as string);
+          const studentTabs = allTabs.filter((name: string) => {
+            const upper = name.toUpperCase();
+            return !upper.startsWith("ARC") && !upper.startsWith("SUMMARY") && !upper.startsWith("OVERVIEW");
+          });
+
+          for (const tabName of studentTabs) {
+            summary.studentsFound++;
+            try {
+              const escapedTab = tabName.replace(/'/g, "''");
+              const rowsResponse = await sheets.spreadsheets.values.get({
+                spreadsheetId: teacher.sheetId!,
+                range: `'${escapedTab}'!A3:I2000`,
+              });
+              const rows = (rowsResponse.data.values || []) as string[][];
+
+              const pkgsToCreate: { date: Date; minutes: number }[] = [];
+              const lessonsToCreate: { date: Date; durationMinutes: number }[] = [];
+
+              for (const row of rows) {
+                const dateStr = (row[1] || "").toString().trim();
+                const timePurchased = (row[4] || "").toString().trim(); // col E
+                const lessonDuration = (row[5] || "").toString().trim(); // col F
+
+                if (!dateStr && !timePurchased && !lessonDuration) continue;
+                const parsedDate = parseSheetDate(dateStr);
+
+                if (timePurchased) {
+                  const mins = parseSheetMinutes(timePurchased);
+                  if (mins > 0) pkgsToCreate.push({ date: parsedDate || new Date(), minutes: mins });
+                }
+                if (lessonDuration && parsedDate) {
+                  const mins = parseSheetMinutes(lessonDuration);
+                  if (mins > 0) lessonsToCreate.push({ date: parsedDate, durationMinutes: mins });
+                }
+              }
+
+              summary.preview.push({
+                teacherName: teacher.name,
+                studentName: tabName,
+                packages: pkgsToCreate.length,
+                lessons: lessonsToCreate.length,
+              });
+              summary.packagesImported += pkgsToCreate.length;
+              summary.lessonsImported += lessonsToCreate.length;
+
+              if (!dryRun) {
+                // Find or create student
+                const existingStudents = await storage.getAllStudents();
+                const existing = existingStudents.find((s) => s.name === tabName && s.teacherId === teacher.id);
+                let studentId: string;
+                if (existing) {
+                  studentId = existing.id;
+                } else {
+                  const created = await storage.createStudent({
+                    name: tabName,
+                    teacherId: teacher.id,
+                    isArc: false,
+                    isActive: true,
+                    importedFromSheet: true,
+                  });
+                  studentId = created.id;
+                  summary.studentsCreated++;
+                }
+
+                for (const pkg of pkgsToCreate) {
+                  await storage.createStudentPackage({
+                    studentId,
+                    minutesPurchased: pkg.minutes,
+                    purchaseDate: pkg.date.toISOString().split("T")[0],
+                    notes: "Imported from Google Sheets",
+                    importedFromSheet: true,
+                  });
+                }
+
+                for (const lesson of lessonsToCreate) {
+                  const startDateTime = new Date(lesson.date);
+                  startDateTime.setHours(12, 0, 0, 0);
+                  const endDateTime = new Date(startDateTime.getTime() + lesson.durationMinutes * 60 * 1000);
+                  await db.insert(classEventsTable).values({
+                    teacherId: teacher.id,
+                    studentId,
+                    title: `${tabName} (imported)`,
+                    startDateTime,
+                    endDateTime,
+                    isAvailabilityBlock: false,
+                    isRecurring: false,
+                  });
+                }
+              }
+            } catch (tabErr: any) {
+              summary.errors.push(`${teacher.name} / ${tabName}: ${tabErr?.message || "Unknown error"}`);
+            }
+          }
+        } catch (sheetErr: any) {
+          summary.errors.push(`${teacher.name}: ${sheetErr?.message || "Unknown error"}`);
+        }
+      }
+
+      res.json(summary);
+    } catch (error: any) {
+      console.error("Import error:", error);
+      res.status(500).json({ message: "Import failed: " + (error?.message || "Unknown error") });
     }
   });
 
